@@ -205,3 +205,10 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Debugging/Test Scripts
+debug_entries.py
+test_solver.py
+
+# Project Plan
+project_plan.md
