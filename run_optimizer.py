@@ -22,14 +22,14 @@ def main():
     parser = argparse.ArgumentParser(description="NBA DFS Optimizer - Main Orchestrator")
     
     # Engine Arguments
-    parser.add_argument("--num_lineups", type=int, default=20, help="Number of lineups to generate (Default: 20)")
-    parser.add_argument("--randomness", type=float, default=0.1, help="Randomness factor 0.0-1.0 (Default: 0.1)")
-    parser.add_argument("--min_unique", type=int, default=1, help="Min unique players between lineups (Default: 1)")
+    parser.add_argument("-n", "--num_lineups", type=int, default=20, help="Number of lineups to generate (Default: 20)")
+    parser.add_argument("-r", "--randomness", type=float, default=0.1, help="Randomness factor 0.0-1.0 (Default: 0.1)")
+    parser.add_argument("-u", "--min_unique", type=int, default=1, help="Min unique players between lineups (Default: 1)")
     
     # Ranker Arguments
-    parser.add_argument("--proj_weight", type=float, default=0.85, help="Weight for Projection Rank (Default: 0.85)")
-    parser.add_argument("--own_weight", type=float, default=0.0, help="Weight for Ownership Rank (Default: 0.0)")
-    parser.add_argument("--geo_weight", type=float, default=0.15, help="Weight for Geomean Rank (Default: 0.15)")
+    parser.add_argument("-pw", "--proj_weight", type=float, default=0.85, help="Weight for Projection Rank (Default: 0.85)")
+    parser.add_argument("-ow", "--own_weight", type=float, default=0.0, help="Weight for Ownership Rank (Default: 0.0)")
+    parser.add_argument("-gw", "--geo_weight", type=float, default=0.15, help="Weight for Geomean Rank (Default: 0.15)")
     
     args = parser.parse_args()
     
