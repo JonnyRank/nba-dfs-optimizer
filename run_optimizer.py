@@ -1,7 +1,6 @@
 import subprocess
 import argparse
 import sys
-import os
 
 def run_command(command, description):
     """Executes a shell command and prints status."""

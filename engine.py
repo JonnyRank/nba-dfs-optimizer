@@ -7,7 +7,9 @@ import re
 import traceback
 import argparse
 from datetime import datetime
-from typing import List, Set
+from typing import List, Set, Tuple
+import concurrent.futures
+import multiprocessing
 
 # --- CONFIGURATION ---
 ENTRIES_PATH = r"C:\Users\jrank\Downloads\DKEntries.csv"
@@ -18,6 +20,7 @@ SALARY_CAP = 50000
 ROSTER_SIZE = 8
 MIN_GAMES = 2
 
+# --- DATA LOADING ---
 def get_latest_projections() -> str:
     files = glob.glob(os.path.join(PROJS_DIR, "NBA-Projs-*.csv"))
     if not files:
@@ -55,42 +58,36 @@ def load_data(projs_file: str, entries_file: str) -> pd.DataFrame:
     
     return df
 
-def solve_lineup(df: pd.DataFrame, randomness: float, past_lineups: List[Set[int]], min_unique: int) -> tuple[List[str], Set[int]]:
+# --- WORKER FUNCTION (MUST BE TOP-LEVEL) ---
+def generate_single_lineup(df: pd.DataFrame, randomness: float) -> Tuple[List[str], Set[int]]:
     """
-    Generates a single optimal lineup using PuLP, excluding past lineups.
-    
-    Args:
-        df: Player DataFrame.
-        randomness: Random variance.
-        past_lineups: List of sets, where each set contains the indices of players in a previous lineup.
-        min_unique: Minimum number of unique players required vs past lineups.
-        
-    Returns:
-        tuple: (List of player names, Set of player indices)
+    Worker function to generate one lineup with simulated projections.
+    Independent of other lineups (no exclusion constraints).
     """
     try:
-        prob = pulp.LpProblem("NBA_DFS", pulp.LpMaximize)
+        # Re-seed numpy in each process to ensuring true randomness
+        np.random.seed()
         
-        # Randomize Projections if randomness > 0
+        prob = pulp.LpProblem("NBA_DFS_Worker", pulp.LpMaximize)
+        
+        # Apply Randomness
         if randomness > 0:
-            df['SimProj'] = df['Projection'] * (1 + np.random.uniform(-randomness, randomness, len(df)))
+            # We use a copy to avoid modifying the shared dataframe (though MP usually pickles it)
+            sim_proj = df['Projection'] * (1 + np.random.uniform(-randomness, randomness, len(df)))
         else:
-            df['SimProj'] = df['Projection']
+            sim_proj = df['Projection']
         
+        # Decision Variables
         player_vars = pulp.LpVariable.dicts("player", df.index, cat=pulp.LpBinary)
         
-        prob += pulp.lpSum([df.loc[i, 'SimProj'] * player_vars[i] for i in df.index])
+        # Objective
+        prob += pulp.lpSum([sim_proj[i] * player_vars[i] for i in df.index])
         
-        # Standard Constraints
+        # Constraints
         prob += pulp.lpSum([df.loc[i, 'Salary'] * player_vars[i] for i in df.index]) <= SALARY_CAP
         prob += pulp.lpSum([player_vars[i] for i in df.index]) == ROSTER_SIZE
         
-        # Exclusion Constraints (Iterative Solver)
-        # For every past lineup, ensure we don't pick more than (8 - min_unique) of the same players
-        for prev_indices in past_lineups:
-            prob += pulp.lpSum([player_vars[i] for i in prev_indices]) <= (ROSTER_SIZE - min_unique)
-        
-        # Positional Constraints
+        # Positional
         slots = ['PG', 'SG', 'SF', 'PF', 'C', 'G', 'F', 'UTIL']
         slot_vars = pulp.LpVariable.dicts("slot", (df.index, slots), cat=pulp.LpBinary)
         
@@ -126,6 +123,7 @@ def solve_lineup(df: pd.DataFrame, randomness: float, past_lineups: List[Set[int
                 
         prob += pulp.lpSum([game_vars[game] for game in games]) >= MIN_GAMES
 
+        # Solve
         solver = pulp.HiGHS(msg=False)
         prob.solve(solver)
         
@@ -138,13 +136,17 @@ def solve_lineup(df: pd.DataFrame, randomness: float, past_lineups: List[Set[int
             if pulp.value(player_vars[i]) > 0.5:
                 lineup_names.append(df.loc[i, 'Name + ID'])
                 selected_indices.add(i)
-                        
+                
         return lineup_names, selected_indices
+        
     except Exception:
+        # In MP, printing tracebacks can be messy, but let's try
         traceback.print_exc()
         return None, None
 
 def slot_lineup_by_time(lineup_names: List[str], df: pd.DataFrame) -> List[str]:
+    # This is fast enough to run sequentially or in the worker.
+    # Let's keep it sequential post-processing to keep worker simple.
     players = df[df['Name + ID'].isin(lineup_names)].copy()
     if len(players) != 8:
         return ["ERROR"] * 8
@@ -185,9 +187,6 @@ def slot_lineup_by_time(lineup_names: List[str], df: pd.DataFrame) -> List[str]:
         
     prob.solve(pulp.HiGHS(msg=False))
     
-    if pulp.LpStatus[prob.status] != 'Optimal':
-        return lineup_names
-        
     final_lineup = {}
     for i in players.index:
         for s in slots:
@@ -197,14 +196,20 @@ def slot_lineup_by_time(lineup_names: List[str], df: pd.DataFrame) -> List[str]:
     return [final_lineup.get(s, "EMPTY") for s in slots]
 
 def main():
-    parser = argparse.ArgumentParser(description="NBA DFS Optimization Engine")
+    parser = argparse.ArgumentParser(description="NBA DFS Optimization Engine (Parallel)")
     parser.add_argument("--num_lineups", type=int, default=10, help="Number of lineups to generate")
     parser.add_argument("--randomness", type=float, default=0.1, help="Randomness factor (0.0 - 1.0)")
     parser.add_argument("--min_unique", type=int, default=1, help="Min unique players vs previous lineups")
     args = parser.parse_args()
 
-    print("Starting NBA DFS Optimizer (Sim/Solve)...")
+    print("Starting NBA DFS Optimizer (Parallel Mode)...")
     print(f"Settings: {args.num_lineups} lineups, {args.randomness * 100:.0f}% randomness, {args.min_unique} min unique")
+    
+    # Check if randomness is 0
+    if args.randomness <= 0:
+        print("WARNING: Randomness is 0. Parallel workers will likely generate identical lineups.")
+        print("Using sequential Iterative Exclusion logic instead? No, this script is now Parallel-only.")
+        print("Please enable randomness (>0) for parallel mode efficiency.")
 
     try:
         projs_file = get_latest_projections()
@@ -213,35 +218,79 @@ def main():
         df = load_data(projs_file, ENTRIES_PATH)
         print(f"Loaded {len(df)} players.")
         
-        lineups = []
-        past_indices_list = []
+        # Strategy: Generate more than needed to account for duplicates/overlap
+        target_lineups = args.num_lineups
+        oversample_factor = 3 if args.min_unique > 1 else 1.5
+        num_tasks = int(target_lineups * oversample_factor)
         
-        while len(lineups) < args.num_lineups:
-            names, indices = solve_lineup(df, args.randomness, past_indices_list, args.min_unique)
-            if names:
-                slotted = slot_lineup_by_time(names, df)
-                lineups.append(slotted)
-                past_indices_list.append(indices)
-                
-                if len(lineups) % 20 == 0:
-                    print(f"Generated {len(lineups)}/{args.num_lineups} lineups...")
-            else:
-                print("Failed to find optimal lineup (constraints too tight?), stopping.")
+        print(f"Spinning up pool with {multiprocessing.cpu_count()} cores to generate ~{num_tasks} candidates...")
+        
+        candidates = []
+        
+        with concurrent.futures.ProcessPoolExecutor() as executor:
+            # We must pass df and randomness to each worker
+            # Since df is static, it gets pickled once (or shared via COW on Linux, but picked on Windows)
+            futures = [executor.submit(generate_single_lineup, df, args.randomness) for _ in range(num_tasks)]
+            
+            for i, future in enumerate(concurrent.futures.as_completed(futures)):
+                try:
+                    names, indices = future.result()
+                    if names and indices:
+                        candidates.append((names, indices))
+                    
+                    if (i + 1) % 20 == 0:
+                        print(f"Candidates generated: {i + 1}/{num_tasks}")
+                except Exception as exc:
+                    print(f"Worker generated exception: {exc}")
+
+        print(f"Total candidates generated: {len(candidates)}")
+        
+        # Filter for Uniqueness / Min Unique
+        final_lineups = []
+        selected_indices_list = []
+        
+        print("Filtering candidates for uniqueness...")
+        for names, indices in candidates:
+            if len(final_lineups) >= target_lineups:
                 break
+                
+            is_valid = True
+            for prev_indices in selected_indices_list:
+                # Calculate overlap
+                # Intersection size
+                overlap = len(indices.intersection(prev_indices))
+                # Max allowed overlap = 8 - min_unique
+                if overlap > (ROSTER_SIZE - args.min_unique):
+                    is_valid = False
+                    break
+            
+            if is_valid:
+                # Post-process slotting (fast)
+                slotted = slot_lineup_by_time(names, df)
+                final_lineups.append(slotted)
+                selected_indices_list.append(indices)
         
+        print(f"Final valid lineups selected: {len(final_lineups)}")
+        
+        if len(final_lineups) < target_lineups:
+            print("Warning: Could not find enough unique lineups from the candidate pool.")
+            print("Try increasing randomness or running again.")
+
+        # Save
         if not os.path.exists(OUTPUT_DIR):
             os.makedirs(OUTPUT_DIR)
             
         timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
         output_file = os.path.join(OUTPUT_DIR, f"lineup-pool-{timestamp}.csv")
         
-        out_df = pd.DataFrame(lineups, columns=['PG', 'SG', 'SF', 'PF', 'C', 'G', 'F', 'UTIL'])
+        out_df = pd.DataFrame(final_lineups, columns=['PG', 'SG', 'SF', 'PF', 'C', 'G', 'F', 'UTIL'])
         out_df.to_csv(output_file, index=False)
-        print(f"Saved {len(lineups)} lineups to {output_file}")
+        print(f"Saved {len(final_lineups)} lineups to {output_file}")
         
     except Exception as e:
         print(f"Error: {e}")
         traceback.print_exc()
 
 if __name__ == "__main__":
+    multiprocessing.freeze_support() # Good practice for Windows
     main()
