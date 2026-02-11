@@ -10,21 +10,13 @@ from datetime import datetime
 from typing import List, Set, Tuple
 import concurrent.futures
 import multiprocessing
-
-# --- CONFIGURATION ---
-ENTRIES_PATH = r"C:\Users\jrank\Downloads\DKEntries.csv"
-PROJS_DIR = r"G:\My Drive\Documents\CSV-Exports"
-OUTPUT_DIR = r"G:\My Drive\Documents\CSV-Exports\lineup-pools"
-
-SALARY_CAP = 50000
-ROSTER_SIZE = 8
-MIN_GAMES = 2
+import config
 
 # --- DATA LOADING ---
 def get_latest_projections() -> str:
-    files = glob.glob(os.path.join(PROJS_DIR, "NBA-Projs-*.csv"))
+    files = glob.glob(os.path.join(config.PROJS_DIR, "NBA-Projs-*.csv"))
     if not files:
-        raise FileNotFoundError(f"No projection files found in {PROJS_DIR}")
+        raise FileNotFoundError(f"No projection files found in {config.PROJS_DIR}")
     return max(files, key=os.path.basename)
 
 def load_data(projs_file: str, entries_file: str) -> pd.DataFrame:
@@ -84,8 +76,8 @@ def generate_single_lineup(df: pd.DataFrame, randomness: float) -> Tuple[List[st
         prob += pulp.lpSum([sim_proj[i] * player_vars[i] for i in df.index])
         
         # Constraints
-        prob += pulp.lpSum([df.loc[i, 'Salary'] * player_vars[i] for i in df.index]) <= SALARY_CAP
-        prob += pulp.lpSum([player_vars[i] for i in df.index]) == ROSTER_SIZE
+        prob += pulp.lpSum([df.loc[i, 'Salary'] * player_vars[i] for i in df.index]) <= config.SALARY_CAP
+        prob += pulp.lpSum([player_vars[i] for i in df.index]) == config.ROSTER_SIZE
         
         # Positional
         slots = ['PG', 'SG', 'SF', 'PF', 'C', 'G', 'F', 'UTIL']
@@ -121,7 +113,7 @@ def generate_single_lineup(df: pd.DataFrame, randomness: float) -> Tuple[List[st
             for i in players_in_game:
                 prob += game_vars[game] >= player_vars[i] / 10.0
                 
-        prob += pulp.lpSum([game_vars[game] for game in games]) >= MIN_GAMES
+        prob += pulp.lpSum([game_vars[game] for game in games]) >= config.MIN_GAMES
 
         # Solve
         solver = pulp.HiGHS(msg=False)
@@ -215,7 +207,7 @@ def main():
         projs_file = get_latest_projections()
         print(f"Using projections: {os.path.basename(projs_file)}")
         
-        df = load_data(projs_file, ENTRIES_PATH)
+        df = load_data(projs_file, config.ENTRIES_PATH)
         print(f"Loaded {len(df)} players.")
         
         # Strategy: Generate more than needed to account for duplicates/overlap
@@ -260,7 +252,7 @@ def main():
                 # Intersection size
                 overlap = len(indices.intersection(prev_indices))
                 # Max allowed overlap = 8 - min_unique
-                if overlap > (ROSTER_SIZE - args.min_unique):
+                if overlap > (config.ROSTER_SIZE - args.min_unique):
                     is_valid = False
                     break
             
@@ -277,11 +269,11 @@ def main():
             print("Try increasing randomness or running again.")
 
         # Save
-        if not os.path.exists(OUTPUT_DIR):
-            os.makedirs(OUTPUT_DIR)
+        if not os.path.exists(config.LINEUP_DIR):
+            os.makedirs(config.LINEUP_DIR)
             
         timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-        output_file = os.path.join(OUTPUT_DIR, f"lineup-pool-{timestamp}.csv")
+        output_file = os.path.join(config.LINEUP_DIR, f"lineup-pool-{timestamp}.csv")
         
         out_df = pd.DataFrame(final_lineups, columns=['PG', 'SG', 'SF', 'PF', 'C', 'G', 'F', 'UTIL'])
         out_df.to_csv(output_file, index=False)

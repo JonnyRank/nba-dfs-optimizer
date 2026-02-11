@@ -216,3 +216,4 @@ implementation_notes.md
 
 # Gemini Ignore
 .geminiignore
+implement_data_loader.md

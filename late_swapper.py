@@ -7,21 +7,13 @@ import traceback
 import re
 from datetime import datetime
 from typing import List
-
-# --- CONFIGURATION ---
-ENTRIES_PATH = r"C:\Users\jrank\Downloads\DKEntries.csv"
-PROJS_DIR = r"G:\My Drive\Documents\CSV-Exports"
-OUTPUT_DIR = r"C:\Users\jrank\Downloads"
-
-SALARY_CAP = 50000
-ROSTER_SIZE = 8
-MIN_GAMES = 2
+import config
 
 
 def get_latest_projections() -> str:
-    files = glob.glob(os.path.join(PROJS_DIR, "NBA-Projs-*.csv"))
+    files = glob.glob(os.path.join(config.PROJS_DIR, "NBA-Projs-*.csv"))
     if not files:
-        raise FileNotFoundError(f"No projection files found in {PROJS_DIR}")
+        raise FileNotFoundError(f"No projection files found in {config.PROJS_DIR}")
     return max(files, key=os.path.basename)
 
 
@@ -59,19 +51,24 @@ def load_data(projs_file: str, entries_file: str) -> pd.DataFrame:
 
 
 def parse_entries(entries_file: str) -> pd.DataFrame:
-    """Parses the existing lineups from the top of the file."""
-    # Fix for ragged CSV: Read header first, then read with python engine and dummy columns
+    """Parses the existing lineups from the top of the file using a memory-efficient approach."""
     header_df = pd.read_csv(entries_file, nrows=0)
     valid_cols = header_df.columns.tolist()
-    all_cols = valid_cols + [f"extra_{i}" for i in range(100)]
+    
+    # Standardize to 25 columns max
+    extra_count = max(0, 25 - len(valid_cols))
+    all_cols = valid_cols + [f"extra_{i}" for i in range(extra_count)]
 
     df = pd.read_csv(
-        entries_file, header=None, names=all_cols, engine="python", skiprows=1
+        entries_file, 
+        header=None, 
+        names=all_cols, 
+        engine="python", 
+        skiprows=1,
+        dtype={"Entry ID": object, "Contest ID": object}
     )
 
-    # Filter back to just the entry columns and valid rows
-    df = df[valid_cols]
-    return df[df["Entry ID"].notna()].copy()
+    return df
 
 
 def solve_late_swap(df_pool: pd.DataFrame, current_lineup_ids: List[str]) -> List[str]:
@@ -117,9 +114,9 @@ def solve_late_swap(df_pool: pd.DataFrame, current_lineup_ids: List[str]) -> Lis
     # Standard Constraints
     prob += (
         pulp.lpSum([df_pool.loc[i, "Salary"] * player_vars[i] for i in df_pool.index])
-        <= SALARY_CAP
+        <= config.SALARY_CAP
     )
-    prob += pulp.lpSum([player_vars[i] for i in df_pool.index]) == ROSTER_SIZE
+    prob += pulp.lpSum([player_vars[i] for i in df_pool.index]) == config.ROSTER_SIZE
 
     # Lock Constraints
     for pid in locked_ids:
@@ -163,7 +160,7 @@ def solve_late_swap(df_pool: pd.DataFrame, current_lineup_ids: List[str]) -> Lis
         for i in players_in_game:
             prob += game_vars[game] >= player_vars[i] / 10.0
 
-    prob += pulp.lpSum([game_vars[game] for game in games]) >= MIN_GAMES
+    prob += pulp.lpSum([game_vars[game] for game in games]) >= config.MIN_GAMES
 
     # Solve
     solver = pulp.HiGHS(msg=False)
@@ -197,14 +194,14 @@ def main():
         print(f"Using projections: {os.path.basename(projs_file)}")
 
         # Load Pool
-        df_pool = load_data(projs_file, ENTRIES_PATH)
+        df_pool = load_data(projs_file, config.ENTRIES_PATH)
         print(f"Player Pool Loaded: {len(df_pool)} players.")
 
         # Load Current Entries
         # parsing correctly requires handling the mixed file structure
         # We can reuse the logic from exporter.py to read the whole thing
         df_entries = pd.read_csv(
-            ENTRIES_PATH, dtype={"Entry ID": object, "Contest ID": object}
+            config.ENTRIES_PATH, dtype={"Entry ID": object, "Contest ID": object}
         )
         valid_entries = df_entries[df_entries["Entry ID"].notna()]
         print(f"Found {len(valid_entries)} entries to check for swap.")
@@ -238,7 +235,7 @@ def main():
 
         # Save
         timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-        output_file = os.path.join(OUTPUT_DIR, f"late-swap-entries-{timestamp}.csv")
+        output_file = os.path.join(config.OUTPUT_DIR, f"late-swap-entries-{timestamp}.csv")
         df_entries.to_csv(output_file, index=False, na_rep="")
 
         # Append Player Pool (to keep file valid for DK?)

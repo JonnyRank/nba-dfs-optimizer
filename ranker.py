@@ -6,10 +6,7 @@ import argparse
 import traceback
 from datetime import datetime
 from typing import Dict
-
-# --- CONFIGURATION ---
-PROJS_DIR = r"G:\My Drive\Documents\CSV-Exports"
-LINEUP_DIR = r"G:\My Drive\Documents\CSV-Exports\lineup-pools"
+import config
 
 def get_latest_file(directory: str, pattern: str) -> str:
     """Finds the most recent file matching a pattern in a directory."""
@@ -42,8 +39,8 @@ def load_data(lineup_file: str, projs_file: str) -> tuple[pd.DataFrame, pd.DataF
     # We should probably have saved the player data or re-run the merge logic.
     # Let's re-run the merge logic here to get the full player context.
     
-    from engine import load_data as engine_load_data, ENTRIES_PATH
-    df_players = engine_load_data(projs_file, ENTRIES_PATH)
+    from engine import load_data as engine_load_data
+    df_players = engine_load_data(projs_file, config.ENTRIES_PATH)
     
     return df_lineups, df_players
 
@@ -116,8 +113,8 @@ def main():
     
     try:
         # 1. Identify latest files
-        lineup_file = get_latest_file(LINEUP_DIR, "lineup-pool-*.csv")
-        projs_file = get_latest_file(PROJS_DIR, "NBA-Projs-*.csv")
+        lineup_file = get_latest_file(config.LINEUP_DIR, "lineup-pool-*.csv")
+        projs_file = get_latest_file(config.PROJS_DIR, "NBA-Projs-*.csv")
         
         print(f"Ranking: {os.path.basename(lineup_file)}")
         print(f"Using metrics from: {os.path.basename(projs_file)}")
@@ -136,7 +133,7 @@ def main():
         # 4. Save
         # Reuse timestamp from original lineup file if possible, or just new one
         timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-        output_file = os.path.join(LINEUP_DIR, f"ranked-lineups-{timestamp}.csv")
+        output_file = os.path.join(config.LINEUP_DIR, f"ranked-lineups-{timestamp}.csv")
         
         # Reorder columns to put rankings first
         cols = ['Final_Rank', 'Lineup_Score', 'Total_Projection', 'Total_Ownership', 'Geomean_Ownership', 

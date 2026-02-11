@@ -4,18 +4,14 @@ import glob
 import argparse
 import traceback
 from datetime import datetime
-
-# --- CONFIGURATION ---
-ENTRIES_PATH = r"C:\Users\jrank\Downloads\DKEntries.csv"
-LINEUP_DIR = r"G:\My Drive\Documents\CSV-Exports\lineup-pools"
-OUTPUT_DIR = r"C:\Users\jrank\Downloads"
+import config
 
 
 def get_latest_ranked_file() -> str:
     """Finds the most recent ranked-lineups-*.csv file."""
-    files = glob.glob(os.path.join(LINEUP_DIR, "ranked-lineups-*.csv"))
+    files = glob.glob(os.path.join(config.LINEUP_DIR, "ranked-lineups-*.csv"))
     if not files:
-        raise FileNotFoundError(f"No ranked lineup files found in {LINEUP_DIR}")
+        raise FileNotFoundError(f"No ranked lineup files found in {config.LINEUP_DIR}")
     return max(files, key=os.path.basename)
 
 
@@ -31,14 +27,16 @@ def main():
         # Force Entry ID and Contest ID to be strings to avoid .0 suffix
 
         # Fix for ragged CSV (ParserError): Read header first to get valid columns
-        header_df = pd.read_csv(ENTRIES_PATH, nrows=0)
+        header_df = pd.read_csv(config.ENTRIES_PATH, nrows=0)
         valid_cols = header_df.columns.tolist()
 
         # Use dummy columns to handle the wider rows (player pool) further down in the file
-        all_cols = valid_cols + [f"extra_{i}" for i in range(100)]
+        # We cap this at 25 total columns to save memory
+        extra_count = max(0, 25 - len(valid_cols))
+        all_cols = valid_cols + [f"extra_{i}" for i in range(extra_count)]
 
         df_entries = pd.read_csv(
-            ENTRIES_PATH,
+            config.ENTRIES_PATH,
             header=None,
             names=all_cols,
             skiprows=1,
@@ -88,7 +86,7 @@ def main():
         # Append date and time to filename to maintain history (YYYY-MM-DD_HHMMSS)
         timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
         output_file = os.path.join(
-            OUTPUT_DIR, f"upload_ready_DKEntries-{timestamp}.csv"
+            config.OUTPUT_DIR, f"upload_ready_DKEntries-{timestamp}.csv"
         )
 
         # Write updated entries
