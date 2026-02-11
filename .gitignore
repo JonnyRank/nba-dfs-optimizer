@@ -212,3 +212,7 @@ test_solver.py
 
 # Project Plan
 project_plan.md
+implementation_notes.md
+
+# Gemini Ignore
+.geminiignore
