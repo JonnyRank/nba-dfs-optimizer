@@ -1,4 +1,5 @@
-# NBA DFS Optimizer
+# *WARNING: Late Swap Script Is WIP - Do Not Use*
+# Jonny Rankin's NBA DFS Optimizer
 
 A high-performance optimization pipeline designed to generate, rank, and export NBA lineups for DraftKings. It leverages linear programming (LP) to maximize projected fantasy points while adhering to salary caps, roster requirements, and multi-game constraints.
 
