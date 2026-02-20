@@ -71,13 +71,14 @@ def parse_entries(entries_file: str) -> pd.DataFrame:
     return df
 
 
-def solve_late_swap(df_pool: pd.DataFrame, current_lineup_ids: List[str]) -> List[str]:
+def solve_late_swap(df_pool: pd.DataFrame, current_lineup_ids: List[str], min_salary: int) -> List[str]:
     """
     Optimizes the remaining slots of a lineup given a set of already locked players.
 
     Args:
         df_pool: The full player pool with projections and 'IsLocked' status.
         current_lineup_ids: List of Player IDs currently in the lineup (from the CSV).
+        min_salary: Minimum salary for the lineup.
 
     Returns:
         List[str]: The new optimal lineup (Name + ID strings).
@@ -115,6 +116,10 @@ def solve_late_swap(df_pool: pd.DataFrame, current_lineup_ids: List[str]) -> Lis
     prob += (
         pulp.lpSum([df_pool.loc[i, "Salary"] * player_vars[i] for i in df_pool.index])
         <= config.SALARY_CAP
+    )
+    prob += (
+        pulp.lpSum([df_pool.loc[i, "Salary"] * player_vars[i] for i in df_pool.index])
+        >= min_salary
     )
     prob += pulp.lpSum([player_vars[i] for i in df_pool.index]) == config.ROSTER_SIZE
 
@@ -185,7 +190,9 @@ def solve_late_swap(df_pool: pd.DataFrame, current_lineup_ids: List[str]) -> Lis
 
 def main():
     parser = argparse.ArgumentParser(description="NBA DFS Late Swap Tool")
-    parser.parse_args()
+    parser.add_argument("-ms", "--min_salary", type=int, default=49500, help="Min salary for a lineup")
+    parser.add_argument("-mp", "--min_projection", type=float, default=10.0, help="Min projection for a player to be considered")
+    args = parser.parse_args()
 
     print("Starting Late Swap Optimization...")
 
@@ -195,7 +202,8 @@ def main():
 
         # Load Pool
         df_pool = load_data(projs_file, config.ENTRIES_PATH)
-        print(f"Player Pool Loaded: {len(df_pool)} players.")
+        df_pool = df_pool[df_pool["Projection"] >= args.min_projection]
+        print(f"Player Pool Loaded: {len(df_pool)} players (after min projection filter).")
 
         # Load Current Entries
         # parsing correctly requires handling the mixed file structure
@@ -216,7 +224,7 @@ def main():
             # Solve
             # Note: This runs sequentially. For 150 lineups, it might take 1-2 mins.
             # HiGHS is fast, so this is likely acceptable.
-            new_lineup = solve_late_swap(df_pool, current_players)
+            new_lineup = solve_late_swap(df_pool, current_players, args.min_salary)
 
             # Store result (preserving original index is not needed since we iterate)
             # We construct a dict to update the main df later

@@ -6,8 +6,10 @@ load_dotenv()
 
 # --- ROSTER SETTINGS ---
 SALARY_CAP = 50000
+MIN_SALARY = 49500
 ROSTER_SIZE = 8
 MIN_GAMES = 2
+MIN_PROJECTION = 10.0
 
 # --- DIRECTORY SETTINGS ---
 # Default to local directories if environment variables are not set

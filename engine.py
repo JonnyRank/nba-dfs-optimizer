@@ -51,7 +51,7 @@ def load_data(projs_file: str, entries_file: str) -> pd.DataFrame:
     return df
 
 # --- WORKER FUNCTION (MUST BE TOP-LEVEL) ---
-def generate_single_lineup(df: pd.DataFrame, randomness: float) -> Tuple[List[str], Set[int]]:
+def generate_single_lineup(df: pd.DataFrame, randomness: float, min_salary: int) -> Tuple[List[str], Set[int]]:
     """
     Worker function to generate one lineup with simulated projections.
     Independent of other lineups (no exclusion constraints).
@@ -65,7 +65,9 @@ def generate_single_lineup(df: pd.DataFrame, randomness: float) -> Tuple[List[st
         # Apply Randomness
         if randomness > 0:
             # We use a copy to avoid modifying the shared dataframe (though MP usually pickles it)
-            sim_proj = df['Projection'] * (1 + np.random.uniform(-randomness, randomness, len(df)))
+            # New: Normal Distribution where randomness is the Standard Deviation %
+            std_dev = df['Projection'] * randomness
+            sim_proj = np.random.normal(df['Projection'], std_dev)
         else:
             sim_proj = df['Projection']
         
@@ -77,6 +79,7 @@ def generate_single_lineup(df: pd.DataFrame, randomness: float) -> Tuple[List[st
         
         # Constraints
         prob += pulp.lpSum([df.loc[i, 'Salary'] * player_vars[i] for i in df.index]) <= config.SALARY_CAP
+        prob += pulp.lpSum([df.loc[i, 'Salary'] * player_vars[i] for i in df.index]) >= min_salary
         prob += pulp.lpSum([player_vars[i] for i in df.index]) == config.ROSTER_SIZE
         
         # Positional
@@ -192,6 +195,8 @@ def main():
     parser.add_argument("-n", "--num_lineups", type=int, default=10, help="Number of lineups to generate")
     parser.add_argument("-r", "--randomness", type=float, default=0.1, help="Randomness factor (0.0 - 1.0)")
     parser.add_argument("-u", "--min_unique", type=int, default=1, help="Min unique players vs previous lineups")
+    parser.add_argument("-ms", "--min_salary", type=int, default=49500, help="Min salary for a lineup")
+    parser.add_argument("-mp", "--min_projection", type=float, default=10.0, help="Min projection for a player to be considered")
     args = parser.parse_args()
 
     print("Starting NBA DFS Optimizer (Parallel Mode)...")
@@ -208,7 +213,8 @@ def main():
         print(f"Using projections: {os.path.basename(projs_file)}")
         
         df = load_data(projs_file, config.ENTRIES_PATH)
-        print(f"Loaded {len(df)} players.")
+        df = df[df['Projection'] >= args.min_projection]
+        print(f"Loaded {len(df)} players (after min projection filter).")
         
         # Strategy: Generate more than needed to account for duplicates/overlap
         target_lineups = args.num_lineups
@@ -220,9 +226,9 @@ def main():
         candidates = []
         
         with concurrent.futures.ProcessPoolExecutor() as executor:
-            # We must pass df and randomness to each worker
+            # We must pass df, randomness, and min_salary to each worker
             # Since df is static, it gets pickled once (or shared via COW on Linux, but picked on Windows)
-            futures = [executor.submit(generate_single_lineup, df, args.randomness) for _ in range(num_tasks)]
+            futures = [executor.submit(generate_single_lineup, df, args.randomness, args.min_salary) for _ in range(num_tasks)]
             
             for i, future in enumerate(concurrent.futures.as_completed(futures)):
                 try:
@@ -231,7 +237,8 @@ def main():
                         candidates.append((names, indices))
                     
                     if (i + 1) % 20 == 0:
-                        print(f"Candidates generated: {i + 1}/{num_tasks}")
+                        percentage = int(((i + 1) / num_tasks) * 100)
+                        print(f"Lineups generated: {percentage}%")
                 except Exception as exc:
                     print(f"Worker generated exception: {exc}")
 

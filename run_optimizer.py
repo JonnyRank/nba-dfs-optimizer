@@ -25,6 +25,8 @@ def main():
     parser.add_argument("-n", "--num_lineups", type=int, default=20, help="Number of lineups to generate (Default: 20)")
     parser.add_argument("-r", "--randomness", type=float, default=0.1, help="Randomness factor 0.0-1.0 (Default: 0.1)")
     parser.add_argument("-u", "--min_unique", type=int, default=1, help="Min unique players between lineups (Default: 1)")
+    parser.add_argument("-ms", "--min_salary", type=int, default=49500, help="Min salary for a lineup (Default: 49500)")
+    parser.add_argument("-mp", "--min_projection", type=float, default=10.0, help="Min projection for a player to be considered (Default: 10.0)")
     
     # Ranker Arguments
     parser.add_argument("-pw", "--proj_weight", type=float, default=0.85, help="Weight for Projection Rank (Default: 0.85)")
@@ -41,7 +43,9 @@ def main():
         f'"{python_exe}" engine.py '
         f'--num_lineups {args.num_lineups} '
         f'--randomness {args.randomness} '
-        f'--min_unique {args.min_unique}'
+        f'--min_unique {args.min_unique} '
+        f'--min_salary {args.min_salary} '
+        f'--min_projection {args.min_projection}'
     )
     run_command(engine_cmd, "Phase 1: Generating Lineups")
     
