@@ -212,11 +212,11 @@ def main():
         
         # Strategy: Generate more than needed to account for duplicates/overlap
         target_lineups = args.num_lineups
-        oversample_factor = 3 if args.min_unique > 1 else 1.5
+        oversample_factor = 2 if args.min_unique > 1 else 1.25
         num_tasks = int(target_lineups * oversample_factor)
         
         print(f"Spinning up pool with {multiprocessing.cpu_count()} cores to generate ~{num_tasks} candidates...")
-        
+
         candidates = []
         
         with concurrent.futures.ProcessPoolExecutor() as executor:

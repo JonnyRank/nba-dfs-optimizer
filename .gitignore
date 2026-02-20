@@ -216,4 +216,8 @@ implementation_notes.md
 
 # Gemini Ignore
 .geminiignore
+
+# Misc.
 implement_data_loader.md
+Streamlit-skeleton.py
+todo.md
