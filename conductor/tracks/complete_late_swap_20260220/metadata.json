@@ -1,0 +1,8 @@
+{
+  "track_id": "complete_late_swap_20260220",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-02-20T17:11:00Z",
+  "updated_at": "2026-02-20T17:11:00Z",
+  "description": "Complete the Work-In-Progress late swap functionality and ensure it correctly re-optimizes lineups for DraftKings."
+}
