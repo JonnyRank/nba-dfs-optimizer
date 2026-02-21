@@ -1,7 +1,11 @@
 # Implementation Plan: Complete and Validate Late Swap Functionality
 
 ## Phase 1: Research & Baseline
-- [ ] Task: Analyze current `late_swapper.py` implementation and identify missing logic.
+- [x] Task: Analyze current `late_swapper.py` implementation and identify missing logic. (Commit: b5eac54)
+    - *Findings:*
+        - Locking logic depends on "(LOCKED)" string; needs to use game start times.
+        - Missing flexible slotting optimization (late players in UTIL).
+        - CSV reading/writing needs to be more robust for DK compatibility.
 - [ ] Task: Create a baseline test suite with a mock `DKEntries.csv` and projections.
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Research & Baseline' (Protocol in workflow.md)
 
