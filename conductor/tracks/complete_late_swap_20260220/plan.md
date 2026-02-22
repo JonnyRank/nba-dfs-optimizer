@@ -6,8 +6,8 @@
         - Locking logic depends on "(LOCKED)" string; needs to use game start times.
         - Missing flexible slotting optimization (late players in UTIL).
         - CSV reading/writing needs to be more robust for DK compatibility.
-- [ ] Task: Create a baseline test suite with a mock `DKEntries.csv` and projections.
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: Research & Baseline' (Protocol in workflow.md)
+- [x] Task: Create a baseline test suite with a mock `DKEntries.csv` and projections.
+- [~] Task: Conductor - User Manual Verification 'Phase 1: Research & Baseline' (Protocol in workflow.md)
 
 ## Phase 2: Core Implementation
 - [ ] Task: Implement robust player locking logic based on game timestamps.

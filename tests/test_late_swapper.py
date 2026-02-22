@@ -1,0 +1,74 @@
+import os
+import sys
+import pytest
+import pandas as pd
+from unittest.mock import patch, MagicMock
+
+# Add root to path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+import late_swapper
+import config
+
+TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "test_data")
+
+def test_get_latest_projections():
+    with patch("config.PROJS_DIR", TEST_DATA_DIR):
+        latest = late_swapper.get_latest_projections()
+        assert "NBA-Projs-2026-02-20.csv" in latest
+
+def test_load_data():
+    projs_file = os.path.join(TEST_DATA_DIR, "NBA-Projs-2026-02-20.csv")
+    entries_file = os.path.join(TEST_DATA_DIR, "DKEntries.csv")
+    
+    df = late_swapper.load_data(projs_file, entries_file)
+    
+    assert not df.empty
+    assert "ID" in df.columns
+    assert "Projection" in df.columns
+    # Check some player
+    assert any(df["Name"] == "Giannis Antetokounmpo")
+
+def test_solve_late_swap():
+    # Setup pool
+    projs_file = os.path.join(TEST_DATA_DIR, "NBA-Projs-2026-02-20.csv")
+    entries_file = os.path.join(TEST_DATA_DIR, "DKEntries.csv")
+    df_pool = late_swapper.load_data(projs_file, entries_file)
+    
+    # Lineup with some locked players
+    current_lineup = [
+        "Kam Jones (42063199) (LOCKED)",
+        "Anthony Edwards (42062863)", # NOT LOCKED
+        "Gregory Jackson (42063100) (LOCKED)",
+        "Taylor Hendricks (42063299) (LOCKED)",
+        "Tristan Vukcevic (42063159) (LOCKED)",
+        "Javon Small (42063406) (LOCKED)",
+        "Jalen Johnson (42062857)", # NOT LOCKED
+        "Zion Williamson (42062920)" # NOT LOCKED
+    ]
+    
+    new_lineup = late_swapper.solve_late_swap(df_pool, current_lineup, min_salary=40000)
+    
+    assert len(new_lineup) == 8
+    # Kam Jones must still be there (locked)
+    assert any("Kam Jones" in p for p in new_lineup)
+    assert any("42063199" in p for p in new_lineup)
+
+    # Check that locked players are preserved
+    locked_expected = [
+        "42063199", "42063100", "42063299", "42063159", "42063406"
+    ]
+    for pid in locked_expected:
+        assert any(pid in p for p in new_lineup), f"Player {pid} was locked but not found in new lineup"
+
+def test_solve_late_swap_no_valid_solution():
+    projs_file = os.path.join(TEST_DATA_DIR, "NBA-Projs-2026-02-20.csv")
+    entries_file = os.path.join(TEST_DATA_DIR, "DKEntries.csv")
+    df_pool = late_swapper.load_data(projs_file, entries_file)
+    
+    # Extremely high salary requirement to force failure
+    current_lineup = ["Player (123) (LOCKED)"] * 8
+    new_lineup = late_swapper.solve_late_swap(df_pool, current_lineup, min_salary=100000)
+    
+    # Should return original if failed
+    assert new_lineup == current_lineup

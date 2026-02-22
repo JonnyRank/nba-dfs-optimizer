@@ -1,0 +1,24 @@
+Entry ID,Contest Name,Contest ID,Entry Fee,PG,SG,SF,PF,C,G,F,UTIL,,Instructions
+1001,NBA Contest,188231786,$4,Kam Jones (42063199) (LOCKED),Anthony Edwards (42062863),Gregory Jackson (42063100) (LOCKED),Taylor Hendricks (42063299) (LOCKED),Tristan Vukcevic (42063159) (LOCKED),Javon Small (42063406) (LOCKED),Jalen Johnson (42062857),Zion Williamson (42062920),,
+1002,NBA Contest,188231786,$4,T.J. McConnell (42063239) (LOCKED),Cam Spencer (42063072) (LOCKED),Gregory Jackson (42063100) (LOCKED),Olivier-Maxence Prosper (42063402) (LOCKED),Jay Huff (42063089) (LOCKED),Anthony Edwards (42062863),Jalen Johnson (42062857),Derik Queen (42063033),,
+,,,,,,,,,,,,,Position,Name + ID,Name,ID,Roster Position,Salary,Game Info,TeamAbbrev,AvgPointsPerGame
+,,,,,,,,,,,,,PF,Giannis Antetokounmpo (42062851),Giannis Antetokounmpo,42062851,PF/F/UTIL,11000,MIL@NOP 02/20/2026 08:00PM ET,MIL,51.61
+,,,,,,,,,,,,,PG,Shai Gilgeous-Alexander (42062854),Shai Gilgeous-Alexander,42062854,PG/G/UTIL,10700,BKN@OKC 02/20/2026 08:00PM ET,OKC,51.12
+,,,,,,,,,,,,,C,Hunter Dickinson (42063626),Hunter Dickinson,42063626,C/UTIL,3000,MIL@NOP 02/20/2026 08:00PM ET,NOP,3
+,,,,,,,,,,,,,SF,Alex Antetokounmpo (42063641),Alex Antetokounmpo,42063641,SF/F/UTIL,3000,MIL@NOP 02/20/2026 08:00PM ET,MIL,0
+,,,,,,,,,,,,,SF/PF,Josh Minott (42063511),Josh Minott,42063511,SF/PF/F/UTIL,3000,BKN@OKC 02/20/2026 08:00PM ET,BKN,14.23
+,,,,,,,,,,,,,SF/PF,Brooks Barnhizer (42063521),Brooks Barnhizer,42063521,SF/PF/F/UTIL,3000,BKN@OKC 02/20/2026 08:00PM ET,OKC,5.14
+,,,,,,,,,,,,,C,E.J. Liddell (42063575),E.J. Liddell,42063575,C/UTIL,3000,BKN@OKC 02/20/2026 08:00PM ET,BKN,3.98
+,,,,,,,,,,,,,PG,Tyson Etienne (42063586),Tyson Etienne,42063586,PG/G/UTIL,3000,BKN@OKC 02/20/2026 08:00PM ET,BKN,1.88
+,,,,,,,,,,,,,SF,Buddy Boeheim (42063619),Buddy Boeheim,42063619,SF/F/UTIL,3000,BKN@OKC 02/20/2026 08:00PM ET,OKC,3.5
+,,,,,,,,,,,,,PG,Nikola Topic (42063628),Nikola Topic,42063628,PG/G/UTIL,3000,BKN@OKC 02/20/2026 08:00PM ET,OKC,3.25
+,,,,,,,,,,,,,C,Thomas Sorber (42063633),Thomas Sorber,42063633,C/UTIL,3000,BKN@OKC 02/20/2026 08:00PM ET,OKC,0
+,,,,,,,,,,,,,PF,Chaney Johnson (42063649),Chaney Johnson,42063649,PF/F/UTIL,3000,BKN@OKC 02/20/2026 08:00PM ET,BKN,0
+,,,,,,,,,,,,,PG,Kam Jones (42063199),Kam Jones,42063199,PG/G/UTIL,5000,MIL@NOP 02/20/2026 08:00PM ET,MIL,25.0
+,,,,,,,,,,,,,SG,Anthony Edwards (42062863),Anthony Edwards,42062863,SG/G/UTIL,9000,MIL@NOP 02/20/2026 08:00PM ET,MIL,45.0
+,,,,,,,,,,,,,SF,Gregory Jackson (42063100),Gregory Jackson,42063100,SF/F/UTIL,4000,MIL@NOP 02/20/2026 08:00PM ET,MIL,20.0
+,,,,,,,,,,,,,PF,Taylor Hendricks (42063299),Taylor Hendricks,42063299,PF/F/UTIL,4500,MIL@NOP 02/20/2026 08:00PM ET,MIL,18.0
+,,,,,,,,,,,,,C,Tristan Vukcevic (42063159),Tristan Vukcevic,42063159,C/UTIL,3500,MIL@NOP 02/20/2026 08:00PM ET,MIL,15.0
+,,,,,,,,,,,,,PG,Javon Small (42063406),Javon Small,42063406,PG/G/UTIL,3000,MIL@NOP 02/20/2026 08:00PM ET,MIL,22.0
+,,,,,,,,,,,,,SF,Jalen Johnson (42062857),Jalen Johnson,42062857,SF/F/UTIL,8000,MIL@NOP 02/20/2026 08:00PM ET,MIL,40.0
+,,,,,,,,,,,,,PF,Zion Williamson (42062920),Zion Williamson,42062920,PF/F/UTIL,8500,MIL@NOP 02/20/2026 08:00PM ET,NOP,48.0
