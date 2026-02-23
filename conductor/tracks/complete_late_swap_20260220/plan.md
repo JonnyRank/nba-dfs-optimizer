@@ -22,3 +22,5 @@
 
 ## Phase: Review Fixes
 - [x] Task: Apply review suggestions for string-based locking logic. (Commit: 1212ab7)
+- [x] Task: Fix run_optimizer.py regression (missing engine_cmd) (Commit: 7bf14d3)
+
