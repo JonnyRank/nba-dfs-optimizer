@@ -58,6 +58,14 @@ def main():
 
     # --- DEFAULT PIPELINE ---
     # 1. Run Engine
+    engine_cmd = (
+        f'"{python_exe}" engine.py '
+        f'--num_lineups {args.num_lineups} '
+        f'--randomness {args.randomness} '
+        f'--min_unique {args.min_unique} '
+        f'--min_salary {args.min_salary} '
+        f'--min_projection {args.min_projection}'
+    )
     run_command(engine_cmd, "Phase 1: Generating Lineups")
     
     # 2. Run Ranker
