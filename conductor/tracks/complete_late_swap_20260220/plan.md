@@ -9,15 +9,11 @@
 - [x] Task: Create a baseline test suite with a mock `DKEntries.csv` and projections.
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Research & Baseline' (Protocol in workflow.md)
 
-## Phase 2: Core Implementation
+## Phase 2: Core Implementation [checkpoint: a524455]
 - [x] Task: Implement robust player locking logic based on (LOCKED) string in Name + ID. (Commit: 1212ab7)
 - [x] Task: Implement the PuLP optimization loop for per-lineup re-optimization. (Commit: 84c4d96)
-    - [ ] Write Tests for optimization logic
-    - [ ] Implement optimization logic
 - [x] Task: Implement flexible roster slotting to maximize late-swap options. (Commit: 708f13b)
-    - [ ] Write Tests for slotting logic
-    - [ ] Implement slotting logic
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Core Implementation' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 2: Core Implementation' (Protocol in workflow.md)
 
 ## Phase 3: Export & Validation
 - [ ] Task: Finalize the CSV export logic to match DraftKings' late-swap format.
