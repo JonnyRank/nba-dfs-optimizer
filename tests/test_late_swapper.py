@@ -2,6 +2,7 @@ import os
 import sys
 import pytest
 import pandas as pd
+from datetime import datetime
 from unittest.mock import patch, MagicMock
 
 # Add root to path
@@ -72,3 +73,45 @@ def test_solve_late_swap_no_valid_solution():
     
     # Should return original if failed
     assert new_lineup == current_lineup
+
+def test_is_player_locked():
+    # Mock player series with Name + ID
+    p_locked = pd.Series({"Name + ID": "Kam Jones (42063199) (LOCKED)"})
+    p_unlocked = pd.Series({"Name + ID": "Shai Gilgeous-Alexander (42062854)"})
+    
+    assert late_swapper.is_player_locked(p_locked) is True
+    assert late_swapper.is_player_locked(p_unlocked) is False
+
+def test_solve_late_swap_with_pool_locking():
+    # Setup pool
+    projs_file = os.path.join(TEST_DATA_DIR, "NBA-Projs-2026-02-20.csv")
+    entries_file = os.path.join(TEST_DATA_DIR, "DKEntries.csv")
+    df_pool = late_swapper.load_data(projs_file, entries_file)
+    
+    # In the updated mock data (DKEntries.csv), Giannis is locked in the pool
+    # SGA is NOT locked in the pool (BKN@OKC 10:00PM ET)
+    
+    current_lineup = [
+        "Giannis Antetokounmpo (42062851)", # Should be locked via pool data
+        "Shai Gilgeous-Alexander (42062854)", # Should NOT be locked
+        "Gregory Jackson (42063100)", 
+        "Taylor Hendricks (42063299)",
+        "Tristan Vukcevic (42063159)",
+        "Javon Small (42063406)",
+        "Jalen Johnson (42062857)",
+        "Zion Williamson (42062920)"
+    ]
+    
+    new_lineup = late_swapper.solve_late_swap(df_pool, current_lineup, min_salary=40000)
+    
+    # Giannis must still be there
+    assert any("42062851" in p for p in new_lineup), "Giannis was locked in pool but not found"
+    
+    # SGA could potentially be swapped if there's a better option
+    df_pool_low_sga = df_pool.copy()
+    df_pool_low_sga.loc[df_pool_low_sga["ID"] == "42062854", "Projection"] = 0.0
+    
+    new_lineup_swapped = late_swapper.solve_late_swap(df_pool_low_sga, current_lineup, min_salary=40000)
+    
+    assert any("42062851" in p for p in new_lineup_swapped), "Giannis must stay"
+    assert not any("42062854" in p for p in new_lineup_swapped), "SGA should have been swapped out due to low projection"

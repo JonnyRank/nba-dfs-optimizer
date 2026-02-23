@@ -17,6 +17,14 @@ def get_latest_projections() -> str:
     return max(files, key=os.path.basename)
 
 
+def is_player_locked(player_series: pd.Series) -> bool:
+    """
+    Determines if a player is locked based on the (LOCKED) string in Name + ID.
+    """
+    name_id = str(player_series.get("Name + ID", ""))
+    return "(LOCKED)" in name_id.upper()
+
+
 def load_data(projs_file: str, entries_file: str) -> pd.DataFrame:
     """Loads player pool and projections."""
     # We load the player pool from the bottom of the entries file
@@ -84,8 +92,7 @@ def solve_late_swap(df_pool: pd.DataFrame, current_lineup_ids: List[str], min_sa
         List[str]: The new optimal lineup (Name + ID strings).
     """
     # 1. Identify Locked Players in this specific lineup
-    # We look for the "(LOCKED)" suffix in the lineup strings.
-
+    # We check BOTH the "(LOCKED)" suffix in the lineup row AND the (LOCKED) status in the pool.
     locked_ids = set()
 
     # Regex to extract ID from "Name (ID)" or "Name (ID) (LOCKED)"
@@ -100,8 +107,16 @@ def solve_late_swap(df_pool: pd.DataFrame, current_lineup_ids: List[str], min_sa
     for p_str in current_lineup_ids:
         pid = get_id(p_str)
         if pid:
+            # Check if entry row says locked
             if is_locked_str(p_str):
                 locked_ids.add(pid)
+                continue
+            
+            # Check if player data in pool indicates lock
+            player_data = df_pool[df_pool["ID"] == pid]
+            if not player_data.empty:
+                if is_player_locked(player_data.iloc[0]):
+                    locked_ids.add(pid)
 
     # 2. Setup Solver
     prob = pulp.LpProblem("NBA_Late_Swap", pulp.LpMaximize)
