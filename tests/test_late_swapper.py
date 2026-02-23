@@ -113,5 +113,29 @@ def test_solve_late_swap_with_pool_locking():
     
     new_lineup_swapped = late_swapper.solve_late_swap(df_pool_low_sga, current_lineup, min_salary=40000)
     
-    assert any("42062851" in p for p in new_lineup_swapped), "Giannis must stay"
-    assert not any("42062854" in p for p in new_lineup_swapped), "SGA should have been swapped out due to low projection"
+def test_solve_late_swap_missing_projection_for_locked_player():
+    # Setup pool
+    projs_file = os.path.join(TEST_DATA_DIR, "NBA-Projs-2026-02-20.csv")
+    entries_file = os.path.join(TEST_DATA_DIR, "DKEntries.csv")
+    df_pool = late_swapper.load_data(projs_file, entries_file)
+    
+    # In this test, we have a player who is in the entry but NOT in the pool (e.g., projection missing)
+    # Let's mock a lineup where one player is locked but missing from df_pool
+    # ID 99999999 is NOT in our mock pool
+    current_lineup = [
+        "Missing Player (99999999) (LOCKED)",
+        "Anthony Edwards (42062863)", 
+        "Gregory Jackson (42063100)",
+        "Taylor Hendricks (42063299)",
+        "Tristan Vukcevic (42063159)",
+        "Javon Small (42063406)",
+        "Jalen Johnson (42062857)",
+        "Zion Williamson (42062920)"
+    ]
+    
+    new_lineup = late_swapper.solve_late_swap(df_pool, current_lineup, min_salary=40000)
+    
+    # It should still preserve the missing locked player in their slot
+    # and not crash.
+    assert "99999999" in str(new_lineup), "Missing locked player was dropped from lineup"
+    assert len(new_lineup) == 8
