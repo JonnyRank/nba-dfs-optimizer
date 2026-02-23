@@ -67,7 +67,8 @@ def generate_single_lineup(df: pd.DataFrame, randomness: float, min_salary: int)
             # We use a copy to avoid modifying the shared dataframe (though MP usually pickles it)
             # New: Normal Distribution where randomness is the Standard Deviation %
             std_dev = df['Projection'] * randomness
-            sim_proj = np.random.normal(df['Projection'], std_dev)
+            # Ensure sim_proj remains a Series to keep indices aligned with df.index
+            sim_proj = pd.Series(np.random.normal(df['Projection'], std_dev), index=df.index)
         else:
             sim_proj = df['Projection']
         
