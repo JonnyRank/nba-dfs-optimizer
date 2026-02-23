@@ -14,7 +14,7 @@
 - [x] Task: Implement the PuLP optimization loop for per-lineup re-optimization. (Commit: 84c4d96)
     - [ ] Write Tests for optimization logic
     - [ ] Implement optimization logic
-- [ ] Task: Implement flexible roster slotting to maximize late-swap options.
+- [x] Task: Implement flexible roster slotting to maximize late-swap options. (Commit: 708f13b)
     - [ ] Write Tests for slotting logic
     - [ ] Implement slotting logic
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Core Implementation' (Protocol in workflow.md)
