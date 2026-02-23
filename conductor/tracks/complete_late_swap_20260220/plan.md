@@ -10,7 +10,7 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Research & Baseline' (Protocol in workflow.md)
 
 ## Phase 2: Core Implementation
-- [~] Task: Implement robust player locking logic based on game timestamps.
+- [x] Task: Implement robust player locking logic based on (LOCKED) string in Name + ID. (Commit: 1212ab7)
 - [ ] Task: Implement the PuLP optimization loop for per-lineup re-optimization.
     - [ ] Write Tests for optimization logic
     - [ ] Implement optimization logic
@@ -23,3 +23,6 @@
 - [ ] Task: Finalize the CSV export logic to match DraftKings' late-swap format.
 - [ ] Task: Perform an end-to-end dry run with real data.
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Export & Validation' (Protocol in workflow.md)
+
+## Phase: Review Fixes
+- [x] Task: Apply review suggestions for string-based locking logic. (Commit: 1212ab7)
