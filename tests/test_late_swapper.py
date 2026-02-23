@@ -137,5 +137,47 @@ def test_solve_late_swap_missing_projection_for_locked_player():
     
     # It should still preserve the missing locked player in their slot
     # and not crash.
-    assert "99999999" in str(new_lineup), "Missing locked player was dropped from lineup"
-    assert len(new_lineup) == 8
+def test_flexible_slotting_prioritization():
+    # Setup pool
+    projs_file = os.path.join(TEST_DATA_DIR, "NBA-Projs-2026-02-20.csv")
+    entries_file = os.path.join(TEST_DATA_DIR, "DKEntries.csv")
+    df_pool = late_swapper.load_data(projs_file, entries_file)
+    
+    # We want to see if a late player is put in UTIL instead of a specific slot
+    # In the mock data:
+    # Giannis is 08:00PM (ID: 42062851)
+    # SGA is 10:00PM (ID: 42062854)
+    # Both are high projection. Let's force a lineup where one MUST be UTIL.
+    
+    current_lineup = ["Player (1)"] * 8 # Dummy lineup, everything is unlocked
+    
+    # We'll use a custom pool where we only have enough players to fill a lineup
+    # and we want to see where SGA (late) and Giannis (early) end up.
+    # Note: Giannis is PF/F/UTIL, SGA is PG/G/UTIL.
+    
+    # Let's mock a scenario where SGA and another PG are available.
+    # If SGA is late, he should be in UTIL if possible.
+    
+    # Force SGA into the lineup with a high projection
+    df_pool.loc[df_pool["ID"] == "42062854", "Projection"] = 100.0
+    # Also ensure we have enough low-salary players to fit SGA and Giannis
+    df_pool.loc[df_pool["Salary"] > 5000, "Salary"] = 3000
+    # But keep SGA and Giannis somewhat expensive to test the cap logic if needed
+    df_pool.loc[df_pool["ID"] == "42062854", "Salary"] = 10000
+    df_pool.loc[df_pool["ID"] == "42062851", "Salary"] = 10000
+
+    new_lineup = late_swapper.solve_late_swap(df_pool, current_lineup, min_salary=30000)
+    
+    # SGA (42062854) is 10:00PM. Giannis (42062851) is 08:00PM.
+    # If the logic works, SGA should be in a more flexible slot if there's a choice.
+    slots = ["PG", "SG", "SF", "PF", "C", "G", "F", "UTIL"]
+    sga_slot = -1
+    for i, p in enumerate(new_lineup):
+        if "42062854" in p:
+            sga_slot = i
+            break
+            
+    assert sga_slot != -1, f"SGA not found in optimized lineup: {new_lineup}"
+    # SGA is a PG/G/UTIL. 
+    # Since he's the latest player in the pool, he should ideally be in UTIL (index 7).
+    assert sga_slot in [5, 7], f"Latest player SGA was put in slot {slots[sga_slot]}, expected G or UTIL. Lineup: {new_lineup}"

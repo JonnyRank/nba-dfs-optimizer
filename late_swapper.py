@@ -80,15 +80,31 @@ def parse_entries(entries_file: str) -> pd.DataFrame:
     return df
 
 
+def get_game_time(game_info: str) -> datetime:
+    """Extracts datetime from game info string."""
+    match = re.search(r"(\d{2}/\d{2}/\d{4} \d{2}:\d{2}[AP]M)", str(game_info))
+    if not match:
+        return datetime(1970, 1, 1) # Fallback for sorting
+    try:
+        return datetime.strptime(match.group(1), "%m/%d/%Y %I:%M%p")
+    except ValueError:
+        return datetime(1970, 1, 1)
+
+
 def solve_late_swap(df_pool: pd.DataFrame, current_lineup_ids: List[str], min_salary: int) -> List[str]:
     """
     Optimizes the remaining slots of a lineup given a set of already locked players.
     """
     slots = ["PG", "SG", "SF", "PF", "C", "G", "F", "UTIL"]
+    # Flexibility scores: higher is more flexible
+    flex_scores = {
+        "UTIL": 3,
+        "G": 2, "F": 2,
+        "PG": 1, "SG": 1, "SF": 1, "PF": 1, "C": 1
+    }
+    
     locked_ids = set()
     lineup_map = {}
-    
-    # Track which slots are already filled by missing/locked players
     filled_slots = [False] * len(slots)
 
     def get_id(s):
@@ -113,17 +129,9 @@ def solve_late_swap(df_pool: pd.DataFrame, current_lineup_ids: List[str], min_sa
         if is_locked:
             if pid:
                 locked_ids.add(pid)
-            
-            # Check if this locked player is in our pool
             if pid and not df_pool[df_pool["ID"] == pid].empty:
-                # We'll let the solver handle this via constraints to allow slot flexibility
-                # for OTHER locked players if they aren't in their "ideal" slot yet?
-                # Actually, for late swap, we usually keep them in their slot unless 
-                # we are doing the "flexible slotting" optimization.
-                # For now, let's let the solver handle it.
                 pass
             else:
-                # Missing from pool but locked: we MUST keep them in this exact slot
                 lineup_map[slots[i]] = p_str
                 filled_slots[i] = True
 
@@ -131,15 +139,33 @@ def solve_late_swap(df_pool: pd.DataFrame, current_lineup_ids: List[str], min_sa
     prob = pulp.LpProblem("NBA_Late_Swap", pulp.LpMaximize)
     player_vars = pulp.LpVariable.dicts("player", df_pool.index, cat=pulp.LpBinary)
 
-    # Objective
-    prob += pulp.lpSum(
-        [df_pool.loc[i, "Projection"] * player_vars[i] for i in df_pool.index]
-    )
+    # 3. Objective with Slotting Incentive
+    # We want late players in flexible slots.
+    # Incentive = Sum(player_in_slot[i, s] * LateScore(i) * FlexScore(s)) * SmallConstant
+    # Base objective is Projections
+    base_obj = pulp.lpSum([df_pool.loc[i, "Projection"] * player_vars[i] for i in df_pool.index])
+    
+    available_slots = [slots[i] for i, filled in enumerate(filled_slots) if not filled]
+    slot_vars = pulp.LpVariable.dicts("slot", (df_pool.index, available_slots), cat=pulp.LpBinary)
 
-    # Standard Constraints
-    # Salary Cap: Total must be <= 50000. 
-    # For missing players, we don't know salary, so we assume 0 for now (best effort).
-    # In a real scenario, they should be in df_pool if load_data is fixed.
+    incentive_terms = []
+    # Calculate latest game time for scaling
+    df_pool["StartTime"] = df_pool["Game Info"].apply(get_game_time)
+    min_time = df_pool["StartTime"].min()
+    max_time = df_pool["StartTime"].max()
+    time_range = (max_time - min_time).total_seconds() or 1.0
+
+    for i in df_pool.index:
+        time_score = (df_pool.loc[i, "StartTime"] - min_time).total_seconds() / time_range
+        for s in available_slots:
+            # Weight: late players (time_score near 1) * flexible slots (flex_score 2 or 3)
+            weight = time_score * flex_scores.get(s, 1) * 0.001
+            incentive_terms.append(slot_vars[i][s] * weight)
+
+    prob += base_obj + pulp.lpSum(incentive_terms)
+
+    # 4. Constraints
+    # Salary Cap
     prob += (
         pulp.lpSum([df_pool.loc[i, "Salary"] * player_vars[i] for i in df_pool.index])
         <= config.SALARY_CAP
@@ -149,21 +175,17 @@ def solve_late_swap(df_pool: pd.DataFrame, current_lineup_ids: List[str], min_sa
         >= min_salary
     )
     
-    # Roster Size: Solver fills the REMAINING slots
+    # Roster Size
     num_to_fill = sum(1 for filled in filled_slots if not filled)
     prob += pulp.lpSum([player_vars[i] for i in df_pool.index]) == num_to_fill
 
-    # Lock Constraints for players IN the pool
+    # Lock Constraints
     for pid in locked_ids:
         indices = df_pool.index[df_pool["ID"] == pid].tolist()
         if indices:
             prob += player_vars[indices[0]] == 1
 
-    # Positional Constraints
-    # Only for slots that are NOT already filled
-    available_slots = [slots[i] for i, filled in enumerate(filled_slots) if not filled]
-    slot_vars = pulp.LpVariable.dicts("slot", (df_pool.index, available_slots), cat=pulp.LpBinary)
-
+    # Positional Eligibility
     for i in df_pool.index:
         prob += pulp.lpSum([slot_vars[i][s] for s in available_slots]) == player_vars[i]
         pos_str = str(df_pool.loc[i, "Roster Position"])
