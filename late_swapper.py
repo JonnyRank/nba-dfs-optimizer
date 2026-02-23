@@ -277,12 +277,8 @@ def main():
         # Load Current Entries
         df_entries, entry_cols = parse_entries_robust(config.ENTRIES_PATH)
         
-        # Valid entries have an Entry ID
-        # Entry ID is usually the first column
-        valid_mask = df_entries[all_cols[0]].notna() if 'all_cols' in locals() else df_entries.iloc[:, 0].notna()
-        # Let's be more precise with the mask
+        # Valid entries have an Entry ID (first column)
         valid_mask = df_entries[entry_cols[0]].notna()
-        
         valid_entries = df_entries[valid_mask]
         print(f"Found {len(valid_entries)} entries to check for swap.")
 
@@ -318,9 +314,12 @@ def main():
         timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
         output_file = os.path.join(config.OUTPUT_DIR, f"late-swap-entries-{timestamp}.csv")
         
-        # We only output the valid entry columns and rows
-        df_output = df_entries[entry_cols]
-        df_output = df_output[df_output[entry_cols[0]].notna()]
+        # Strictly define the required DraftKings columns
+        required_cols = ["Entry ID", "Contest Name", "Contest ID", "Entry Fee", "PG", "SG", "SF", "PF", "C", "G", "F", "UTIL"]
+        
+        # We only output the required columns and rows that have an Entry ID
+        df_output = df_entries[required_cols]
+        df_output = df_output[df_output["Entry ID"].notna()]
         
         df_output.to_csv(output_file, index=False, na_rep="")
 

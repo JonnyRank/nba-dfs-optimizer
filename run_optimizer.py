@@ -21,7 +21,10 @@ def run_command(command, description):
 def main():
     parser = argparse.ArgumentParser(description="NBA DFS Optimizer - Main Orchestrator")
     
-    # Engine Arguments
+    # Mode Toggle
+    parser.add_argument("--late_swap", action="store_true", help="Run late swap re-optimization instead of full generation.")
+
+    # Engine/Late-Swap Arguments
     parser.add_argument("-n", "--num_lineups", type=int, default=20, help="Number of lineups to generate (Default: 20)")
     parser.add_argument("-r", "--randomness", type=float, default=0.1, help="Randomness factor 0.0-1.0 (Default: 0.1)")
     parser.add_argument("-u", "--min_unique", type=int, default=1, help="Min unique players between lineups (Default: 1)")
@@ -35,18 +38,26 @@ def main():
     
     args = parser.parse_args()
     
-    # 1. Run Engine
-    # We use the current python interpreter
     python_exe = sys.executable
-    
-    engine_cmd = (
-        f'"{python_exe}" engine.py '
-        f'--num_lineups {args.num_lineups} '
-        f'--randomness {args.randomness} '
-        f'--min_unique {args.min_unique} '
-        f'--min_salary {args.min_salary} '
-        f'--min_projection {args.min_projection}'
-    )
+
+    if args.late_swap:
+        # --- LATE SWAP PIPELINE ---
+        print("\n=== RUNNING LATE SWAP RE-OPTIMIZATION ===")
+        late_swap_cmd = (
+            f'"{python_exe}" late_swapper.py '
+            f'--min_salary {args.min_salary} '
+            f'--min_projection {args.min_projection}'
+        )
+        run_command(late_swap_cmd, "Late Swap Optimization")
+        
+        print("\n===========================================")
+        print("Late Swap Complete!")
+        print("Check your exports/ folder for the 'late-swap-entries' file.")
+        print("===========================================")
+        return
+
+    # --- DEFAULT PIPELINE ---
+    # 1. Run Engine
     run_command(engine_cmd, "Phase 1: Generating Lineups")
     
     # 2. Run Ranker
