@@ -11,7 +11,7 @@
 
 ## Phase 2: Core Implementation
 - [x] Task: Implement robust player locking logic based on (LOCKED) string in Name + ID. (Commit: 1212ab7)
-- [ ] Task: Implement the PuLP optimization loop for per-lineup re-optimization.
+- [x] Task: Implement the PuLP optimization loop for per-lineup re-optimization. (Commit: 84c4d96)
     - [ ] Write Tests for optimization logic
     - [ ] Implement optimization logic
 - [ ] Task: Implement flexible roster slotting to maximize late-swap options.
