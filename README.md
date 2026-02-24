@@ -54,7 +54,7 @@ python run_optimizer.py -n 50 -r 0.2 -u 2
 | `--num_lineups` | `-n` | 20 | Total lineups to generate and export. |
 | `--randomness` | `-r` | 0.1 | Random variance applied to projections (0.0 to 1.0). |
 | `--min_unique` | `-u` | 1 | Min unique players that must differ between every lineup. |
-| `--proj_weight" | `-pw` | 0.85 | Weight for the Projection Rank in final scoring. |
+| `--proj_weight` | `-pw` | 0.85 | Weight for the Projection Rank in final scoring. |
 | `--own_weight` | `-ow` | 0.0 | Weight for the Total Ownership Rank. |
 | `--geo_weight` | `-gw` | 0.15 | Weight for the Geomean Ownership Rank. |
 
