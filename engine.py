@@ -11,6 +11,7 @@ from typing import List, Set, Tuple
 import concurrent.futures
 import multiprocessing
 import config
+import time
 
 # --- DATA LOADING ---
 def get_latest_projections() -> str:
@@ -228,10 +229,16 @@ def main():
 
         candidates = []
         
+        # Start the timer
+        start_time = time.perf_counter()
+        
         with concurrent.futures.ProcessPoolExecutor() as executor:
             # We must pass df, randomness, and min_salary to each worker
             # Since df is static, it gets pickled once (or shared via COW on Linux, but picked on Windows)
             futures = [executor.submit(generate_single_lineup, df, args.randomness, args.min_salary) for _ in range(num_tasks)]
+            
+            # Calculate the iteration interval for 20% chunks once, outside the loop
+            interval = max(1, num_tasks // 5)
             
             for i, future in enumerate(concurrent.futures.as_completed(futures)):
                 try:
@@ -239,13 +246,20 @@ def main():
                     if names and indices:
                         candidates.append((names, indices))
                     
-                    if (i + 1) % 20 == 0:
+                    # Only do the math and print when hitting the interval or the final task
+                    if (i + 1) % interval == 0 or (i + 1) == num_tasks:
                         percentage = int(((i + 1) / num_tasks) * 100)
                         print(f"Lineups generated: {percentage}%")
+                        
                 except Exception as exc:
                     print(f"Worker generated exception: {exc}")
 
+        # Stop the timer and calculate the duration
+        end_time = time.perf_counter()
+        execution_time = end_time - start_time
+
         print(f"Total candidates generated: {len(candidates)}")
+        print(f"Total solver time: {execution_time:.2f} seconds")
         
         # Filter for Uniqueness / Min Unique
         final_lineups = []
