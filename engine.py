@@ -12,6 +12,7 @@ import concurrent.futures
 import multiprocessing
 import config
 import time
+import itertools
 
 # --- DATA LOADING ---
 def get_latest_projections() -> str:
@@ -49,39 +50,33 @@ def load_data(projs_file: str, entries_file: str) -> pd.DataFrame:
     df['StartTime'] = df['Game Info'].apply(parse_time)
     df['Salary'] = pd.to_numeric(df['Salary'])
     
+    df['Game'] = df['Game Info'].str.split(' ').str[0]
     return df
 
 # --- WORKER FUNCTION (MUST BE TOP-LEVEL) ---
 def generate_single_lineup(df: pd.DataFrame, randomness: float, min_salary: int) -> Tuple[List[str], Set[int]]:
-    """
-    Worker function to generate one lineup with simulated projections.
-    Independent of other lineups (no exclusion constraints).
-    """
     try:
-        # Re-seed numpy in each process to ensuring true randomness
         np.random.seed()
-        
         prob = pulp.LpProblem("NBA_DFS_Worker", pulp.LpMaximize)
         
-        # Apply Randomness
+        # Convert necessary columns to native Python dicts for instant lookup in loops
+        salary_dict = df['Salary'].to_dict()
+        pos_dict = df['Roster Position'].to_dict()
+        
         if randomness > 0:
-            # We use a copy to avoid modifying the shared dataframe (though MP usually pickles it)
-            # New: Normal Distribution where randomness is the Standard Deviation %
             std_dev = df['Projection'] * randomness
-            # Ensure sim_proj remains a Series to keep indices aligned with df.index
             sim_proj = pd.Series(np.random.normal(df['Projection'], std_dev), index=df.index)
         else:
-            sim_proj = df['Projection']
+            sim_proj = df['Projection'].to_dict()
         
-        # Decision Variables
         player_vars = pulp.LpVariable.dicts("player", df.index, cat=pulp.LpBinary)
         
         # Objective
         prob += pulp.lpSum([sim_proj[i] * player_vars[i] for i in df.index])
         
-        # Constraints
-        prob += pulp.lpSum([df.loc[i, 'Salary'] * player_vars[i] for i in df.index]) <= config.SALARY_CAP
-        prob += pulp.lpSum([df.loc[i, 'Salary'] * player_vars[i] for i in df.index]) >= min_salary
+        # Constraints (Using salary_dict instead of df.loc)
+        prob += pulp.lpSum([salary_dict[i] * player_vars[i] for i in df.index]) <= config.SALARY_CAP
+        prob += pulp.lpSum([salary_dict[i] * player_vars[i] for i in df.index]) >= min_salary
         prob += pulp.lpSum([player_vars[i] for i in df.index]) == config.ROSTER_SIZE
         
         # Positional
@@ -90,7 +85,8 @@ def generate_single_lineup(df: pd.DataFrame, randomness: float, min_salary: int)
         
         for i in df.index:
             prob += pulp.lpSum([slot_vars[i][s] for s in slots]) == player_vars[i]
-            pos_str = str(df.loc[i, 'Roster Position'])
+            pos_str = str(pos_dict[i]) # Using pos_dict instead of df.loc
+            
             for s in slots:
                 eligible = False
                 if s == 'UTIL':
@@ -109,12 +105,16 @@ def generate_single_lineup(df: pd.DataFrame, randomness: float, min_salary: int)
             prob += pulp.lpSum([slot_vars[i][s] for i in df.index]) == 1
 
         # Min Games
-        df['Game'] = df['Game Info'].str.split(' ').str[0]
+        # The 'Game' column is now pre-processed in load_data
         games = df['Game'].unique()
         game_vars = pulp.LpVariable.dicts("game", games, cat=pulp.LpBinary)
         
+        # Use pandas groupby to create a dictionary of {game: [list_of_indices]} 
+        # This completely avoids doing df[df['Game'] == game] inside the loop
+        game_to_players = df.groupby('Game').groups 
+        
         for game in games:
-            players_in_game = df[df['Game'] == game].index
+            players_in_game = game_to_players[game]
             for i in players_in_game:
                 prob += game_vars[game] >= player_vars[i] / 10.0
                 
@@ -129,21 +129,21 @@ def generate_single_lineup(df: pd.DataFrame, randomness: float, min_salary: int)
             
         lineup_names = []
         selected_indices = set()
+        
+        # Create name dictionary to avoid .loc during result extraction
+        name_dict = df['Name + ID'].to_dict()
         for i in df.index:
             if pulp.value(player_vars[i]) > 0.5:
-                lineup_names.append(df.loc[i, 'Name + ID'])
+                lineup_names.append(name_dict[i])
                 selected_indices.add(i)
                 
         return lineup_names, selected_indices
         
     except Exception:
-        # In MP, printing tracebacks can be messy, but let's try
         traceback.print_exc()
         return None, None
 
 def slot_lineup_by_time(lineup_names: List[str], df: pd.DataFrame) -> List[str]:
-    # This is fast enough to run sequentially or in the worker.
-    # Let's keep it sequential post-processing to keep worker simple.
     players = df[df['Name + ID'].isin(lineup_names)].copy()
     if len(players) != 8:
         return ["ERROR"] * 8
@@ -151,22 +151,31 @@ def slot_lineup_by_time(lineup_names: List[str], df: pd.DataFrame) -> List[str]:
     slot_weights = {'PG': 1, 'SG': 1, 'SF': 1, 'PF': 1, 'C': 1, 'G': 10, 'F': 10, 'UTIL': 100}
     slots = ['PG', 'SG', 'SF', 'PF', 'C', 'G', 'F', 'UTIL']
     
-    prob = pulp.LpProblem("Slotting", pulp.LpMaximize)
-    slot_vars = pulp.LpVariable.dicts("slot", (players.index, slots), cat=pulp.LpBinary)
-    
     start_times = pd.to_datetime(players['StartTime'], errors='coerce')
     min_time = start_times.min()
     players['TimeScore'] = (start_times - min_time).dt.total_seconds() / 60.0
-    players['TimeScore'] = players['TimeScore'].fillna(0) # Handle any NaT if present
+    players['TimeScore'] = players['TimeScore'].fillna(0) 
 
+    # --- NEW: Convert to dictionaries for O(1) lookup ---
+    time_score_dict = players['TimeScore'].to_dict()
+    pos_dict = players['Roster Position'].to_dict()
+    name_dict = players['Name + ID'].to_dict()
+
+    prob = pulp.LpProblem("Slotting", pulp.LpMaximize)
+    slot_vars = pulp.LpVariable.dicts("slot", (players.index, slots), cat=pulp.LpBinary)
+    
+    # Use time_score_dict instead of players.loc
     prob += pulp.lpSum([
-        slot_vars[i][s] * players.loc[i, 'TimeScore'] * slot_weights[s]
+        slot_vars[i][s] * time_score_dict[i] * slot_weights[s]
         for i in players.index for s in slots
     ])
     
     for i in players.index:
         prob += pulp.lpSum([slot_vars[i][s] for s in slots]) == 1
-        pos_str = str(players.loc[i, 'Roster Position'])
+        
+        # Use pos_dict instead of players.loc
+        pos_str = str(pos_dict[i]) 
+        
         for s in slots:
             eligible = False
             if s == 'UTIL':
@@ -190,7 +199,8 @@ def slot_lineup_by_time(lineup_names: List[str], df: pd.DataFrame) -> List[str]:
     for i in players.index:
         for s in slots:
             if pulp.value(slot_vars[i][s]) > 0.5:
-                final_lineup[s] = players.loc[i, 'Name + ID']
+                # Use name_dict instead of players.loc
+                final_lineup[s] = name_dict[i]
                 
     return [final_lineup.get(s, "EMPTY") for s in slots]
 
@@ -220,12 +230,15 @@ def main():
         df = df[df['Projection'] >= args.min_projection]
         print(f"Loaded {len(df)} players (after min projection filter).")
         
+        # DEPRECATED - randomness of 0.25 renders duplicates mathematically improbable
         # Strategy: Generate more than needed to account for duplicates/overlap
+        # target_lineups = args.num_lineups
+        # oversample_factor = 1 if args.min_unique > 1 else 1.25
+        # target_lineups = int(target_lineups * oversample_factor)
+
         target_lineups = args.num_lineups
-        oversample_factor = 2 if args.min_unique > 1 else 1.25
-        num_tasks = int(target_lineups * oversample_factor)
         
-        print(f"Spinning up pool with {multiprocessing.cpu_count()} cores to generate ~{num_tasks} candidates...")
+        print(f"Spinning up pool with {multiprocessing.cpu_count()} cores to generate ~{target_lineups} candidates...")
 
         candidates = []
         
@@ -235,10 +248,10 @@ def main():
         with concurrent.futures.ProcessPoolExecutor() as executor:
             # We must pass df, randomness, and min_salary to each worker
             # Since df is static, it gets pickled once (or shared via COW on Linux, but picked on Windows)
-            futures = [executor.submit(generate_single_lineup, df, args.randomness, args.min_salary) for _ in range(num_tasks)]
+            futures = [executor.submit(generate_single_lineup, df, args.randomness, args.min_salary) for _ in range(target_lineups)]
             
             # Calculate the iteration interval for 20% chunks once, outside the loop
-            interval = max(1, num_tasks // 5)
+            interval = max(1, target_lineups // 5)
             
             for i, future in enumerate(concurrent.futures.as_completed(futures)):
                 try:
@@ -247,8 +260,8 @@ def main():
                         candidates.append((names, indices))
                     
                     # Only do the math and print when hitting the interval or the final task
-                    if (i + 1) % interval == 0 or (i + 1) == num_tasks:
-                        percentage = int(((i + 1) / num_tasks) * 100)
+                    if (i + 1) % interval == 0 or (i + 1) == target_lineups:
+                        percentage = int(((i + 1) / target_lineups) * 100)
                         print(f"Lineups generated: {percentage}%")
                         
                 except Exception as exc:
@@ -262,35 +275,51 @@ def main():
         print(f"Total solver time: {execution_time:.2f} seconds")
         
         # Filter for Uniqueness / Min Unique
-        final_lineups = []
+        valid_raw_names = []
         selected_indices_list = []
+        duplicates_removed = 0
         
         print("Filtering candidates for uniqueness...")
         for names, indices in candidates:
-            if len(final_lineups) >= target_lineups:
+            if len(valid_raw_names) >= target_lineups:
                 break
                 
             is_valid = True
             for prev_indices in selected_indices_list:
-                # Calculate overlap
-                # Intersection size
                 overlap = len(indices.intersection(prev_indices))
-                # Max allowed overlap = 8 - min_unique
                 if overlap > (config.ROSTER_SIZE - args.min_unique):
                     is_valid = False
+                    duplicates_removed += 1
                     break
             
             if is_valid:
-                # Post-process slotting (fast)
-                slotted = slot_lineup_by_time(names, df)
-                final_lineups.append(slotted)
+                valid_raw_names.append(names)
                 selected_indices_list.append(indices)
         
-        print(f"Final valid lineups selected: {len(final_lineups)}")
+        excess_discarded = len(candidates) - len(valid_raw_names) - duplicates_removed
         
-        if len(final_lineups) < target_lineups:
+        print(f"Duplicates removed (min_unique constraint): {duplicates_removed}")
+        print(f"Excess candidates discarded unread: {excess_discarded}")
+        
+        if len(valid_raw_names) < target_lineups:
             print("Warning: Could not find enough unique lineups from the candidate pool.")
-            print("Try increasing randomness or running again.")
+
+        # Parallelize the slotting process
+        print("Slotting final lineups by start time...")
+        final_lineups = []
+        
+        with concurrent.futures.ProcessPoolExecutor() as executor:
+            # map() executes in parallel but yields results in the original order
+            results = executor.map(
+                slot_lineup_by_time,
+                valid_raw_names,
+                itertools.repeat(df, len(valid_raw_names))
+            )
+            
+            for slotted in results:
+                final_lineups.append(slotted)
+
+        print(f"Final valid lineups slotted and selected: {len(final_lineups)}")
 
         # Save
         if not os.path.exists(config.LINEUP_POOL_DIR):
