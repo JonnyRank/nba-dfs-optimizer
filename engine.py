@@ -156,7 +156,7 @@ def slot_lineup_by_time(lineup_names: List[str], df: pd.DataFrame) -> List[str]:
     start_times = pd.to_datetime(players['StartTime'], errors='coerce')
     min_time = start_times.min()
     players['TimeScore'] = (start_times - min_time).dt.total_seconds() / 60.0
-    players['TimeScore'].fillna(0, inplace=True) # Handle any NaT if present
+    players['TimeScore'] = players['TimeScore'].fillna(0) # Handle any NaT if present
 
     prob += pulp.lpSum([
         slot_vars[i][s] * players.loc[i, 'TimeScore'] * slot_weights[s]
