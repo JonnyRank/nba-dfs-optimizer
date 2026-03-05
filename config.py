@@ -16,11 +16,16 @@ MIN_PROJECTION = 10.0
 # Users should set these in a .env file locally
 ENTRIES_PATH = os.getenv("NBA_ENTRIES_PATH", "DKEntries.csv")
 PROJS_DIR = os.getenv("NBA_PROJS_DIR", "projections")
-LINEUP_DIR = os.getenv("NBA_LINEUP_DIR", "lineup-pools")
+
+# Determine base directory for lineup exports
+_base_dir = os.getenv("NBA_LINEUP_DIR", "exports")
+
+LINEUP_POOL_DIR = os.path.join(_base_dir, "lineup-pools")
+RANKED_LINEUP_DIR = os.path.join(_base_dir, "ranked-lineups")
 OUTPUT_DIR = os.getenv("NBA_OUTPUT_DIR", "exports")
 
 # Ensure directories exist
-for d in [PROJS_DIR, LINEUP_DIR, OUTPUT_DIR]:
+for d in [PROJS_DIR, LINEUP_POOL_DIR, RANKED_LINEUP_DIR, OUTPUT_DIR]:
     if not os.path.exists(d):
         try:
             os.makedirs(d, exist_ok=True)

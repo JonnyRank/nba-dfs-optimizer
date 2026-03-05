@@ -113,7 +113,7 @@ def main():
     
     try:
         # 1. Identify latest files
-        lineup_file = get_latest_file(config.LINEUP_DIR, "lineup-pool-*.csv")
+        lineup_file = get_latest_file(config.LINEUP_POOL_DIR, "lineup-pool-*.csv")
         projs_file = get_latest_file(config.PROJS_DIR, "NBA-Projs-*.csv")
         
         print(f"Ranking: {os.path.basename(lineup_file)}")
@@ -131,9 +131,11 @@ def main():
         df_ranked = rank_lineups(df_lineups, df_players, weights)
         
         # 4. Save
+        if not os.path.exists(config.RANKED_LINEUP_DIR):
+            os.makedirs(config.RANKED_LINEUP_DIR)
         # Reuse timestamp from original lineup file if possible, or just new one
         timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-        output_file = os.path.join(config.LINEUP_DIR, f"ranked-lineups-{timestamp}.csv")
+        output_file = os.path.join(config.RANKED_LINEUP_DIR, f"ranked-lineups-{timestamp}.csv")
         
         # Reorder columns to put rankings first
         cols = ['Final_Rank', 'Lineup_Score', 'Total_Projection', 'Total_Ownership', 'Geomean_Ownership', 

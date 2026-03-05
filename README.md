@@ -71,7 +71,7 @@ The project uses environment variables for path configuration to avoid exposing 
 
 - `NBA_ENTRIES_PATH`: Path to your source `DKEntries.csv`.
 - `NBA_PROJS_DIR`: Directory containing your `NBA-Projs-*.csv` files.
-- `NBA_LINEUP_DIR`: Directory where intermediate lineup pools are stored.
+- `NBA_LINEUP_DIR`: Base directory where intermediate `lineup-pools` and `ranked-lineups` subdirectories will be created.
 - `NBA_OUTPUT_DIR`: Directory where the final upload-ready files are saved.
 
 Core roster constants (salary cap, roster size, etc.) are managed in `config.py`.

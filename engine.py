@@ -153,8 +153,10 @@ def slot_lineup_by_time(lineup_names: List[str], df: pd.DataFrame) -> List[str]:
     prob = pulp.LpProblem("Slotting", pulp.LpMaximize)
     slot_vars = pulp.LpVariable.dicts("slot", (players.index, slots), cat=pulp.LpBinary)
     
-    min_time = players['StartTime'].min()
-    players['TimeScore'] = (players['StartTime'] - min_time).dt.total_seconds() / 60.0
+    start_times = pd.to_datetime(players['StartTime'], errors='coerce')
+    min_time = start_times.min()
+    players['TimeScore'] = (start_times - min_time).dt.total_seconds() / 60.0
+    players['TimeScore'].fillna(0, inplace=True) # Handle any NaT if present
 
     prob += pulp.lpSum([
         slot_vars[i][s] * players.loc[i, 'TimeScore'] * slot_weights[s]
@@ -277,12 +279,11 @@ def main():
             print("Try increasing randomness or running again.")
 
         # Save
-        if not os.path.exists(config.LINEUP_DIR):
-            os.makedirs(config.LINEUP_DIR)
-            
+        if not os.path.exists(config.LINEUP_POOL_DIR):
+            os.makedirs(config.LINEUP_POOL_DIR)
+
         timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-        output_file = os.path.join(config.LINEUP_DIR, f"lineup-pool-{timestamp}.csv")
-        
+        output_file = os.path.join(config.LINEUP_POOL_DIR, f"lineup-pool-{timestamp}.csv")        
         out_df = pd.DataFrame(final_lineups, columns=['PG', 'SG', 'SF', 'PF', 'C', 'G', 'F', 'UTIL'])
         out_df.to_csv(output_file, index=False)
         print(f"Saved {len(final_lineups)} lineups to {output_file}")
