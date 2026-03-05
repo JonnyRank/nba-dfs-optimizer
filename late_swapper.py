@@ -106,6 +106,8 @@ def solve_late_swap(df_pool: pd.DataFrame, current_lineup_ids: List[str], min_sa
     locked_ids = set()
     lineup_map = {}
     filled_slots = [False] * len(slots)
+    locked_salary_used = 0
+    locked_games = set()
 
     def get_id(s):
         m = re.search(r"\((\d+)\)", str(s))
@@ -127,29 +129,30 @@ def solve_late_swap(df_pool: pd.DataFrame, current_lineup_ids: List[str], min_sa
                     is_locked = True
         
         if is_locked:
+            # Unconditionally map the original string and mark the slot as filled
+            lineup_map[slots[i]] = p_str
+            filled_slots[i] = True
             if pid:
                 locked_ids.add(pid)
-            if pid and not df_pool[df_pool["ID"] == pid].empty:
-                pass
-            else:
-                lineup_map[slots[i]] = p_str
-                filled_slots[i] = True
+                player_data = df_pool[df_pool["ID"] == pid]
+                if not player_data.empty:
+                    # Deduct salary for the locked player
+                    locked_salary_used += player_data.iloc[0]["Salary"]
+                    # Track games covered by locked players
+                    game = player_data.iloc[0]["Game Info"].split(" ")[0]
+                    locked_games.add(game)
 
     # 2. Setup Solver
     prob = pulp.LpProblem("NBA_Late_Swap", pulp.LpMaximize)
     player_vars = pulp.LpVariable.dicts("player", df_pool.index, cat=pulp.LpBinary)
 
     # 3. Objective with Slotting Incentive
-    # We want late players in flexible slots.
-    # Incentive = Sum(player_in_slot[i, s] * LateScore(i) * FlexScore(s)) * SmallConstant
-    # Base objective is Projections
     base_obj = pulp.lpSum([df_pool.loc[i, "Projection"] * player_vars[i] for i in df_pool.index])
     
     available_slots = [slots[i] for i, filled in enumerate(filled_slots) if not filled]
     slot_vars = pulp.LpVariable.dicts("slot", (df_pool.index, available_slots), cat=pulp.LpBinary)
 
     incentive_terms = []
-    # Calculate latest game time for scaling
     df_pool["StartTime"] = df_pool["Game Info"].apply(get_game_time)
     min_time = df_pool["StartTime"].min()
     max_time = df_pool["StartTime"].max()
@@ -158,21 +161,21 @@ def solve_late_swap(df_pool: pd.DataFrame, current_lineup_ids: List[str], min_sa
     for i in df_pool.index:
         time_score = (df_pool.loc[i, "StartTime"] - min_time).total_seconds() / time_range
         for s in available_slots:
-            # Weight: late players (time_score near 1) * flexible slots (flex_score 2 or 3)
             weight = time_score * flex_scores.get(s, 1) * 0.001
             incentive_terms.append(slot_vars[i][s] * weight)
 
     prob += base_obj + pulp.lpSum(incentive_terms)
 
     # 4. Constraints
-    # Salary Cap
+    # Salary Cap (adjusted for locked players)
     prob += (
         pulp.lpSum([df_pool.loc[i, "Salary"] * player_vars[i] for i in df_pool.index])
-        <= config.SALARY_CAP
+        <= config.SALARY_CAP - locked_salary_used
     )
+    adj_min_salary = max(0, min_salary - locked_salary_used)
     prob += (
         pulp.lpSum([df_pool.loc[i, "Salary"] * player_vars[i] for i in df_pool.index])
-        >= min_salary
+        >= adj_min_salary
     )
     
     # Roster Size
@@ -180,10 +183,10 @@ def solve_late_swap(df_pool: pd.DataFrame, current_lineup_ids: List[str], min_sa
     prob += pulp.lpSum([player_vars[i] for i in df_pool.index]) == num_to_fill
 
     # Lock Constraints
-    for pid in locked_ids:
-        indices = df_pool.index[df_pool["ID"] == pid].tolist()
-        if indices:
-            prob += player_vars[indices[0]] == 1
+    # Prevent the solver from drafting ANY globally locked player into the remaining open slots.
+    for i in df_pool.index:
+        if is_player_locked(df_pool.loc[i]):
+            prob += player_vars[i] == 0
 
     # Positional Eligibility
     for i in df_pool.index:
@@ -216,7 +219,9 @@ def solve_late_swap(df_pool: pd.DataFrame, current_lineup_ids: List[str], min_sa
         for i in players_in_game:
             prob += game_vars[game] >= player_vars[i] / 10.0
 
-    prob += pulp.lpSum([game_vars[game] for game in games]) >= config.MIN_GAMES
+    # Adjust MIN_GAMES required by the games already covered by locked players
+    adj_min_games = max(0, config.MIN_GAMES - len(locked_games))
+    prob += pulp.lpSum([game_vars[game] for game in games]) >= adj_min_games
 
     # Solve
     solver = pulp.HiGHS(msg=False)
@@ -269,17 +274,34 @@ def main():
         projs_file = get_latest_projections()
         print(f"Using projections: {os.path.basename(projs_file)}")
 
-        # Load Pool
-        df_pool = load_data(projs_file, config.ENTRIES_PATH)
-        df_pool = df_pool[df_pool["Projection"] >= args.min_projection]
-        print(f"Player Pool Loaded: {len(df_pool)} players.")
-
-        # Load Current Entries
+        # 1. Load Current Entries FIRST so we know who is already drafted
         df_entries, entry_cols = parse_entries_robust(config.ENTRIES_PATH)
         
         # Valid entries have an Entry ID (first column)
         valid_mask = df_entries[entry_cols[0]].notna()
         valid_entries = df_entries[valid_mask]
+        
+        # 2. Extract all player IDs currently in any lineup
+        current_ids = set()
+        slots = ["PG", "SG", "SF", "PF", "C", "G", "F", "UTIL"]
+        for _, row in valid_entries.iterrows():
+            for s in slots:
+                val = row.get(s)
+                if pd.notna(val):
+                    match = re.search(r"\((\d+)\)", str(val))
+                    if match:
+                        current_ids.add(match.group(1))
+
+        # 3. Load Pool
+        df_pool = load_data(projs_file, config.ENTRIES_PATH)
+        
+        # 4. Filter pool: keep if projection >= min OR if they are already in a lineup
+        mask_proj = df_pool["Projection"] >= args.min_projection
+        mask_current = df_pool["ID"].isin(current_ids)
+        df_pool = df_pool[mask_proj | mask_current].copy()
+        df_pool.reset_index(drop=True, inplace=True)
+
+        print(f"Player Pool Loaded: {len(df_pool)} players.")
         print(f"Found {len(valid_entries)} entries to check for swap.")
 
         new_lineups = []
