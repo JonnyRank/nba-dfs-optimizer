@@ -43,16 +43,17 @@ The easiest way to run the full pipeline is using `run_optimizer.py`. This scrip
 # Basic run (20 lineups, default settings)
 python run_optimizer.py
 
-# Custom run (50 lineups, 20% randomness, 2 min unique players)
-python run_optimizer.py -n 50 -r 0.2 -u 2
+# Custom run (2000 lineups, 12 min projection, 25% randomness, projection weight 80%, geomean weight 20%)
+python run_optimizer.py -n 2000 -mp 12 -r 0.25 -pw 0.8 -gw 0.2
 ```
 
 #### Available Arguments:
 | Long Flag | Short Flag | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `--num_lineups` | `-n` | 20 | Total lineups to generate and export. |
+| `--min_unique` | `-u` | 1 | Minimum unique players between every lineup. |
+| `--min_projection` | `-mp` | 10 | Minimum projection for a player to be considered. |
 | `--randomness` | `-r` | 0.1 | Random variance applied to projections (0.0 to 1.0). |
-| `--min_unique` | `-u` | 1 | Min unique players that must differ between every lineup. |
 | `--proj_weight` | `-pw` | 0.85 | Weight for the Projection Rank in final scoring. |
 | `--own_weight` | `-ow` | 0.0 | Weight for the Total Ownership Rank. |
 | `--geo_weight` | `-gw` | 0.15 | Weight for the Geomean Ownership Rank. |
