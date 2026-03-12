@@ -104,9 +104,9 @@ def rank_lineups(df_lineups: pd.DataFrame, df_players: pd.DataFrame, weights: Di
 
 def main():
     parser = argparse.ArgumentParser(description="NBA DFS Lineup Sorter & Ranker")
-    parser.add_argument("--proj_weight", type=float, default=0.85, help="Weight for Projection Rank")
-    parser.add_argument("--own_weight", type=float, default=0.0, help="Weight for Total Ownership Rank")
-    parser.add_argument("--geo_weight", type=float, default=0.15, help="Weight for Geomean Ownership Rank")
+    parser.add_argument("-pw", "--proj_weight", type=float, default=0.85, help="Weight for Projection Rank (Default: 0.85)")
+    parser.add_argument("-ow", "--own_weight", type=float, default=0.0, help="Weight for Ownership Rank (Default: 0.0)")
+    parser.add_argument("-gw", "--geo_weight", type=float, default=0.15, help="Weight for Geomean Rank (Default: 0.15)")
     args = parser.parse_args()
 
     print("Starting NBA DFS Sorter & Ranker...")
