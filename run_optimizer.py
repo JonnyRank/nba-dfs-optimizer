@@ -82,10 +82,10 @@ def main():
     exporter_cmd = f'"{python_exe}" exporter.py'
     run_command(exporter_cmd, "Phase 3: Exporting to DraftKings CSV")
     
-    print("\n===========================================")
+    print("\n==================================================================")
     print("Optimization Pipeline Complete!")
     print("Check your Downloads folder for the 'upload_ready_DKEntries' file.")
-    print("===========================================")
+    print("==================================================================")
 
 if __name__ == "__main__":
     main()

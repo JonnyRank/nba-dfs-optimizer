@@ -214,7 +214,7 @@ def main():
     args = parser.parse_args()
 
     print("Starting NBA DFS Optimizer (Parallel Mode)...")
-    print(f"Settings: {args.num_lineups} lineups, {args.randomness * 100:.0f}% randomness, {args.min_unique} min unique")
+    print(f"Settings: {args.num_lineups} lineups, {args.randomness * 100:.0f}% randomness, {args.min_unique} min unique, {args.min_projection} min proj")
     
     # Check if randomness is 0
     if args.randomness <= 0:
@@ -228,7 +228,7 @@ def main():
         
         df = load_data(projs_file, config.ENTRIES_PATH)
         df = df[df['Projection'] >= args.min_projection]
-        print(f"Loaded {len(df)} players (after min projection filter).")
+        print(f"Loaded {len(df)} players with proj >= {args.min_projection}")
         
         # DEPRECATED - randomness of 0.25 renders duplicates mathematically improbable
         # Strategy: Generate more than needed to account for duplicates/overlap
@@ -271,15 +271,15 @@ def main():
         end_time = time.perf_counter()
         execution_time = end_time - start_time
 
-        print(f"Total candidates generated: {len(candidates)}")
-        print(f"Total solver time: {execution_time:.2f} seconds")
+        print(f"Total candidates generated: {len(candidates)}; Total solver time: {execution_time:.2f} seconds")
+        # print(f"Total solver time: {execution_time:.2f} seconds")
         
         # Filter for Uniqueness / Min Unique
         valid_raw_names = []
         selected_indices_list = []
         duplicates_removed = 0
         
-        print("Filtering candidates for uniqueness...")
+        print("Filtering candidates for uniqueness, then slotting by start time...")
         for names, indices in candidates:
             if len(valid_raw_names) >= target_lineups:
                 break
@@ -296,16 +296,15 @@ def main():
                 valid_raw_names.append(names)
                 selected_indices_list.append(indices)
         
-        excess_discarded = len(candidates) - len(valid_raw_names) - duplicates_removed
+        # DEPRECATED as part of oversampling removal
+        # excess_discarded = len(candidates) - len(valid_raw_names) - duplicates_removed
         
         print(f"Duplicates removed (min_unique constraint): {duplicates_removed}")
-        print(f"Excess candidates discarded unread: {excess_discarded}")
-        
-        if len(valid_raw_names) < target_lineups:
-            print("Warning: Could not find enough unique lineups from the candidate pool.")
+        # DEPRECATED as part of oversampling removal
+        # print(f"Excess candidates discarded unread: {excess_discarded}")
 
         # Parallelize the slotting process
-        print("Slotting final lineups by start time...")
+        # print("Slotting final lineups by start time...")
         final_lineups = []
         
         with concurrent.futures.ProcessPoolExecutor() as executor:
