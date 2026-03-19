@@ -6,7 +6,7 @@ A high-performance optimization pipeline designed to generate, rank, and export 
 
 - **Linear Programming Optimization:** Uses [PuLP](https://coin-or.github.io/pulp/) with the [HiGHS](https://highs.dev/) solver for optimal roster construction.
 - **Parallel Generation:** Rapidly generates candidate lineup pools using multi-core processing.
-- **Smart Ranking:** Scores lineups using a weighted combination of projections and ownership metrics (Total Ownership and Geometric Mean) to find high-leverage builds.
+- **Customizable Lineup Ranking:** Scores lineups using a weighted combination of projections and ownership metrics.
 - **Late Swap Support:** Re-optimizes remaining roster slots for players whose games haven't started.
 - **DraftKings Integration:** Exports directly to a DK-compatible `DKEntries.csv` template.
 
@@ -16,7 +16,8 @@ The project follows a modular pipeline orchestrated by `run_optimizer.py`:
 
 1.  **Engine (`engine.py`):** Generates a pool of candidate lineups in parallel using randomness to explore the solution space while ensuring uniqueness.
 2.  **Ranker (`ranker.py`):** Scores the generated pool based on user-defined weights for projections and ownership.
-3.  **Exporter (`exporter.py`):** Maps the top-ranked lineups into a DraftKings-compatible template and saves it to your Downloads folder.
+3.  **Exporter (`exporter.py`):** Maps the top-ranked lineups into a DraftKings-compatible template and saves it to your folder of choice.
+4.  **Exposure Report (`exposure_report.py`):** Analyzes the exported lineups to calculate player exposures, projected ownership, and leverage.
 
 ## Installation
 
@@ -37,14 +38,14 @@ The project follows a modular pipeline orchestrated by `run_optimizer.py`:
 ## Usage
 
 ### The Orchestrator
-The easiest way to run the full pipeline is using `run_optimizer.py`. This script runs the Engine, Ranker, and Exporter sequentially.
+The easiest way to run the full pipeline is using `run_optimizer.py`. This script runs the Engine, Ranker, Exporter, and Exposure Report sequentially.
 
 ```bash
 # Basic run (20 lineups, default settings)
 python run_optimizer.py
 
-# Custom run (2000 lineups, 12 min projection, 25% randomness, projection weight 80%, geomean weight 20%)
-python run_optimizer.py -n 2000 -mp 12 -r 0.25 -pw 0.8 -gw 0.2
+# Custom run (2000 lineups, 12 min projection, 25% randomness, projection weight 80%, geomean weight 20%, top 25 exposures displayed)
+python run_optimizer.py -n 2000 -mp 12 -r 0.25 -pw 0.8 -gw 0.2 -t 25
 ```
 
 #### Available Arguments:
@@ -52,20 +53,40 @@ python run_optimizer.py -n 2000 -mp 12 -r 0.25 -pw 0.8 -gw 0.2
 | :--- | :--- | :--- | :--- |
 | `--num_lineups` | `-n` | 20 | Total lineups to generate and export. |
 | `--min_unique` | `-u` | 1 | Minimum unique players between every lineup. |
-| `--min_projection` | `-mp` | 10 | Minimum projection for a player to be considered. |
+| `--min_projection` | `-mp` | 10.0 | Minimum projection for a player to be considered. |
+| `--min_salary` | `-ms` | 49500 | Minimum salary for a lineup. |
 | `--randomness` | `-r` | 0.1 | Random variance applied to projections (0.0 to 1.0). |
 | `--proj_weight` | `-pw` | 0.85 | Weight for the Projection Rank in final scoring. |
 | `--own_weight` | `-ow` | 0.0 | Weight for the Total Ownership Rank. |
 | `--geo_weight` | `-gw` | 0.15 | Weight for the Geomean Ownership Rank. |
+| `--top_x` | `-t` | 0 | Display only top X exposed players in report (default 0 = display all players used in export). |
+| `--late_swap` | | False | Run late swap re-optimization instead of full generation. |
+
+### Exposure Report (`exposure_report.py`)
+Generates a detailed breakdown of player exposures from your latest export, comparing your exposure to projected ownership to identify leverage points. This report is automatically generated at the end of a `run_optimizer.py` session, but can also be run standalone:
+
+```bash
+# Run standalone (shows all exposures)
+python exposure_report.py
+
+# Show only top 10 exposures
+python exposure_report.py --top_x 10
+```
 
 ### Late Swap (`late_swapper.py`)
-Use this tool after the slate has started to re-optimize remaining slots:
+Use this tool after the slate has started to re-optimize remaining slots. It can be run independently or via the main orchestrator:
+
 1. Download a fresh `DKEntries.csv` from DraftKings.
 2. Ensure you have the latest projections available.
-3. Run the script:
-   ```bash
-   python late_swapper.py
-   ```
+3. Run the script via Orchestrator or stand-alone:
+
+```bash
+# Run via Orchestrator
+python run_optimizer.py --late_swap
+
+# Run standalone
+python late_swapper.py
+```
 
 ## Configuration
 The project uses environment variables for path configuration to avoid exposing local directory structures. You can set these in a `.env` file:

@@ -86,7 +86,7 @@ def main():
         # Append date and time to filename to maintain history (YYYY-MM-DD_HHMMSS)
         timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
         output_file = os.path.join(
-            config.OUTPUT_DIR, f"upload_ready_DKEntries-{timestamp}.csv"
+            config.OUTPUT_DIR, f"upload-ready-DKEntries-{timestamp}.csv"
         )
 
         # Write updated entries

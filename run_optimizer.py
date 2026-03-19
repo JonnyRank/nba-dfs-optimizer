@@ -36,6 +36,9 @@ def main():
     parser.add_argument("-ow", "--own_weight", type=float, default=0.0, help="Weight for Ownership Rank (Default: 0.0)")
     parser.add_argument("-gw", "--geo_weight", type=float, default=0.15, help="Weight for Geomean Rank (Default: 0.15)")
     
+    # Reporting Arguments
+    parser.add_argument("-t", "--top_x", type=int, default=0, help="Display only top X exposed players (0 for all)")
+
     args = parser.parse_args()
     
     python_exe = sys.executable
@@ -82,6 +85,10 @@ def main():
     exporter_cmd = f'"{python_exe}" exporter.py'
     run_command(exporter_cmd, "Phase 3: Exporting to DraftKings CSV")
     
+    # 4. Run Exposure Report
+    report_cmd = f'"{python_exe}" exposure_report.py --top_x {args.top_x}'
+    run_command(report_cmd, "Phase 4: Generating Exposure Report")
+
     print("\n==================================================================")
     print("Optimization Pipeline Complete!")
     print("Check your Downloads folder for the 'upload_ready_DKEntries' file.")
