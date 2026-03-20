@@ -7,8 +7,7 @@ import traceback
 import re
 from datetime import datetime
 from typing import List
-import config
-
+import setup.config as config
 
 def get_latest_projections() -> str:
     files = glob.glob(os.path.join(config.PROJS_DIR, "NBA-Projs-*.csv"))
@@ -27,6 +26,7 @@ def is_player_locked(player_series: pd.Series) -> bool:
 
 def load_data(projs_file: str, entries_file: str) -> pd.DataFrame:
     """Loads player pool and projections."""
+    # We load the player pool from the bottom of the entries file
     with open(entries_file, "r") as f:
         lines = f.readlines()
 
@@ -41,6 +41,8 @@ def load_data(projs_file: str, entries_file: str) -> pd.DataFrame:
 
     import io
 
+    # Read the player pool section
+    # We join everything from the header down
     df_raw = pd.read_csv(io.StringIO("".join(lines[player_pool_start_idx:])))
 
     df_players = df_raw.dropna(subset=["ID"])
@@ -56,58 +58,50 @@ def load_data(projs_file: str, entries_file: str) -> pd.DataFrame:
     return df
 
 
-def parse_entries_robust(entries_file: str):
-    """Parses the existing lineups from the top of the file using a robust approach."""
+def parse_entries(entries_file: str) -> pd.DataFrame:
+    """Parses the existing lineups from the top of the file using a memory-efficient approach."""
     header_df = pd.read_csv(entries_file, nrows=0)
     valid_cols = header_df.columns.tolist()
-
+    
+    # Standardize to 25 columns max
     extra_count = max(0, 25 - len(valid_cols))
     all_cols = valid_cols + [f"extra_{i}" for i in range(extra_count)]
 
     df = pd.read_csv(
-        entries_file,
-        header=None,
-        names=all_cols,
-        engine="python",
+        entries_file, 
+        header=None, 
+        names=all_cols, 
+        engine="python", 
         skiprows=1,
-        dtype={"Entry ID": object, "Contest ID": object},
+        dtype={"Entry ID": object, "Contest ID": object}
     )
 
-    return df, valid_cols
+    return df
 
 
 def get_game_time(game_info: str) -> datetime:
     """Extracts datetime from game info string."""
     match = re.search(r"(\d{2}/\d{2}/\d{4} \d{2}:\d{2}[AP]M)", str(game_info))
     if not match:
-        return datetime(1970, 1, 1)
+        return datetime(1970, 1, 1) # Fallback for sorting
     try:
         return datetime.strptime(match.group(1), "%m/%d/%Y %I:%M%p")
     except ValueError:
         return datetime(1970, 1, 1)
 
 
-def solve_late_swap_batch(
-    df_pool: pd.DataFrame,
-    current_lineup_ids: List[str],
-    min_salary: int,
-    num_to_generate: int,
-) -> List[List[str]]:
+def solve_late_swap(df_pool: pd.DataFrame, current_lineup_ids: List[str], min_salary: int) -> List[str]:
     """
-    Optimizes the remaining slots of a lineup and generates a batch of unique variations.
+    Optimizes the remaining slots of a lineup given a set of already locked players.
     """
     slots = ["PG", "SG", "SF", "PF", "C", "G", "F", "UTIL"]
+    # Flexibility scores: higher is more flexible
     flex_scores = {
         "UTIL": 3,
-        "G": 2,
-        "F": 2,
-        "PG": 1,
-        "SG": 1,
-        "SF": 1,
-        "PF": 1,
-        "C": 1,
+        "G": 2, "F": 2,
+        "PG": 1, "SG": 1, "SF": 1, "PF": 1, "C": 1
     }
-
+    
     locked_ids = set()
     lineup_map = {}
     filled_slots = [False] * len(slots)
@@ -132,37 +126,30 @@ def solve_late_swap_batch(
                 player_data = df_pool[df_pool["ID"] == pid]
                 if not player_data.empty and is_player_locked(player_data.iloc[0]):
                     is_locked = True
-
+        
         if is_locked:
+            # Unconditionally map the original string and mark the slot as filled
             lineup_map[slots[i]] = p_str
             filled_slots[i] = True
             if pid:
                 locked_ids.add(pid)
                 player_data = df_pool[df_pool["ID"] == pid]
                 if not player_data.empty:
+                    # Deduct salary for the locked player
                     locked_salary_used += player_data.iloc[0]["Salary"]
+                    # Track games covered by locked players
                     game = player_data.iloc[0]["Game Info"].split(" ")[0]
                     locked_games.add(game)
 
-    # Fast path: If the lineup is completely locked, just return it N times.
-    num_to_fill = sum(1 for filled in filled_slots if not filled)
-    if num_to_fill == 0:
-        return [
-            [lineup_map.get(s, "EMPTY") for s in slots] for _ in range(num_to_generate)
-        ]
-
-    # 2. Setup Solver Base
+    # 2. Setup Solver
     prob = pulp.LpProblem("NBA_Late_Swap", pulp.LpMaximize)
     player_vars = pulp.LpVariable.dicts("player", df_pool.index, cat=pulp.LpBinary)
 
-    base_obj = pulp.lpSum(
-        [df_pool.loc[i, "Projection"] * player_vars[i] for i in df_pool.index]
-    )
-
+    # 3. Objective with Slotting Incentive
+    base_obj = pulp.lpSum([df_pool.loc[i, "Projection"] * player_vars[i] for i in df_pool.index])
+    
     available_slots = [slots[i] for i, filled in enumerate(filled_slots) if not filled]
-    slot_vars = pulp.LpVariable.dicts(
-        "slot", (df_pool.index, available_slots), cat=pulp.LpBinary
-    )
+    slot_vars = pulp.LpVariable.dicts("slot", (df_pool.index, available_slots), cat=pulp.LpBinary)
 
     incentive_terms = []
     df_pool["StartTime"] = df_pool["Game Info"].apply(get_game_time)
@@ -171,15 +158,15 @@ def solve_late_swap_batch(
     time_range = (max_time - min_time).total_seconds() or 1.0
 
     for i in df_pool.index:
-        time_score = (
-            df_pool.loc[i, "StartTime"] - min_time
-        ).total_seconds() / time_range
+        time_score = (df_pool.loc[i, "StartTime"] - min_time).total_seconds() / time_range
         for s in available_slots:
             weight = time_score * flex_scores.get(s, 1) * 0.001
             incentive_terms.append(slot_vars[i][s] * weight)
 
     prob += base_obj + pulp.lpSum(incentive_terms)
 
+    # 4. Constraints
+    # Salary Cap (adjusted for locked players)
     prob += (
         pulp.lpSum([df_pool.loc[i, "Salary"] * player_vars[i] for i in df_pool.index])
         <= config.SALARY_CAP - locked_salary_used
@@ -189,13 +176,18 @@ def solve_late_swap_batch(
         pulp.lpSum([df_pool.loc[i, "Salary"] * player_vars[i] for i in df_pool.index])
         >= adj_min_salary
     )
-
+    
+    # Roster Size
+    num_to_fill = sum(1 for filled in filled_slots if not filled)
     prob += pulp.lpSum([player_vars[i] for i in df_pool.index]) == num_to_fill
 
+    # Lock Constraints
+    # Prevent the solver from drafting ANY globally locked player into the remaining open slots.
     for i in df_pool.index:
         if is_player_locked(df_pool.loc[i]):
             prob += player_vars[i] == 0
 
+    # Positional Eligibility
     for i in df_pool.index:
         prob += pulp.lpSum([slot_vars[i][s] for s in available_slots]) == player_vars[i]
         pos_str = str(df_pool.loc[i, "Roster Position"])
@@ -216,6 +208,7 @@ def solve_late_swap_batch(
     for s in available_slots:
         prob += pulp.lpSum([slot_vars[i][s] for i in df_pool.index]) == 1
 
+    # Min Games
     df_pool["Game"] = df_pool["Game Info"].str.split(" ").str[0]
     games = df_pool["Game"].unique()
     game_vars = pulp.LpVariable.dicts("game", games, cat=pulp.LpBinary)
@@ -225,62 +218,53 @@ def solve_late_swap_batch(
         for i in players_in_game:
             prob += game_vars[game] >= player_vars[i] / 10.0
 
+    # Adjust MIN_GAMES required by the games already covered by locked players
     adj_min_games = max(0, config.MIN_GAMES - len(locked_games))
     prob += pulp.lpSum([game_vars[game] for game in games]) >= adj_min_games
 
-    # 3. Iterative Batch Solving
-    generated_lineups = []
+    # Solve
+    solver = pulp.HiGHS(msg=False)
+    prob.solve(solver)
 
-    for iteration in range(num_to_generate):
-        solver = pulp.HiGHS(msg=False)
-        prob.solve(solver)
+    if pulp.LpStatus[prob.status] != "Optimal":
+        print(f"Warning: Could not optimize lineup with locked IDs: {locked_ids}")
+        return current_lineup_ids
 
-        if pulp.LpStatus[prob.status] != "Optimal":
-            if iteration == 0:
-                print(
-                    f"Warning: Could not optimize lineup for base state. Status: {pulp.LpStatus[prob.status]}"
-                )
-                return [current_lineup_ids for _ in range(num_to_generate)]
-            else:
-                # Ran out of unique combinations. Pad the batch with the last successfully generated lineup.
-                while len(generated_lineups) < num_to_generate:
-                    generated_lineups.append(generated_lineups[-1])
-                break
+    # Extract
+    for i in df_pool.index:
+        if pulp.value(player_vars[i]) > 0.5:
+            for s in available_slots:
+                if pulp.value(slot_vars[i][s]) > 0.5:
+                    lineup_map[s] = df_pool.loc[i, "Name + ID"]
 
-        current_lineup_map = lineup_map.copy()
-        newly_drafted_indices = []
+    return [lineup_map.get(s, "EMPTY") for s in slots]
 
-        for i in df_pool.index:
-            if pulp.value(player_vars[i]) > 0.5:
-                if df_pool.loc[i, "ID"] not in locked_ids:
-                    newly_drafted_indices.append(i)
-                for s in available_slots:
-                    if pulp.value(slot_vars[i][s]) > 0.5:
-                        current_lineup_map[s] = df_pool.loc[i, "Name + ID"]
 
-        generated_lineups.append([current_lineup_map.get(s, "EMPTY") for s in slots])
+def parse_entries_robust(entries_file: str):
+    """Parses the existing lineups from the top of the file using a robust approach."""
+    header_df = pd.read_csv(entries_file, nrows=0)
+    valid_cols = header_df.columns.tolist()
+    
+    # Standardize to 25 columns max to handle ragged rows (like the player pool)
+    extra_count = max(0, 25 - len(valid_cols))
+    all_cols = valid_cols + [f"extra_{i}" for i in range(extra_count)]
 
-        # Add exclusion constraint to ensure the next solve is unique
-        if newly_drafted_indices:
-            prob += pulp.lpSum([player_vars[i] for i in newly_drafted_indices]) <= (
-                len(newly_drafted_indices) - 1
-            )
+    df = pd.read_csv(
+        entries_file, 
+        header=None, 
+        names=all_cols, 
+        engine="python", 
+        skiprows=1,
+        dtype={"Entry ID": object, "Contest ID": object}
+    )
 
-    return generated_lineups
+    return df, valid_cols
 
 
 def main():
     parser = argparse.ArgumentParser(description="NBA DFS Late Swap Tool")
-    parser.add_argument(
-        "-ms", "--min_salary", type=int, default=49500, help="Min salary for a lineup"
-    )
-    parser.add_argument(
-        "-mp",
-        "--min_projection",
-        type=float,
-        default=1.0,
-        help="Min projection for a player to be considered",
-    )
+    parser.add_argument("-ms", "--min_salary", type=int, default=49500, help="Min salary for a lineup")
+    parser.add_argument("-mp", "--min_projection", type=float, default=1.0, help="Min projection for a player to be considered")
     args = parser.parse_args()
 
     print("Starting Late Swap Optimization...")
@@ -289,11 +273,14 @@ def main():
         projs_file = get_latest_projections()
         print(f"Using projections: {os.path.basename(projs_file)}")
 
+        # 1. Load Current Entries FIRST so we know who is already drafted
         df_entries, entry_cols = parse_entries_robust(config.ENTRIES_PATH)
-
+        
+        # Valid entries have an Entry ID (first column)
         valid_mask = df_entries[entry_cols[0]].notna()
         valid_entries = df_entries[valid_mask]
-
+        
+        # 2. Extract all player IDs currently in any lineup
         current_ids = set()
         slots = ["PG", "SG", "SF", "PF", "C", "G", "F", "UTIL"]
         for _, row in valid_entries.iterrows():
@@ -304,65 +291,39 @@ def main():
                     if match:
                         current_ids.add(match.group(1))
 
+        # 3. Load Pool
         df_pool = load_data(projs_file, config.ENTRIES_PATH)
-
+        
+        # 4. Filter pool: keep if projection >= min OR if they are already in a lineup
         mask_proj = df_pool["Projection"] >= args.min_projection
         mask_current = df_pool["ID"].isin(current_ids)
         df_pool = df_pool[mask_proj | mask_current].copy()
         df_pool.reset_index(drop=True, inplace=True)
 
         print(f"Player Pool Loaded: {len(df_pool)} players.")
-        print(f"Found {len(valid_entries)} valid entries.")
-
-        # Group entries by their Base State signature
-        base_states = {}
-        for idx, row in valid_entries.iterrows():
-            current_players = [row[s] for s in slots if s in row and pd.notna(row[s])]
-            if len(current_players) < len(slots):
-                print(
-                    f"Warning: Entry {row[entry_cols[0]]} has an incomplete lineup. Skipping."
-                )
-                continue
-
-            locked_signature = []
-            for i, p_str in enumerate(current_players):
-                match = re.search(r"\((\d+)\)", str(p_str))
-                pid = match.group(1) if match else None
-                is_locked = "(LOCKED)" in str(p_str).upper()
-                if not is_locked and pid:
-                    player_data = df_pool[df_pool["ID"] == pid]
-                    if not player_data.empty and is_player_locked(player_data.iloc[0]):
-                        is_locked = True
-
-                if is_locked and pid:
-                    locked_signature.append((slots[i], pid))
-
-            base_state_key = tuple(locked_signature)
-            if base_state_key not in base_states:
-                base_states[base_state_key] = []
-            base_states[base_state_key].append((idx, current_players))
-
-        print(
-            f"Grouped entries into {len(base_states)} unique base states for batch processing."
-        )
+        print(f"Found {len(valid_entries)} entries to check for swap.")
 
         new_lineups = []
-        for i, (base_state_key, entries) in enumerate(base_states.items()):
-            num_to_generate = len(entries)
-            template_players = entries[0][1]
+        slots = ["PG", "SG", "SF", "PF", "C", "G", "F", "UTIL"]
 
-            batch_lineups = solve_late_swap_batch(
-                df_pool, template_players, args.min_salary, num_to_generate
-            )
+        for idx, row in valid_entries.iterrows():
+            # Get current players
+            current_players = [row[s] for s in slots if s in row and pd.notna(row[s])]
 
-            # Map generated batch back to specific entry indexes
-            for j, (idx, _) in enumerate(entries):
-                entry_update = {s: batch_lineups[j][k] for k, s in enumerate(slots)}
-                entry_update["index"] = idx
-                new_lineups.append(entry_update)
+            if len(current_players) < len(slots):
+                print(f"Warning: Entry {row[entry_cols[0]]} has incomplete lineup. Skipping.")
+                continue
 
-            if (i + 1) % max(1, (len(base_states) // 10)) == 0:
-                print(f"Processed {i + 1}/{len(base_states)} base states...")
+            # Solve
+            new_lineup = solve_late_swap(df_pool, current_players, args.min_salary)
+
+            # Store result
+            entry_update = {s: new_lineup[i] for i, s in enumerate(slots)}
+            entry_update["index"] = idx
+            new_lineups.append(entry_update)
+
+            if len(new_lineups) % 10 == 0:
+                print(f"Swapped {len(new_lineups)}/{len(valid_entries)} lineups...")
 
         # Update DataFrame
         for update in new_lineups:
@@ -370,29 +331,17 @@ def main():
             for s, player in update.items():
                 df_entries.at[idx, s] = player
 
+        # Save ONLY the entries section for upload compatibility
         timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-        output_file = os.path.join(
-            config.OUTPUT_DIR, f"late-swap-entries-{timestamp}.csv"
-        )
-
-        required_cols = [
-            "Entry ID",
-            "Contest Name",
-            "Contest ID",
-            "Entry Fee",
-            "PG",
-            "SG",
-            "SF",
-            "PF",
-            "C",
-            "G",
-            "F",
-            "UTIL",
-        ]
-
+        output_file = os.path.join(config.OUTPUT_DIR, f"late-swap-entries-{timestamp}.csv")
+        
+        # Strictly define the required DraftKings columns
+        required_cols = ["Entry ID", "Contest Name", "Contest ID", "Entry Fee", "PG", "SG", "SF", "PF", "C", "G", "F", "UTIL"]
+        
+        # We only output the required columns and rows that have an Entry ID
         df_output = df_entries[required_cols]
         df_output = df_output[df_output["Entry ID"].notna()]
-
+        
         df_output.to_csv(output_file, index=False, na_rep="")
 
         print(f"Late Swap Complete. {len(new_lineups)} lineups updated.")

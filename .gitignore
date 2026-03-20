@@ -22,8 +22,5 @@ implementation_notes.md
 .geminiignore
 
 # Misc.
-implement_data_loader.md
-Streamlit-skeleton.py
-todo.md
+design_docs/
 nba-dfs-optimizer.code-workspace
-exports/

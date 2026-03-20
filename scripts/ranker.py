@@ -6,7 +6,7 @@ import argparse
 import traceback
 from datetime import datetime
 from typing import Dict
-import config
+import setup.config as config
 
 def get_latest_file(directory: str, pattern: str) -> str:
     """Finds the most recent file matching a pattern in a directory."""

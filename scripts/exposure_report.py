@@ -3,7 +3,7 @@ import os
 import glob
 import argparse
 import re
-import config
+import setup.config as config
 
 def get_latest_file(directory: str, prefix: str) -> str:
     files = glob.glob(os.path.join(directory, f"{prefix}*"))

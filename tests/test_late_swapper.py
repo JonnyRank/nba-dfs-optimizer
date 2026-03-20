@@ -8,8 +8,8 @@ from unittest.mock import patch, MagicMock
 # Add root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-import late_swapper_v1
-import config
+import deprecated.late_swapper_v1 as late_swapper_v1
+import config.config as config
 
 TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "test_data")
 

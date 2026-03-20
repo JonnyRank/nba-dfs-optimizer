@@ -1,7 +1,6 @@
 import subprocess
-# import argparse # Replaced with GooeyParser for GUI
+import argparse
 import sys
-from gooey import Gooey, GooeyParser
 
 def run_command(command, description):
     """Executes a shell command and prints status."""
@@ -19,11 +18,8 @@ def run_command(command, description):
         print(f"CRITICAL ERROR during {description}: {e}")
         sys.exit(1)
 
-@Gooey(program_name="Jonny's NBA DFS Optimizer", default_size=(600, 700))
 def main():
-    # Change argparse.ArgumentParser to GooeyParser
-    parser = GooeyParser(description="NBA DFS Optimizer - Main Orchestrator")
-    # parser = argparse.ArgumentParser(description="NBA DFS Optimizer - Main Orchestrator")
+    parser = argparse.ArgumentParser(description="NBA DFS Optimizer - Main Orchestrator")
     
     # Mode Toggle
     parser.add_argument("--late_swap", action="store_true", help="Run late swap re-optimization instead of full generation.")
@@ -51,7 +47,7 @@ def main():
         # --- LATE SWAP PIPELINE ---
         print("\n=== RUNNING LATE SWAP RE-OPTIMIZATION ===")
         late_swap_cmd = (
-            f'"{python_exe}" late_swapper.py '
+            f'"{python_exe}" late_swapper_v1.1.py '
             f'--min_salary {args.min_salary} '
             f'--min_projection {args.min_projection}'
         )

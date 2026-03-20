@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import List, Set, Tuple
 import concurrent.futures
 import multiprocessing
-import config
+import setup.config as config
 import time
 import itertools
 

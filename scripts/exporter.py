@@ -4,7 +4,7 @@ import glob
 import argparse
 import traceback
 from datetime import datetime
-import config
+import setup.config as config
 
 
 def get_latest_ranked_file() -> str:
