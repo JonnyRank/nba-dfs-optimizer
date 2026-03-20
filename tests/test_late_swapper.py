@@ -8,21 +8,21 @@ from unittest.mock import patch, MagicMock
 # Add root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-import late_swapper
+import late_swapper_v1
 import config
 
 TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "test_data")
 
 def test_get_latest_projections():
     with patch("config.PROJS_DIR", TEST_DATA_DIR):
-        latest = late_swapper.get_latest_projections()
+        latest = late_swapper_v1.get_latest_projections()
         assert "NBA-Projs-2026-02-20.csv" in latest
 
 def test_load_data():
     projs_file = os.path.join(TEST_DATA_DIR, "NBA-Projs-2026-02-20.csv")
     entries_file = os.path.join(TEST_DATA_DIR, "DKEntries.csv")
     
-    df = late_swapper.load_data(projs_file, entries_file)
+    df = late_swapper_v1.load_data(projs_file, entries_file)
     
     assert not df.empty
     assert "ID" in df.columns
@@ -34,7 +34,7 @@ def test_solve_late_swap():
     # Setup pool
     projs_file = os.path.join(TEST_DATA_DIR, "NBA-Projs-2026-02-20.csv")
     entries_file = os.path.join(TEST_DATA_DIR, "DKEntries.csv")
-    df_pool = late_swapper.load_data(projs_file, entries_file)
+    df_pool = late_swapper_v1.load_data(projs_file, entries_file)
     
     # Lineup with some locked players
     current_lineup = [
@@ -48,7 +48,7 @@ def test_solve_late_swap():
         "Zion Williamson (42062920)" # NOT LOCKED
     ]
     
-    new_lineup = late_swapper.solve_late_swap(df_pool, current_lineup, min_salary=40000)
+    new_lineup = late_swapper_v1.solve_late_swap(df_pool, current_lineup, min_salary=40000)
     
     assert len(new_lineup) == 8
     # Kam Jones must still be there (locked)
@@ -65,11 +65,11 @@ def test_solve_late_swap():
 def test_solve_late_swap_no_valid_solution():
     projs_file = os.path.join(TEST_DATA_DIR, "NBA-Projs-2026-02-20.csv")
     entries_file = os.path.join(TEST_DATA_DIR, "DKEntries.csv")
-    df_pool = late_swapper.load_data(projs_file, entries_file)
+    df_pool = late_swapper_v1.load_data(projs_file, entries_file)
     
     # Extremely high salary requirement to force failure
     current_lineup = ["Player (123) (LOCKED)"] * 8
-    new_lineup = late_swapper.solve_late_swap(df_pool, current_lineup, min_salary=100000)
+    new_lineup = late_swapper_v1.solve_late_swap(df_pool, current_lineup, min_salary=100000)
     
     # Should return original if failed
     assert new_lineup == current_lineup
@@ -79,14 +79,14 @@ def test_is_player_locked():
     p_locked = pd.Series({"Name + ID": "Kam Jones (42063199) (LOCKED)"})
     p_unlocked = pd.Series({"Name + ID": "Shai Gilgeous-Alexander (42062854)"})
     
-    assert late_swapper.is_player_locked(p_locked) is True
-    assert late_swapper.is_player_locked(p_unlocked) is False
+    assert late_swapper_v1.is_player_locked(p_locked) is True
+    assert late_swapper_v1.is_player_locked(p_unlocked) is False
 
 def test_solve_late_swap_with_pool_locking():
     # Setup pool
     projs_file = os.path.join(TEST_DATA_DIR, "NBA-Projs-2026-02-20.csv")
     entries_file = os.path.join(TEST_DATA_DIR, "DKEntries.csv")
-    df_pool = late_swapper.load_data(projs_file, entries_file)
+    df_pool = late_swapper_v1.load_data(projs_file, entries_file)
     
     # In the updated mock data (DKEntries.csv), Giannis is locked in the pool
     # SGA is NOT locked in the pool (BKN@OKC 10:00PM ET)
@@ -102,7 +102,7 @@ def test_solve_late_swap_with_pool_locking():
         "Zion Williamson (42062920)"
     ]
     
-    new_lineup = late_swapper.solve_late_swap(df_pool, current_lineup, min_salary=40000)
+    new_lineup = late_swapper_v1.solve_late_swap(df_pool, current_lineup, min_salary=40000)
     
     # Giannis must still be there
     assert any("42062851" in p for p in new_lineup), "Giannis was locked in pool but not found"
@@ -111,13 +111,13 @@ def test_solve_late_swap_with_pool_locking():
     df_pool_low_sga = df_pool.copy()
     df_pool_low_sga.loc[df_pool_low_sga["ID"] == "42062854", "Projection"] = 0.0
     
-    new_lineup_swapped = late_swapper.solve_late_swap(df_pool_low_sga, current_lineup, min_salary=40000)
+    new_lineup_swapped = late_swapper_v1.solve_late_swap(df_pool_low_sga, current_lineup, min_salary=40000)
     
 def test_solve_late_swap_missing_projection_for_locked_player():
     # Setup pool
     projs_file = os.path.join(TEST_DATA_DIR, "NBA-Projs-2026-02-20.csv")
     entries_file = os.path.join(TEST_DATA_DIR, "DKEntries.csv")
-    df_pool = late_swapper.load_data(projs_file, entries_file)
+    df_pool = late_swapper_v1.load_data(projs_file, entries_file)
     
     # In this test, we have a player who is in the entry but NOT in the pool (e.g., projection missing)
     # Let's mock a lineup where one player is locked but missing from df_pool
@@ -133,7 +133,7 @@ def test_solve_late_swap_missing_projection_for_locked_player():
         "Zion Williamson (42062920)"
     ]
     
-    new_lineup = late_swapper.solve_late_swap(df_pool, current_lineup, min_salary=40000)
+    new_lineup = late_swapper_v1.solve_late_swap(df_pool, current_lineup, min_salary=40000)
     
     # It should still preserve the missing locked player in their slot
     # and not crash.
@@ -141,7 +141,7 @@ def test_flexible_slotting_prioritization():
     # Setup pool
     projs_file = os.path.join(TEST_DATA_DIR, "NBA-Projs-2026-02-20.csv")
     entries_file = os.path.join(TEST_DATA_DIR, "DKEntries.csv")
-    df_pool = late_swapper.load_data(projs_file, entries_file)
+    df_pool = late_swapper_v1.load_data(projs_file, entries_file)
     
     # We want to see if a late player is put in UTIL instead of a specific slot
     # In the mock data:
@@ -166,7 +166,7 @@ def test_flexible_slotting_prioritization():
     df_pool.loc[df_pool["ID"] == "42062854", "Salary"] = 10000
     df_pool.loc[df_pool["ID"] == "42062851", "Salary"] = 10000
 
-    new_lineup = late_swapper.solve_late_swap(df_pool, current_lineup, min_salary=30000)
+    new_lineup = late_swapper_v1.solve_late_swap(df_pool, current_lineup, min_salary=30000)
     
     # SGA (42062854) is 10:00PM. Giannis (42062851) is 08:00PM.
     # If the logic works, SGA should be in a more flexible slot if there's a choice.

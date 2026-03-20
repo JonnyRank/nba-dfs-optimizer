@@ -9,7 +9,6 @@ from datetime import datetime
 from typing import List
 import config
 
-
 def get_latest_projections() -> str:
     files = glob.glob(os.path.join(config.PROJS_DIR, "NBA-Projs-*.csv"))
     if not files:
