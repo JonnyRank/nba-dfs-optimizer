@@ -3,7 +3,8 @@ import os
 import glob
 import argparse
 import re
-import setup.config as config
+import config as config
+
 
 def get_latest_file(directory: str, prefix: str) -> str:
     files = glob.glob(os.path.join(directory, f"{prefix}*"))
@@ -11,28 +12,29 @@ def get_latest_file(directory: str, prefix: str) -> str:
         raise FileNotFoundError(f"No files matching {prefix}* found in {directory}")
     return max(files, key=os.path.getmtime)
 
+
 def generate_report(top_x: int = 0):
     try:
         # 1. Locate latest files
         entries_file = get_latest_file(config.OUTPUT_DIR, "upload-ready-DKEntries-")
         projs_file = get_latest_file(config.PROJS_DIR, "NBA-Projs-")
-        
+
         # 2. Parse Projections for Ownership
         df_projs = pd.read_csv(projs_file)
-        df_projs['ID'] = df_projs['ID'].astype(str)
+        df_projs["ID"] = df_projs["ID"].astype(str)
         # Create a dictionary mapping ID to Projected Ownership
-        own_dict = df_projs.set_index('ID')['Own_Proj'].to_dict()
+        own_dict = df_projs.set_index("ID")["Own_Proj"].to_dict()
 
         # 3. Parse Exported Entries
         # Read headers first to handle ragged CSV rows safely
         header_df = pd.read_csv(entries_file, nrows=0)
         valid_cols = header_df.columns.tolist()
         df_entries = pd.read_csv(entries_file, usecols=valid_cols, dtype=str)
-        
+
         # Filter to valid entry rows
         df_entries = df_entries[df_entries["Entry ID"].notna()]
         total_lineups = len(df_entries)
-        
+
         if total_lineups == 0:
             print("No valid lineups found in the latest export.")
             return
@@ -40,49 +42,53 @@ def generate_report(top_x: int = 0):
         # 4. Extract Players from Slots
         slots = ["PG", "SG", "SF", "PF", "C", "G", "F", "UTIL"]
         all_players = []
-        
+
         for slot in slots:
             if slot in df_entries.columns:
                 all_players.extend(df_entries[slot].dropna().tolist())
 
         # 5. Calculate Exposures
         exposure_counts = pd.Series(all_players).value_counts()
-        
+
         report_data = []
         for player_str, count in exposure_counts.items():
             # Extract ID from string like "Giannis Antetokounmpo (42062851) (LOCKED)"
-            id_match = re.search(r'\((\d+)\)', str(player_str))
+            id_match = re.search(r"\((\d+)\)", str(player_str))
             player_id = id_match.group(1) if id_match else None
-            
+
             # Clean up name for display
-            name = re.sub(r'\s*\(\d+\).*$', '', str(player_str))
-            
+            name = re.sub(r"\s*\(\d+\).*$", "", str(player_str))
+
             exposure_pct = (count / total_lineups) * 100
             own_pct = own_dict.get(player_id, 0.0) if player_id else 0.0
             leverage = exposure_pct - own_pct
-            
-            report_data.append({
-                "Player": name,
-                "Exposure %": exposure_pct,
-                "Proj Own %": own_pct,
-                "Leverage": leverage
-            })
+
+            report_data.append(
+                {
+                    "Player": name,
+                    "Exposure %": exposure_pct,
+                    "Proj Own %": own_pct,
+                    "Leverage": leverage,
+                }
+            )
 
         df_report = pd.DataFrame(report_data)
-        df_report = df_report.sort_values(by="Exposure %", ascending=False).reset_index(drop=True)
+        df_report = df_report.sort_values(by="Exposure %", ascending=False).reset_index(
+            drop=True
+        )
 
         # 6. Display Output
         print("--- Entry Exposures ---")
         print(f"Total Lineups: {total_lineups}")
         print(f"Source: {os.path.basename(entries_file)}")
-        
+
         # Format columns for readability
         formatters = {
             "Exposure %": "{:.1f}%".format,
             "Proj Own %": "{:.1f}%".format,
-            "Leverage": "{:+.1f}".format
+            "Leverage": "{:+.1f}".format,
         }
-        
+
         display_df = df_report.copy()
         for col, fmt in formatters.items():
             display_df[col] = display_df[col].apply(fmt)
@@ -91,13 +97,20 @@ def generate_report(top_x: int = 0):
             print(display_df.head(top_x).to_string(index=False))
         else:
             print(display_df.to_string(index=False))
-            
+
     except Exception as e:
         print(f"Failed to generate exposure report: {e}")
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="NBA DFS Exposure Report")
-    parser.add_argument("-t", "--top_x", type=int, default=0, help="Limit display to top X highest-exposed players. Use 0 for all.")
+    parser.add_argument(
+        "-t",
+        "--top_x",
+        type=int,
+        default=0,
+        help="Limit display to top X highest-exposed players. Use 0 for all.",
+    )
     args = parser.parse_args()
-    
+
     generate_report(args.top_x)

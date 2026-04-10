@@ -51,14 +51,14 @@ python run_optimizer.py -n 2000 -mp 12 -r 0.25 -pw 0.8 -gw 0.2 -t 25
 #### Available Arguments:
 | Long Flag | Short Flag | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `--num_lineups` | `-n` | 20 | Total lineups to generate and export. |
+| `--num_lineups` | `-n` | 2500 | Total lineups to generate and export. |
 | `--min_unique` | `-u` | 1 | Minimum unique players between every lineup. |
 | `--min_projection` | `-mp` | 10.0 | Minimum projection for a player to be considered. |
 | `--min_salary` | `-ms` | 49500 | Minimum salary for a lineup. |
-| `--randomness` | `-r` | 0.1 | Random variance applied to projections (0.0 to 1.0). |
-| `--proj_weight` | `-pw` | 0.85 | Weight for the Projection Rank in final scoring. |
+| `--randomness` | `-r` | 0.25 | Random variance applied to projections (0.0 to 1.0). |
+| `--proj_weight` | `-pw` | 0.8 | Weight for the Projection Rank in final scoring. |
 | `--own_weight` | `-ow` | 0.0 | Weight for the Total Ownership Rank. |
-| `--geo_weight` | `-gw` | 0.15 | Weight for the Geomean Ownership Rank. |
+| `--geo_weight` | `-gw` | 0.2 | Weight for the Geomean Ownership Rank. |
 | `--top_x` | `-t` | 0 | Display only top X exposed players in report (default 0 = display all players used in export). |
 | `--late_swap` | | False | Run late swap re-optimization instead of full generation. |
 

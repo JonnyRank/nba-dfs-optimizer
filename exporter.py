@@ -4,14 +4,16 @@ import glob
 import argparse
 import traceback
 from datetime import datetime
-import setup.config as config
+import config as config
 
 
 def get_latest_ranked_file() -> str:
     """Finds the most recent ranked-lineups-*.csv file."""
     files = glob.glob(os.path.join(config.RANKED_LINEUP_DIR, "ranked-lineups-*.csv"))
     if not files:
-        raise FileNotFoundError(f"No ranked lineup files found in {config.RANKED_LINEUP_DIR}")
+        raise FileNotFoundError(
+            f"No ranked lineup files found in {config.RANKED_LINEUP_DIR}"
+        )
     return max(files, key=os.path.basename)
 
 

@@ -7,7 +7,7 @@ import traceback
 import re
 from datetime import datetime
 from typing import List
-import setup.config as config
+import config as config
 
 
 def get_latest_projections() -> str:
@@ -278,7 +278,7 @@ def main():
         "-mp",
         "--min_projection",
         type=float,
-        default=1.0,
+        default=10.0,
         help="Min projection for a player to be considered",
     )
     args = parser.parse_args()
