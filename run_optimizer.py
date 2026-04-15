@@ -37,7 +37,7 @@ def main():
     parser.add_argument("-gw", "--geo_weight", type=float, default=0.2, help="Weight for Geomean Rank (Default: 0.2)")
     
     # Reporting Arguments
-    parser.add_argument("-t", "--top_x", type=int, default=25, help="Display only top X exposed players (0 for all)")
+    parser.add_argument("-t", "--top_x", type=int, default=0, help="Display only top X exposed players (0 for all)")
 
     args = parser.parse_args()
     

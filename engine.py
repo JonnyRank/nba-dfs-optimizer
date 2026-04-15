@@ -232,40 +232,12 @@ def slot_lineup_by_time(lineup_names: List[str], df: pd.DataFrame) -> List[str]:
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="NBA DFS Optimization Engine (Parallel)"
-    )
-    parser.add_argument(
-        "-n",
-        "--num_lineups",
-        type=int,
-        default=2500,
-        help="Number of lineups to generate",
-    )
-    parser.add_argument(
-        "-r",
-        "--randomness",
-        type=float,
-        default=0.25,
-        help="Randomness factor (0.0 - 1.0)",
-    )
-    parser.add_argument(
-        "-u",
-        "--min_unique",
-        type=int,
-        default=1,
-        help="Min unique players vs previous lineups",
-    )
-    parser.add_argument(
-        "-ms", "--min_salary", type=int, default=49500, help="Min salary for a lineup"
-    )
-    parser.add_argument(
-        "-mp",
-        "--min_projection",
-        type=float,
-        default=10.0,
-        help="Min projection for a player to be considered",
-    )
+    parser = argparse.ArgumentParser(description="NBA DFS Optimization Engine (Parallel)")
+    parser.add_argument("-n", "--num_lineups", type=int, default=2500, help="Number of lineups to generate (Default: 2500)")
+    parser.add_argument("-r", "--randomness", type=float, default=0.25, help="Randomness factor 0.0-1.0 (Default: 0.25)")
+    parser.add_argument("-u", "--min_unique", type=int, default=1, help="Min unique players between lineups (Default: 1)")
+    parser.add_argument("-ms", "--min_salary", type=int, default=49500, help="Min salary for a lineup (Default: 49500)")
+    parser.add_argument("-mp", "--min_projection", type=float, default=10.0, help="Min projection for a player to be considered (Default: 10.0)")
     args = parser.parse_args()
 
     print("Starting NBA DFS Optimizer (Parallel Mode)...")
