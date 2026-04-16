@@ -1,25 +1,24 @@
-import subprocess
-import argparse
+import os
 import sys
 
-def run_command(command, description):
-    """Executes a shell command and prints status."""
-    print(f"\n--- {description} ---")
-    print(f"Running: {command}")
-    try:
-        # distinct separation between steps
-        result = subprocess.run(command, shell=True, check=True, text=True)
-        if result.returncode == 0:
-            print(f"SUCCESS: {description} completed.")
-        else:
-            print(f"ERROR: {description} failed with return code {result.returncode}.")
-            sys.exit(1)
-    except subprocess.CalledProcessError as e:
-        print(f"CRITICAL ERROR during {description}: {e}")
-        sys.exit(1)
+from gooey import Gooey, GooeyParser
 
+# Add the project root to the Python path to allow for absolute imports from `src`
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+# Import the core modules from your src package
+from src.nba_optimizer import engine, exporter, exposure_report, late_swapper, ranker
+
+
+@Gooey(
+    program_name="Jonny's NBA DFS Optimizer",
+    default_size=(600, 700),
+    progress_regex=r"Lineups generated: (\d+)%"
+)
 def main():
-    parser = argparse.ArgumentParser(description="NBA DFS Optimizer - Main Orchestrator")
+    # Change argparse.ArgumentParser to GooeyParser
+    parser = GooeyParser(description="NBA DFS Optimizer - Main Orchestrator")
+    # parser = argparse.ArgumentParser(description="NBA DFS Optimizer - Main Orchestrator")
     
     # Mode Toggle
     parser.add_argument("--late_swap", action="store_true", help="Run late swap re-optimization instead of full generation.")
@@ -40,19 +39,10 @@ def main():
     parser.add_argument("-t", "--top_x", type=int, default=0, help="Display only top X exposed players (0 for all)")
 
     args = parser.parse_args()
-    
-    python_exe = sys.executable
 
     if args.late_swap:
-        # --- LATE SWAP PIPELINE ---
         print("\n=== RUNNING LATE SWAP RE-OPTIMIZATION ===")
-        late_swap_cmd = (
-            f'"{python_exe}" late_swapper_v1.1.py '
-            f'--min_salary {args.min_salary} '
-            f'--min_projection {args.min_projection}'
-        )
-        run_command(late_swap_cmd, "Late Swap Optimization")
-        
+        late_swapper.run(min_salary=args.min_salary, min_projection=args.min_projection)
         print("\n===========================================")
         print("Late Swap Complete!")
         print("Check your exports/ folder for the 'late-swap-entries' file.")
@@ -61,37 +51,34 @@ def main():
 
     # --- DEFAULT PIPELINE ---
     # 1. Run Engine
-    engine_cmd = (
-        f'"{python_exe}" engine.py '
-        f'--num_lineups {args.num_lineups} '
-        f'--randomness {args.randomness} '
-        f'--min_unique {args.min_unique} '
-        f'--min_salary {args.min_salary} '
-        f'--min_projection {args.min_projection}'
+    print("\n--- Phase 1: Generating Lineups ---")
+    engine.run(
+        num_lineups=args.num_lineups,
+        randomness=args.randomness,
+        min_unique=args.min_unique,
+        min_salary=args.min_salary,
+        min_projection=args.min_projection,
     )
-    run_command(engine_cmd, "Phase 1: Generating Lineups")
-    
+
     # 2. Run Ranker
-    ranker_cmd = (
-        f'"{python_exe}" ranker.py '
-        f'--proj_weight {args.proj_weight} '
-        f'--own_weight {args.own_weight} '
-        f'--geo_weight {args.geo_weight}'
+    print("\n--- Phase 2: Ranking Lineups ---")
+    ranker.run(
+        proj_weight=args.proj_weight,
+        own_weight=args.own_weight,
+        geo_weight=args.geo_weight,
     )
-    run_command(ranker_cmd, "Phase 2: Ranking Lineups")
-    
+
     # 3. Run Exporter
-    # Exporter automatically picks up the latest ranked file and finds the valid entries
-    exporter_cmd = f'"{python_exe}" exporter.py'
-    run_command(exporter_cmd, "Phase 3: Exporting to DraftKings CSV")
-    
+    print("\n--- Phase 3: Exporting to DraftKings CSV ---")
+    exporter.run()
+
     # 4. Run Exposure Report
-    report_cmd = f'"{python_exe}" exposure_report.py --top_x {args.top_x}'
-    run_command(report_cmd, "Phase 4: Generating Exposure Report")
+    print("\n--- Phase 4: Generating Exposure Report ---")
+    exposure_report.run(top_x=args.top_x)
 
     print("\n==================================================================")
     print("Optimization Pipeline Complete!")
-    print("Check your Downloads folder for the 'upload_ready_DKEntries' file.")
+    print("Check your exports folder for the 'upload_ready_DKEntries' file.")
     print("==================================================================")
 
 if __name__ == "__main__":

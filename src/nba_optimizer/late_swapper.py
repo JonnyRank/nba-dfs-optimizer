@@ -1,28 +1,20 @@
-import pandas as pd
-import pulp
 import argparse
 import os
-import glob
 import traceback
-import re
 from datetime import datetime
 from typing import List
-import config as config
 
+import pandas as pd
+import pulp
 
-def get_latest_projections() -> str:
-    files = glob.glob(os.path.join(config.PROJS_DIR, "NBA-Projs-*.csv"))
-    if not files:
-        raise FileNotFoundError(f"No projection files found in {config.PROJS_DIR}")
-    return max(files, key=os.path.basename)
-
-
-def is_player_locked(player_series: pd.Series) -> bool:
-    """
-    Determines if a player is locked based on the (LOCKED) string in Name + ID.
-    """
-    name_id = str(player_series.get("Name + ID", ""))
-    return "(LOCKED)" in name_id.upper()
+from . import config
+from .utils import (
+    extract_player_id,
+    get_latest_file,
+    is_player_locked,
+    parse_game_time,
+    read_ragged_csv,
+)
 
 
 def load_data(projs_file: str, entries_file: str) -> pd.DataFrame:
@@ -42,7 +34,6 @@ def load_data(projs_file: str, entries_file: str) -> pd.DataFrame:
     import io
 
     df_raw = pd.read_csv(io.StringIO("".join(lines[player_pool_start_idx:])))
-
     df_players = df_raw.dropna(subset=["ID"])
     df_players["ID"] = df_players["ID"].astype(str).str.split(".").str[0]
 
@@ -56,46 +47,13 @@ def load_data(projs_file: str, entries_file: str) -> pd.DataFrame:
     return df
 
 
-def parse_entries_robust(entries_file: str):
-    """Parses the existing lineups from the top of the file using a robust approach."""
-    header_df = pd.read_csv(entries_file, nrows=0)
-    valid_cols = header_df.columns.tolist()
-
-    extra_count = max(0, 25 - len(valid_cols))
-    all_cols = valid_cols + [f"extra_{i}" for i in range(extra_count)]
-
-    df = pd.read_csv(
-        entries_file,
-        header=None,
-        names=all_cols,
-        engine="python",
-        skiprows=1,
-        dtype={"Entry ID": object, "Contest ID": object},
-    )
-
-    return df, valid_cols
-
-
-def get_game_time(game_info: str) -> datetime:
-    """Extracts datetime from game info string."""
-    match = re.search(r"(\d{2}/\d{2}/\d{4} \d{2}:\d{2}[AP]M)", str(game_info))
-    if not match:
-        return datetime(1970, 1, 1)
-    try:
-        return datetime.strptime(match.group(1), "%m/%d/%Y %I:%M%p")
-    except ValueError:
-        return datetime(1970, 1, 1)
-
-
 def solve_late_swap_batch(
     df_pool: pd.DataFrame,
     current_lineup_ids: List[str],
     min_salary: int,
     num_to_generate: int,
 ) -> List[List[str]]:
-    """
-    Optimizes the remaining slots of a lineup and generates a batch of unique variations.
-    """
+    """Optimizes the remaining slots of a lineup and generates a batch of unique variations."""
     slots = ["PG", "SG", "SF", "PF", "C", "G", "F", "UTIL"]
     flex_scores = {
         "UTIL": 3,
@@ -114,23 +72,18 @@ def solve_late_swap_batch(
     locked_salary_used = 0
     locked_games = set()
 
-    def get_id(s):
-        m = re.search(r"\((\d+)\)", str(s))
-        return m.group(1) if m else None
-
-    def is_locked_str(s):
-        return "(LOCKED)" in str(s).upper()
-
     # 1. Identify Locked Players and their slots
     for i, p_str in enumerate(current_lineup_ids):
-        pid = get_id(p_str)
+        pid = extract_player_id(p_str)
         is_locked = False
         if pid:
-            if is_locked_str(p_str):
+            if is_player_locked(p_str):
                 is_locked = True
             else:
                 player_data = df_pool[df_pool["ID"] == pid]
-                if not player_data.empty and is_player_locked(player_data.iloc[0]):
+                if not player_data.empty and is_player_locked(
+                    player_data.iloc[0].get("Name + ID", "")
+                ):
                     is_locked = True
 
         if is_locked:
@@ -144,7 +97,7 @@ def solve_late_swap_batch(
                     game = player_data.iloc[0]["Game Info"].split(" ")[0]
                     locked_games.add(game)
 
-    # Fast path: If the lineup is completely locked, just return it N times.
+    # Fast path: If the lineup is completely locked, return it N times.
     num_to_fill = sum(1 for filled in filled_slots if not filled)
     if num_to_fill == 0:
         return [
@@ -165,7 +118,7 @@ def solve_late_swap_batch(
     )
 
     incentive_terms = []
-    df_pool["StartTime"] = df_pool["Game Info"].apply(get_game_time)
+    df_pool["StartTime"] = df_pool["Game Info"].apply(parse_game_time)
     min_time = df_pool["StartTime"].min()
     max_time = df_pool["StartTime"].max()
     time_range = (max_time - min_time).total_seconds() or 1.0
@@ -189,11 +142,10 @@ def solve_late_swap_batch(
         pulp.lpSum([df_pool.loc[i, "Salary"] * player_vars[i] for i in df_pool.index])
         >= adj_min_salary
     )
-
     prob += pulp.lpSum([player_vars[i] for i in df_pool.index]) == num_to_fill
 
     for i in df_pool.index:
-        if is_player_locked(df_pool.loc[i]):
+        if is_player_locked(df_pool.loc[i].get("Name + ID", "")):
             prob += player_vars[i] == 0
 
     for i in df_pool.index:
@@ -242,7 +194,6 @@ def solve_late_swap_batch(
                 )
                 return [current_lineup_ids for _ in range(num_to_generate)]
             else:
-                # Ran out of unique combinations. Pad the batch with the last successfully generated lineup.
                 while len(generated_lineups) < num_to_generate:
                     generated_lineups.append(generated_lineups[-1])
                 break
@@ -260,7 +211,6 @@ def solve_late_swap_batch(
 
         generated_lineups.append([current_lineup_map.get(s, "EMPTY") for s in slots])
 
-        # Add exclusion constraint to ensure the next solve is unique
         if newly_drafted_indices:
             prob += pulp.lpSum([player_vars[i] for i in newly_drafted_indices]) <= (
                 len(newly_drafted_indices) - 1
@@ -269,27 +219,17 @@ def solve_late_swap_batch(
     return generated_lineups
 
 
-def main():
-    parser = argparse.ArgumentParser(description="NBA DFS Late Swap Tool")
-    parser.add_argument(
-        "-ms", "--min_salary", type=int, default=49500, help="Min salary for a lineup"
-    )
-    parser.add_argument(
-        "-mp",
-        "--min_projection",
-        type=float,
-        default=10.0,
-        help="Min projection for a player to be considered",
-    )
-    args = parser.parse_args()
-
+def run(
+    min_salary: int = 49500,
+    min_projection: float = 1.0,
+):
     print("Starting Late Swap Optimization...")
 
     try:
-        projs_file = get_latest_projections()
+        projs_file = get_latest_file(config.PROJS_DIR, "NBA-Projs-*.csv")
         print(f"Using projections: {os.path.basename(projs_file)}")
 
-        df_entries, entry_cols = parse_entries_robust(config.ENTRIES_PATH)
+        df_entries, entry_cols = read_ragged_csv(config.ENTRIES_PATH)
 
         valid_mask = df_entries[entry_cols[0]].notna()
         valid_entries = df_entries[valid_mask]
@@ -300,13 +240,13 @@ def main():
             for s in slots:
                 val = row.get(s)
                 if pd.notna(val):
-                    match = re.search(r"\((\d+)\)", str(val))
-                    if match:
-                        current_ids.add(match.group(1))
+                    pid = extract_player_id(val)
+                    if pid:
+                        current_ids.add(pid)
 
         df_pool = load_data(projs_file, config.ENTRIES_PATH)
 
-        mask_proj = df_pool["Projection"] >= args.min_projection
+        mask_proj = df_pool["Projection"] >= min_projection
         mask_current = df_pool["ID"].isin(current_ids)
         df_pool = df_pool[mask_proj | mask_current].copy()
         df_pool.reset_index(drop=True, inplace=True)
@@ -314,7 +254,6 @@ def main():
         print(f"Player Pool Loaded: {len(df_pool)} players.")
         print(f"Found {len(valid_entries)} valid entries.")
 
-        # Group entries by their Base State signature
         base_states = {}
         for idx, row in valid_entries.iterrows():
             current_players = [row[s] for s in slots if s in row and pd.notna(row[s])]
@@ -326,12 +265,13 @@ def main():
 
             locked_signature = []
             for i, p_str in enumerate(current_players):
-                match = re.search(r"\((\d+)\)", str(p_str))
-                pid = match.group(1) if match else None
-                is_locked = "(LOCKED)" in str(p_str).upper()
+                pid = extract_player_id(p_str)
+                is_locked = is_player_locked(p_str)
                 if not is_locked and pid:
                     player_data = df_pool[df_pool["ID"] == pid]
-                    if not player_data.empty and is_player_locked(player_data.iloc[0]):
+                    if not player_data.empty and is_player_locked(
+                        player_data.iloc[0].get("Name + ID", "")
+                    ):
                         is_locked = True
 
                 if is_locked and pid:
@@ -352,10 +292,9 @@ def main():
             template_players = entries[0][1]
 
             batch_lineups = solve_late_swap_batch(
-                df_pool, template_players, args.min_salary, num_to_generate
+                df_pool, template_players, min_salary, num_to_generate
             )
 
-            # Map generated batch back to specific entry indexes
             for j, (idx, _) in enumerate(entries):
                 entry_update = {s: batch_lineups[j][k] for k, s in enumerate(slots)}
                 entry_update["index"] = idx
@@ -364,7 +303,6 @@ def main():
             if (i + 1) % max(1, (len(base_states) // 10)) == 0:
                 print(f"Processed {i + 1}/{len(base_states)} base states...")
 
-        # Update DataFrame
         for update in new_lineups:
             idx = update.pop("index")
             for s, player in update.items():
@@ -401,6 +339,23 @@ def main():
     except Exception as e:
         print(f"Error: {e}")
         traceback.print_exc()
+
+
+def main():
+    parser = argparse.ArgumentParser(description="NBA DFS Late Swap Tool")
+    parser.add_argument(
+        "-ms", "--min_salary", type=int, default=49500, help="Min salary for a lineup"
+    )
+    parser.add_argument(
+        "-mp",
+        "--min_projection",
+        type=float,
+        default=1.0,
+        help="Min projection for a player",
+    )
+    args = parser.parse_args()
+
+    run(min_salary=args.min_salary, min_projection=args.min_projection)
 
 
 if __name__ == "__main__":

@@ -1,9 +1,11 @@
-import pandas as pd
-import os
-import glob
 import argparse
+import glob
+import os
 import re
-import config as config
+
+import pandas as pd
+
+import src.nba_optimizer.config as config
 
 
 def get_latest_file(directory: str, prefix: str) -> str:
@@ -13,7 +15,7 @@ def get_latest_file(directory: str, prefix: str) -> str:
     return max(files, key=os.path.getmtime)
 
 
-def generate_report(top_x: int = 0):
+def run(top_x: int = 0):
     try:
         # 1. Locate latest files
         entries_file = get_latest_file(config.OUTPUT_DIR, "upload-ready-DKEntries-")
@@ -102,7 +104,7 @@ def generate_report(top_x: int = 0):
         print(f"Failed to generate exposure report: {e}")
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(description="NBA DFS Exposure Report")
     parser.add_argument(
         "-t",
@@ -113,4 +115,8 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    generate_report(args.top_x)
+    run(args.top_x)
+
+
+if __name__ == "__main__":
+    main()

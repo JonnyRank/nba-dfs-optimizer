@@ -1,18 +1,20 @@
-import pandas as pd
-import numpy as np
-import pulp
+import argparse
+import concurrent.futures
 import glob
+import itertools
+import multiprocessing
 import os
 import re
+import time
 import traceback
-import argparse
 from datetime import datetime
 from typing import List, Set, Tuple
-import concurrent.futures
-import multiprocessing
-import config as config
-import time
-import itertools
+
+import numpy as np
+import pandas as pd
+import pulp
+
+import src.nba_optimizer.config as config
 
 
 # --- DATA LOADING ---
@@ -231,22 +233,20 @@ def slot_lineup_by_time(lineup_names: List[str], df: pd.DataFrame) -> List[str]:
     return [final_lineup.get(s, "EMPTY") for s in slots]
 
 
-def main():
-    parser = argparse.ArgumentParser(description="NBA DFS Optimization Engine (Parallel)")
-    parser.add_argument("-n", "--num_lineups", type=int, default=2500, help="Number of lineups to generate (Default: 2500)")
-    parser.add_argument("-r", "--randomness", type=float, default=0.25, help="Randomness factor 0.0-1.0 (Default: 0.25)")
-    parser.add_argument("-u", "--min_unique", type=int, default=1, help="Min unique players between lineups (Default: 1)")
-    parser.add_argument("-ms", "--min_salary", type=int, default=49500, help="Min salary for a lineup (Default: 49500)")
-    parser.add_argument("-mp", "--min_projection", type=float, default=10.0, help="Min projection for a player to be considered (Default: 10.0)")
-    args = parser.parse_args()
-
+def run(
+    num_lineups: int = 2500,
+    randomness: float = 0.25,
+    min_unique: int = 1,
+    min_salary: int = 49500,
+    min_projection: float = 10.0,
+):
     print("Starting NBA DFS Optimizer (Parallel Mode)...")
     print(
-        f"Settings: {args.num_lineups} lineups, {args.randomness * 100:.0f}% randomness, {args.min_unique} min unique, {args.min_projection} min proj"
+        f"Settings: {num_lineups} lineups, {randomness * 100:.0f}% randomness, {min_unique} min unique, {min_projection} min proj"
     )
 
     # Check if randomness is 0
-    if args.randomness <= 0:
+    if randomness <= 0:
         print(
             "WARNING: Randomness is 0. Parallel workers will likely generate identical lineups."
         )
@@ -260,16 +260,16 @@ def main():
         print(f"Using projections: {os.path.basename(projs_file)}")
 
         df = load_data(projs_file, config.ENTRIES_PATH)
-        df = df[df["Projection"] >= args.min_projection]
-        print(f"Loaded {len(df)} players with proj >= {args.min_projection}")
+        df = df[df["Projection"] >= min_projection]
+        print(f"Loaded {len(df)} players with proj >= {min_projection}")
 
         # DEPRECATED - randomness of 0.25 renders duplicates mathematically improbable
         # Strategy: Generate more than needed to account for duplicates/overlap
-        # target_lineups = args.num_lineups
-        # oversample_factor = 1 if args.min_unique > 1 else 1.25
+        # target_lineups = num_lineups
+        # oversample_factor = 1 if min_unique > 1 else 1.25
         # target_lineups = int(target_lineups * oversample_factor)
 
-        target_lineups = args.num_lineups
+        target_lineups = num_lineups
 
         print(
             f"Spinning up pool with {multiprocessing.cpu_count()} cores to generate ~{target_lineups} candidates..."
@@ -285,7 +285,7 @@ def main():
             # Since df is static, it gets pickled once (or shared via COW on Linux, but picked on Windows)
             futures = [
                 executor.submit(
-                    generate_single_lineup, df, args.randomness, args.min_salary
+                    generate_single_lineup, df, randomness, min_salary
                 )
                 for _ in range(target_lineups)
             ]
@@ -329,7 +329,7 @@ def main():
             is_valid = True
             for prev_indices in selected_indices_list:
                 overlap = len(indices.intersection(prev_indices))
-                if overlap > (config.ROSTER_SIZE - args.min_unique):
+                if overlap > (config.ROSTER_SIZE - min_unique):
                     is_valid = False
                     duplicates_removed += 1
                     break
@@ -379,6 +379,24 @@ def main():
     except Exception as e:
         print(f"Error: {e}")
         traceback.print_exc()
+
+
+def main():
+    parser = argparse.ArgumentParser(description="NBA DFS Optimization Engine (Parallel)")
+    parser.add_argument("-n", "--num_lineups", type=int, default=2500, help="Number of lineups to generate (Default: 2500)")
+    parser.add_argument("-r", "--randomness", type=float, default=0.25, help="Randomness factor 0.0-1.0 (Default: 0.25)")
+    parser.add_argument("-u", "--min_unique", type=int, default=1, help="Min unique players between lineups (Default: 1)")
+    parser.add_argument("-ms", "--min_salary", type=int, default=49500, help="Min salary for a lineup (Default: 49500)")
+    parser.add_argument("-mp", "--min_projection", type=float, default=10.0, help="Min projection for a player to be considered (Default: 10.0)")
+    args = parser.parse_args()
+
+    run(
+        num_lineups=args.num_lineups,
+        randomness=args.randomness,
+        min_unique=args.min_unique,
+        min_salary=args.min_salary,
+        min_projection=args.min_projection,
+    )
 
 
 if __name__ == "__main__":

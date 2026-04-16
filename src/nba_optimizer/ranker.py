@@ -1,20 +1,14 @@
-import pandas as pd
-import numpy as np
-import glob
-import os
 import argparse
+import os
 import traceback
 from datetime import datetime
 from typing import Dict
-import config as config
 
+import numpy as np
+import pandas as pd
 
-def get_latest_file(directory: str, pattern: str) -> str:
-    """Finds the most recent file matching a pattern in a directory."""
-    files = glob.glob(os.path.join(directory, pattern))
-    if not files:
-        raise FileNotFoundError(f"No files matching {pattern} found in {directory}")
-    return max(files, key=os.path.basename)
+from . import config
+from .utils import get_latest_file
 
 
 def load_data(lineup_file: str, projs_file: str) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -23,26 +17,8 @@ def load_data(lineup_file: str, projs_file: str) -> tuple[pd.DataFrame, pd.DataF
     df_projs = pd.read_csv(projs_file)
     df_projs["ID"] = df_projs["ID"].astype(str)
 
-    # Extract ID from Name + ID string: "Name (ID)"
-    def extract_id(val):
-        if pd.isna(val):
-            return None
-        # Look for digits inside parentheses
-        import re
-
-        match = re.search(r"\((\d+)\)", str(val))
-        return match.group(1) if match else None
-
-    # We need a mapping from Name + ID to Projection and Ownership
-    # The engine uses Name + ID in the CSV, so we'll map that directly.
-    # To do this reliably, we'll read DKEntries again or just use the IDs.
-
-    # Better approach: Create a dictionary from the Projections file
-    # But wait, the Projections file only has ID. The engine merges it with DKEntries.
-    # We should probably have saved the player data or re-run the merge logic.
-    # Let's re-run the merge logic here to get the full player context.
-
-    from engine import load_data as engine_load_data
+    # Import the engine's merge logic to get full player context
+    from .engine import load_data as engine_load_data
 
     df_players = engine_load_data(projs_file, config.ENTRIES_PATH)
 
@@ -52,19 +28,11 @@ def load_data(lineup_file: str, projs_file: str) -> tuple[pd.DataFrame, pd.DataF
 def rank_lineups(
     df_lineups: pd.DataFrame, df_players: pd.DataFrame, weights: Dict[str, float]
 ):
-    """
-    Calculates metrics and ranks lineups based on weighted scores.
-
-    Weights should look like: {'proj': 1.0, 'own': 0.5, 'geo': 0.5}
-    Higher weights mean that metric has more influence on the final score.
-    Note: For 'own' and 'geo', we want LOWER values, so we rank accordingly.
-    """
-    # Map Name + ID to metrics
+    """Calculates metrics and ranks lineups based on weighted scores."""
     proj_map = df_players.set_index("Name + ID")["Projection"].to_dict()
     own_map = df_players.set_index("Name + ID")["Own_Proj"].to_dict()
 
     lineup_results = []
-
     slots = ["PG", "SG", "SF", "PF", "C", "G", "F", "UTIL"]
 
     for idx, row in df_lineups.iterrows():
@@ -90,15 +58,11 @@ def rank_lineups(
     df_res = pd.DataFrame(lineup_results)
 
     # Calculate Ranks (1 is best)
-    # Total Projection: Higher is better
     df_res["Proj_Rank"] = df_res["Total_Projection"].rank(ascending=False)
-    # Total Ownership: Lower is better
     df_res["Own_Rank"] = df_res["Total_Ownership"].rank(ascending=True)
-    # Geomean Ownership: Lower is better
     df_res["Geo_Rank"] = df_res["Geomean_Ownership"].rank(ascending=True)
 
     # Final Score: Weighted sum of ranks
-    # Lower Score = Better Lineup
     df_res["Lineup_Score"] = (
         df_res["Proj_Rank"] * weights.get("proj", 1.0)
         + df_res["Own_Rank"] * weights.get("own", 1.0)
@@ -112,31 +76,11 @@ def rank_lineups(
     return df_res
 
 
-def main():
-    parser = argparse.ArgumentParser(description="NBA DFS Lineup Sorter & Ranker")
-    parser.add_argument(
-        "-pw",
-        "--proj_weight",
-        type=float,
-        default=0.85,
-        help="Weight for Projection Rank (Default: 0.85)",
-    )
-    parser.add_argument(
-        "-ow",
-        "--own_weight",
-        type=float,
-        default=0.0,
-        help="Weight for Ownership Rank (Default: 0.0)",
-    )
-    parser.add_argument(
-        "-gw",
-        "--geo_weight",
-        type=float,
-        default=0.15,
-        help="Weight for Geomean Rank (Default: 0.15)",
-    )
-    args = parser.parse_args()
-
+def run(
+    proj_weight: float = 0.85,
+    own_weight: float = 0.0,
+    geo_weight: float = 0.15,
+):
     print("Starting NBA DFS Sorter & Ranker...")
 
     try:
@@ -152,22 +96,21 @@ def main():
 
         # 3. Rank
         weights = {
-            "proj": args.proj_weight,
-            "own": args.own_weight,
-            "geo": args.geo_weight,
+            "proj": proj_weight,
+            "own": own_weight,
+            "geo": geo_weight,
         }
         df_ranked = rank_lineups(df_lineups, df_players, weights)
 
         # 4. Save
         if not os.path.exists(config.RANKED_LINEUP_DIR):
             os.makedirs(config.RANKED_LINEUP_DIR)
-        # Reuse timestamp from original lineup file if possible, or just new one
+
         timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
         output_file = os.path.join(
             config.RANKED_LINEUP_DIR, f"ranked-lineups-{timestamp}.csv"
         )
 
-        # Reorder columns to put rankings first
         cols = [
             "Final_Rank",
             "Lineup_Score",
@@ -186,6 +129,30 @@ def main():
     except Exception as e:
         print(f"Error: {e}")
         traceback.print_exc()
+
+
+def main():
+    parser = argparse.ArgumentParser(description="NBA DFS Lineup Sorter & Ranker")
+    parser.add_argument(
+        "-pw",
+        "--proj_weight",
+        type=float,
+        default=0.85,
+        help="Weight for Projection Rank",
+    )
+    parser.add_argument(
+        "-ow", "--own_weight", type=float, default=0.0, help="Weight for Ownership Rank"
+    )
+    parser.add_argument(
+        "-gw", "--geo_weight", type=float, default=0.15, help="Weight for Geomean Rank"
+    )
+    args = parser.parse_args()
+
+    run(
+        proj_weight=args.proj_weight,
+        own_weight=args.own_weight,
+        geo_weight=args.geo_weight,
+    )
 
 
 if __name__ == "__main__":
