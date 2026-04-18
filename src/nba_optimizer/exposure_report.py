@@ -5,7 +5,7 @@ import re
 
 import pandas as pd
 
-import src.nba_optimizer.config as config
+from . import config
 
 
 def get_latest_file(directory: str, prefix: str) -> str:

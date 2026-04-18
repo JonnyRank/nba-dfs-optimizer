@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import pulp
 
-import src.nba_optimizer.config as config
+from . import config
 
 
 # --- DATA LOADING ---

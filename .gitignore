@@ -26,3 +26,4 @@ design_docs/
 nba-dfs-optimizer.code-workspace
 example_projs/
 gemini_web_project_standardization_instructions.md
+run_optimizer_pysimplegui.py
