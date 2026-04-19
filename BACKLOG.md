@@ -173,6 +173,24 @@
   * [ ] Confirm that `ranker.py` will only need to perform a simple vectorized sum of this new column to score the lineup.
 * **LLM Instructions**: Act as a Data Scientist specializing in Daily Fantasy Sports. Propose a mathematical formula to quantify "good vs. bad chalk" and "leverage" by evaluating a player's projected ownership against their historical standard deviation and salary-implied value. Explain how to pre-compute this as a static player-level column in pandas during data initialization so that `ranker.py` only needs to perform a simple, highly optimized vectorized sum.
 
+### [Implement] Refactor Global Configuration State
+* **Status**: Not Started
+* **Target Files**: `src/nba_optimizer/config.py`, `src/nba_optimizer/engine.py`, `src/nba_optimizer/late_swapper.py`, `src/nba_optimizer/ranker.py`, `src/nba_optimizer/exporter.py`, `scripts/run_optimizer.py`
+* **Context**: `config.py` currently loads environment variables into global module-level variables upon import. This hardcodes the state, preventing isolated unit testing or running concurrent instances with different settings. We need to refactor this into an instantiated `Config` class.
+* **Acceptance Criteria**:
+  * [ ] `config.py` is rewritten to use a `Config` class (using `dataclasses` or `pydantic`).
+  * [ ] All modules are updated to accept a `Config` instance (dependency injection) rather than importing global variables directly.
+* **LLM Instructions**: Act as a Python Software Architect. Refactor `config.py` to define a configuration class instead of global variables. Trace all imports of `config.py` across the codebase (`engine.py`, `ranker.py`, `scripts/run_optimizer.py`, etc.) and update them to initialize and pass a configuration instance. Ensure the CLI arguments in the scripts still correctly override these class defaults.
+
+### [Implement] Centralize Magic Strings and Positional Slots
+* **Status**: Not Started
+* **Target Files**: `src/nba_optimizer/config.py` (or new `constants.py`), `src/nba_optimizer/engine.py`, `src/nba_optimizer/late_swapper.py`, `src/nba_optimizer/ranker.py`
+* **Context**: Hardcoded lists of DraftKings roster slots (`["PG", "SG", "SF", "PF", "C", "G", "F", "UTIL"]`) are duplicated across multiple files. They need to be moved to a single source of truth to prevent bugs and enable easier adaptation to other contest types or sports.
+* **Acceptance Criteria**:
+  * [ ] A single constant or Enum representing the roster slots is defined in `config.py` or a dedicated `constants.py` file.
+  * [ ] All hardcoded positional arrays in `engine.py`, `late_swapper.py`, and `ranker.py` are replaced with a reference to this central constant.
+* **LLM Instructions**: Act as a Python Refactoring Expert. Create a centralized constant for the DraftKings NBA roster slots in `config.py` or a new `constants.py` file. Search through `engine.py`, `late_swapper.py`, and `ranker.py`, and replace all hardcoded lists of these slots with the new central reference.
+
 ---
 
 ## Completed Tasks
