@@ -19,7 +19,7 @@
 | `exposure_report.py` has its own `get_latest_file()` using `getmtime` instead of basename sorting | Different sorting requirement | `exposure_report.py:get_latest_file()` | Two file-finding implementations with different semantics | Use `utils.get_latest_file()` with `use_mtime=True` |
 | `ranker.py` imports `engine.load_data()` for player context | Avoids duplicating merge logic | `ranker.py:load_data()` | Tight coupling between ranker and engine | Extract shared data loading to a common module |
 | Deprecated code in `deprecated/` folder | Legacy late swapper kept for reference | `deprecated/late_swapper_deprecated.py` (12.6KB) | Confusion about which is canonical | Remove or archive outside repo |
-| `sys.path.insert` hack in scripts | Needed because project lacks `pyproject.toml` or proper package install | `scripts/run_optimizer.py`, `scripts/run_optimizer_gui.py` | Fragile; breaks if directory structure changes | Add `pyproject.toml` with `[project.scripts]` entry points |
+| Legacy `sys.path.insert` script hack | Replaced by package-based imports and `pyproject.toml` entry points | `pyproject.toml`, `scripts/run_optimizer.py`, `scripts/run_optimizer_gui.py` | Resolved | Keep execution standardized via `pip install -e .` and console scripts |
 
 ### 3) Security Concerns
 

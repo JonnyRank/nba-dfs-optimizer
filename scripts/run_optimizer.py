@@ -1,12 +1,7 @@
 import argparse
-import os
-import sys
 
-# Add the project root to the Python path to allow for absolute imports from `src`
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-# Import the core modules from your src package
-from src.nba_optimizer import engine, exporter, exposure_report, late_swapper, ranker
+# Import the core modules from the installed package
+from nba_optimizer import engine, exporter, exposure_report, late_swapper, ranker
 
 
 def main():

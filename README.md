@@ -30,6 +30,7 @@ The project follows a modular pipeline orchestrated by `run_optimizer.py`:
 2. Install the required dependencies:
    ```bash
    pip install -r requirements.txt
+   pip install -e .
    ```
 3. Configure your environment:
    - Copy `.env.example` to `.env`.
@@ -38,14 +39,14 @@ The project follows a modular pipeline orchestrated by `run_optimizer.py`:
 ## Usage
 
 ### The Orchestrator
-The easiest way to run the full pipeline is using `run_optimizer.py`. This script runs the Engine, Ranker, Exporter, and Exposure Report sequentially.
+The easiest way to run the full pipeline is using the `nba-dfs-optimizer` console command (installed via `pip install -e .`) or `scripts/run_optimizer.py`. This runs the Engine, Ranker, Exporter, and Exposure Report sequentially.
 
 ```bash
-# Basic run (20 lineups, default settings)
-python run_optimizer.py
+# Basic run (default settings)
+nba-dfs-optimizer
 
 # Custom run (2000 lineups, 12 min projection, 25% randomness, projection weight 80%, geomean weight 20%, top 25 exposures displayed)
-python run_optimizer.py -n 2000 -mp 12 -r 0.25 -pw 0.8 -gw 0.2 -t 25
+nba-dfs-optimizer -n 2000 -mp 12 -r 0.25 -pw 0.8 -gw 0.2 -t 25
 ```
 
 #### Available Arguments:
@@ -82,7 +83,7 @@ Use this tool after the slate has started to re-optimize remaining slots. It can
 
 ```bash
 # Run via Orchestrator
-python run_optimizer.py --late_swap
+nba-dfs-optimizer --late_swap
 
 # Run standalone
 python late_swapper.py
