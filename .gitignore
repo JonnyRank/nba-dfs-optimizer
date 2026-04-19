@@ -10,20 +10,7 @@ __pycache__/
 .pytest_cache/
 .coverage
 
-# Debugging/Test Scripts
-debug_entries.py
-test_solver.py
-
-# Project Plan
-project_plan.md
-implementation_notes.md
-
-# Gemini Ignore
-.geminiignore
-
 # Misc.
-design_docs/
 nba-dfs-optimizer.code-workspace
 example_projs/
-gemini_web_project_standardization_instructions.md
 run_optimizer_pysimplegui.py
