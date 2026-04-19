@@ -19,10 +19,9 @@ dependencies = [
 ]
 
 [project.scripts]
-nba-dfs-optimizer = "scripts.run_optimizer:main"
-nba-dfs-optimizer-gui = "scripts.run_optimizer_gui:main"
+nba-dfs-optimizer = "nba_optimizer.cli:main"
+nba-dfs-optimizer-gui = "nba_optimizer.gui:main"
 
 [tool.setuptools.packages.find]
-where = ["src", "."]
-include = ["nba_optimizer*", "scripts*"]
-namespaces = true
+where = ["src"]
+include = ["nba_optimizer*"]
