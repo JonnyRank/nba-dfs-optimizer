@@ -33,7 +33,7 @@
 
 ```bash
 # Install
-pip install -r requirements.txt
+pip install -e .
 
 # Run full pipeline (CLI)
 python scripts/run_optimizer.py -n 2500 -r 0.25

@@ -28,7 +28,7 @@ Keep responsibilities in those modules. Do not move export, ranking, or report l
 Use these commands unless the task clearly needs something narrower:
 
 ```bash
-pip install -r requirements.txt
+pip install -e .
 python scripts/run_optimizer.py
 python scripts/run_optimizer.py --late_swap
 python scripts/run_optimizer_gui.py
@@ -39,7 +39,7 @@ Each package module also has its own `main()` and can be run directly when neede
 ## Conventions
 
 - Inside `src/nba_optimizer/`, use relative imports such as `from . import config` and `from .utils import get_latest_file`.
-- In `scripts/`, absolute imports from `src.nba_optimizer` are acceptable because the scripts add the repo root to `sys.path`.
+- In `scripts/`, import from the installed package (for example `from nba_optimizer import engine, ranker`).
 - Follow existing Python naming:
   - files and functions: `snake_case`
   - constants: `UPPER_SNAKE_CASE`

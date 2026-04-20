@@ -24,7 +24,7 @@
 
 - Import grouping/order: stdlib → third-party (`pandas`, `numpy`, `pulp`) → local (`config`, `utils`)
 - Within-package imports: Relative (`from . import config`, `from .utils import get_latest_file`)
-- Script-level imports: Absolute with `sys.path` manipulation (`from src.nba_optimizer import engine, ranker`)
+- Script-level imports: Absolute package imports (`from nba_optimizer import engine, ranker`)
 - No barrel exports; `__init__.py` is empty
 
 ### 4) Error and Logging Conventions

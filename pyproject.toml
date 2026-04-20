@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nba-dfs-optimizer"
+version = "0.1.0"
+description = "NBA DFS lineup optimizer for DraftKings"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pandas==3.0.1",
+    "numpy==2.4.2",
+    "PuLP==3.3.0",
+    "highspy==1.12.0",
+    "python-dotenv==1.2.2",
+    "Gooey==1.0.8.1",
+    "wxPython==4.2.5",
+]
+
+[project.scripts]
+nba-dfs-optimizer = "nba_optimizer.cli:main"
+nba-dfs-optimizer-gui = "nba_optimizer.gui:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["nba_optimizer*"]

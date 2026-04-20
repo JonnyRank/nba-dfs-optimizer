@@ -15,9 +15,9 @@
 
 ### 2) Entry Points
 
-- **Main runtime entry:** `scripts/run_optimizer.py` — CLI orchestrator that runs all 4 pipeline phases sequentially
-- **GUI entry:** `scripts/run_optimizer_gui.py` — Gooey-wrapped GUI version of the orchestrator
-- **How entry is selected:** User runs a script directly. Scripts add project root to `sys.path` and import from `src.nba_optimizer`.
+- **Main runtime entry:** `nba-dfs-optimizer` console script (`nba_optimizer.cli:main`) with `scripts/run_optimizer.py` as a thin wrapper
+- **GUI entry:** `nba-dfs-optimizer-gui` console script (`nba_optimizer.gui:main`) with `scripts/run_optimizer_gui.py` as a thin wrapper
+- **How entry is selected:** User runs console scripts after `pip install -e .`, or runs wrapper scripts directly.
 - **Standalone modules:** Each module in `src/nba_optimizer/` (`engine.py`, `ranker.py`, `exporter.py`, `exposure_report.py`, `late_swapper.py`) has its own `main()` with `argparse` and can be run independently.
 
 ### 3) Module Boundaries
@@ -37,10 +37,12 @@
 
 - File naming pattern: `snake_case` (e.g., `late_swapper.py`, `exposure_report.py`)
 - Directory organization pattern: Layer-based (`src/` for library, `scripts/` for entry points)
-- Import convention: Scripts use `sys.path.insert` to add project root, then `from src.nba_optimizer import ...`. Internal package modules use relative imports (`from . import config`, `from .utils import ...`).
+- Import convention: Scripts import from installed package modules (`from nba_optimizer import ...`). Internal package modules use relative imports (`from . import config`, `from .utils import ...`).
 
 ### 5) Evidence
 
 - Scan output directory tree
-- `scripts/run_optimizer.py` (sys.path manipulation and imports)
+- `scripts/run_optimizer.py` (thin wrapper importing `nba_optimizer.cli:main`)
+- `src/nba_optimizer/orchestrator.py` (shared orchestration flow for CLI and GUI)
+- `pyproject.toml` (`[project.scripts]` console-script entrypoints)
 - `src/nba_optimizer/__init__.py` (empty, marks package)

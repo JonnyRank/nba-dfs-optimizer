@@ -12,7 +12,7 @@ A high-performance optimization pipeline designed to generate, rank, and export 
 
 ## Architecture
 
-The project follows a modular pipeline orchestrated by `run_optimizer.py`:
+The project follows a modular pipeline orchestrated by the `nba-dfs-optimizer` command (or `scripts/run_optimizer.py` wrapper):
 
 1.  **Engine (`engine.py`):** Generates a pool of candidate lineups in parallel using randomness to explore the solution space while ensuring uniqueness.
 2.  **Ranker (`ranker.py`):** Scores the generated pool based on user-defined weights for projections and ownership.
@@ -26,10 +26,12 @@ The project follows a modular pipeline orchestrated by `run_optimizer.py`:
 - HiGHS solver (installed automatically via the `highspy` dependency)
 
 ### Setup
+Use `pip install -e .` as the standard install path. `requirements.txt` is kept only as a compatibility mirror for tools that still expect that file format.
+
 1. Clone the repository.
-2. Install the required dependencies:
+2. Install the project and required dependencies:
    ```bash
-   pip install -r requirements.txt
+   pip install -e .
    ```
 3. Configure your environment:
    - Copy `.env.example` to `.env`.
@@ -38,14 +40,14 @@ The project follows a modular pipeline orchestrated by `run_optimizer.py`:
 ## Usage
 
 ### The Orchestrator
-The easiest way to run the full pipeline is using `run_optimizer.py`. This script runs the Engine, Ranker, Exporter, and Exposure Report sequentially.
+The easiest way to run the full pipeline is using the `nba-dfs-optimizer` console command (installed via `pip install -e .`) or `scripts/run_optimizer.py`. This runs the Engine, Ranker, Exporter, and Exposure Report sequentially.
 
 ```bash
-# Basic run (20 lineups, default settings)
-python run_optimizer.py
+# Basic run (default settings)
+nba-dfs-optimizer
 
 # Custom run (2000 lineups, 12 min projection, 25% randomness, projection weight 80%, geomean weight 20%, top 25 exposures displayed)
-python run_optimizer.py -n 2000 -mp 12 -r 0.25 -pw 0.8 -gw 0.2 -t 25
+nba-dfs-optimizer -n 2000 -mp 12 -r 0.25 -pw 0.8 -gw 0.2 -t 25
 ```
 
 #### Available Arguments:
@@ -63,14 +65,14 @@ python run_optimizer.py -n 2000 -mp 12 -r 0.25 -pw 0.8 -gw 0.2 -t 25
 | `--late_swap` | | False | Run late swap re-optimization instead of full generation. |
 
 ### Exposure Report (`exposure_report.py`)
-Generates a detailed breakdown of player exposures from your latest export, comparing your exposure to projected ownership to identify leverage points. This report is automatically generated at the end of a `run_optimizer.py` session, but can also be run standalone:
+Generates a detailed breakdown of player exposures from your latest export, comparing your exposure to projected ownership to identify leverage points. This report is automatically generated at the end of an `nba-dfs-optimizer` run, but can also be run standalone:
 
 ```bash
 # Run standalone (shows all exposures)
-python exposure_report.py
+python -m nba_optimizer.exposure_report
 
 # Show only top 10 exposures
-python exposure_report.py --top_x 10
+python -m nba_optimizer.exposure_report --top_x 10
 ```
 
 ### Late Swap (`late_swapper.py`)
@@ -82,10 +84,10 @@ Use this tool after the slate has started to re-optimize remaining slots. It can
 
 ```bash
 # Run via Orchestrator
-python run_optimizer.py --late_swap
+nba-dfs-optimizer --late_swap
 
 # Run standalone
-python late_swapper.py
+python -m nba_optimizer.late_swapper
 ```
 
 ## Configuration
