@@ -40,14 +40,20 @@ class Config:
 
         This is separated from __post_init__ to avoid side effects during
         instantiation, allowing for testing without filesystem operations.
+
+        Raises:
+            OSError: If one or more directories could not be created.
         """
+        failed = []
         for d in [self.projs_dir, self.lineup_pool_dir, self.ranked_lineup_dir, self.output_dir]:
             if not os.path.exists(d):
                 try:
                     os.makedirs(d, exist_ok=True)
-                except (OSError, PermissionError) as e:
-                    # Warn on permission/filesystem errors instead of silently failing
+                except OSError as e:
                     print(f"Warning: Failed to create directory '{d}': {e}")
+                    failed.append(d)
+        if failed:
+            raise OSError(f"Could not create required directories: {failed}")
 
 
 def load_config_from_env() -> Config:
