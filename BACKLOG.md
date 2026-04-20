@@ -121,12 +121,12 @@
 * **LLM Instructions**: Act as a Python Software Architect. Analyze `engine.py`. Draft a plan to decompose this 400+ line file into focused, single-responsibility functions or internal modules without altering the underlying mathematical logic. Provide the proposed structure and wait for approval before writing code.
 
 ### [Implement] Add `pyproject.toml` for Standardized Execution
-* **Status**: Not Started
+* **Status**: Completed
 * **Target Files**: `pyproject.toml` (new), `scripts/run_optimizer.py`, `scripts/run_optimizer_gui.py`
 * **Context**: The `scripts/` currently rely on a `sys.path.insert` hack to resolve the `nba_optimizer` package. We need to define the project formally using a `pyproject.toml` so it can be installed via `pip install -e .`.
 * **Acceptance Criteria**:
-  * [ ] Create a standard `pyproject.toml` defining the project, dependencies, and script entry points.
-  * [ ] Remove the `sys.path.insert` hacks from the `scripts/` directory.
+  * [x] Create a standard `pyproject.toml` defining the project, dependencies, and script entry points.
+  * [x] Remove the `sys.path.insert` hacks from the `scripts/` directory.
 * **LLM Instructions**: Act as a Python Packaging Expert. Generate a `pyproject.toml` file mapping to the existing `src/` layout. Ensure script entry points for the CLI and GUI are defined. Provide instructions on removing the `sys.path` hacks.
 
 ### [Design] Unit Tests for Core LP Logic and Data Loading
@@ -174,12 +174,12 @@
 * **LLM Instructions**: Act as a Data Scientist specializing in Daily Fantasy Sports. Propose a mathematical formula to quantify "good vs. bad chalk" and "leverage" by evaluating a player's projected ownership against their historical standard deviation and salary-implied value. Explain how to pre-compute this as a static player-level column in pandas during data initialization so that `ranker.py` only needs to perform a simple, highly optimized vectorized sum.
 
 ### [Implement] Refactor Global Configuration State
-* **Status**: Not Started
+* **Status**: Completed
 * **Target Files**: `src/nba_optimizer/config.py`, `src/nba_optimizer/engine.py`, `src/nba_optimizer/late_swapper.py`, `src/nba_optimizer/ranker.py`, `src/nba_optimizer/exporter.py`, `scripts/run_optimizer.py`
 * **Context**: `config.py` currently loads environment variables into global module-level variables upon import. This hardcodes the state, preventing isolated unit testing or running concurrent instances with different settings. We need to refactor this into an instantiated `Config` class.
 * **Acceptance Criteria**:
-  * [ ] `config.py` is rewritten to use a `Config` class (using `dataclasses` or `pydantic`).
-  * [ ] All modules are updated to accept a `Config` instance (dependency injection) rather than importing global variables directly.
+  * [x] `config.py` is rewritten to use a `Config` class (using `dataclasses` or `pydantic`).
+  * [x] All modules are updated to accept a `Config` instance (dependency injection) rather than importing global variables directly.
 * **LLM Instructions**: Act as a Python Software Architect. Refactor `config.py` to define a configuration class instead of global variables. Trace all imports of `config.py` across the codebase (`engine.py`, `ranker.py`, `scripts/run_optimizer.py`, etc.) and update them to initialize and pass a configuration instance. Ensure the CLI arguments in the scripts still correctly override these class defaults.
 
 ### [Implement] Centralize Magic Strings and Positional Slots

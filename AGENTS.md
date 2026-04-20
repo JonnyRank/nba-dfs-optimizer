@@ -63,3 +63,5 @@ Do not add generic or opaque tests just to increase coverage. If you add tests i
 ## Documentation
 
 When updating project guidance, prefer linking to the existing docs in `docs/codebase/` instead of duplicating content here.
+
+When working on a GitHub issue, check if the task is already described in `backlog.md`. If so, update the task status upon completion.
