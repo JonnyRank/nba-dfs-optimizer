@@ -26,12 +26,13 @@ The project follows a modular pipeline orchestrated by the `nba-dfs-optimizer` c
 - HiGHS solver (installed automatically via the `highspy` dependency)
 
 ### Setup
+Use `pip install -e .` as the standard install path. `requirements.txt` is kept only as a compatibility mirror for tools that still expect that file format.
+
 1. Clone the repository.
 2. Install the project and required dependencies:
    ```bash
    pip install -e .
    ```
-   `requirements.txt` is kept as a compatibility mirror; dependency source of truth is `pyproject.toml`.
 3. Configure your environment:
    - Copy `.env.example` to `.env`.
    - Update the paths in `.env` to match your local directory structure.
