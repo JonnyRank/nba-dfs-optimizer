@@ -1,4 +1,4 @@
-# Compatibility lockfile mirror.
+# Compatibility requirements mirror.
 # Source of truth: pyproject.toml [project.dependencies]
 
 # Core Optimization & Data
