@@ -1,12 +1,6 @@
 LICENSE
 README.md
 pyproject.toml
-src/nba_dfs_optimizer.egg-info/PKG-INFO
-src/nba_dfs_optimizer.egg-info/SOURCES.txt
-src/nba_dfs_optimizer.egg-info/dependency_links.txt
-src/nba_dfs_optimizer.egg-info/entry_points.txt
-src/nba_dfs_optimizer.egg-info/requires.txt
-src/nba_dfs_optimizer.egg-info/top_level.txt
 src/nba_optimizer/__init__.py
 src/nba_optimizer/cli.py
 src/nba_optimizer/config.py
