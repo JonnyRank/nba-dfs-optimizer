@@ -12,7 +12,7 @@ A high-performance optimization pipeline designed to generate, rank, and export 
 
 ## Architecture
 
-The project follows a modular pipeline orchestrated by `run_optimizer.py`:
+The project follows a modular pipeline orchestrated by the `nba-dfs-optimizer` command (or `scripts/run_optimizer.py` wrapper):
 
 1.  **Engine (`engine.py`):** Generates a pool of candidate lineups in parallel using randomness to explore the solution space while ensuring uniqueness.
 2.  **Ranker (`ranker.py`):** Scores the generated pool based on user-defined weights for projections and ownership.
@@ -27,9 +27,8 @@ The project follows a modular pipeline orchestrated by `run_optimizer.py`:
 
 ### Setup
 1. Clone the repository.
-2. Install the required dependencies:
+2. Install the project and required dependencies:
    ```bash
-   pip install -r requirements.txt
    pip install -e .
    ```
 3. Configure your environment:
@@ -64,14 +63,14 @@ nba-dfs-optimizer -n 2000 -mp 12 -r 0.25 -pw 0.8 -gw 0.2 -t 25
 | `--late_swap` | | False | Run late swap re-optimization instead of full generation. |
 
 ### Exposure Report (`exposure_report.py`)
-Generates a detailed breakdown of player exposures from your latest export, comparing your exposure to projected ownership to identify leverage points. This report is automatically generated at the end of a `run_optimizer.py` session, but can also be run standalone:
+Generates a detailed breakdown of player exposures from your latest export, comparing your exposure to projected ownership to identify leverage points. This report is automatically generated at the end of an `nba-dfs-optimizer` run, but can also be run standalone:
 
 ```bash
 # Run standalone (shows all exposures)
-python exposure_report.py
+python -m nba_optimizer.exposure_report
 
 # Show only top 10 exposures
-python exposure_report.py --top_x 10
+python -m nba_optimizer.exposure_report --top_x 10
 ```
 
 ### Late Swap (`late_swapper.py`)
@@ -86,7 +85,7 @@ Use this tool after the slate has started to re-optimize remaining slots. It can
 nba-dfs-optimizer --late_swap
 
 # Run standalone
-python late_swapper.py
+python -m nba_optimizer.late_swapper
 ```
 
 ## Configuration

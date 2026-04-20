@@ -28,7 +28,6 @@ Keep responsibilities in those modules. Do not move export, ranking, or report l
 Use these commands unless the task clearly needs something narrower:
 
 ```bash
-pip install -r requirements.txt
 pip install -e .
 python scripts/run_optimizer.py
 python scripts/run_optimizer.py --late_swap
