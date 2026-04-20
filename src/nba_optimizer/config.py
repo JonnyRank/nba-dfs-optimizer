@@ -22,20 +22,18 @@ class Config:
     # --- DIRECTORY SETTINGS ---
     entries_path: str = "DKEntries.csv"
     projs_dir: str = "projections"
+    base_dir: str = "exports"
     lineup_pool_dir: str = field(default="")
     ranked_lineup_dir: str = field(default="")
     output_dir: str = "exports"
 
     def __post_init__(self):
         """Derive computed paths after initialization."""
-        # Determine base directory for lineup exports
-        base_dir = os.getenv("NBA_LINEUP_DIR", "exports")
-
         # Only override if not explicitly set
         if not self.lineup_pool_dir:
-            self.lineup_pool_dir = os.path.join(base_dir, "lineup-pools")
+            self.lineup_pool_dir = os.path.join(self.base_dir, "lineup-pools")
         if not self.ranked_lineup_dir:
-            self.ranked_lineup_dir = os.path.join(base_dir, "ranked-lineups")
+            self.ranked_lineup_dir = os.path.join(self.base_dir, "ranked-lineups")
 
     def ensure_directories(self):
         """Create required directories if they don't exist.
@@ -47,9 +45,9 @@ class Config:
             if not os.path.exists(d):
                 try:
                     os.makedirs(d, exist_ok=True)
-                except Exception:
-                    # Fallback for paths that might be absolute and unreachable
-                    pass
+                except (OSError, PermissionError) as e:
+                    # Warn on permission/filesystem errors instead of silently failing
+                    print(f"Warning: Failed to create directory '{d}': {e}")
 
 
 def load_config_from_env() -> Config:
@@ -64,6 +62,7 @@ def load_config_from_env() -> Config:
     config = Config(
         entries_path=os.getenv("NBA_ENTRIES_PATH", "DKEntries.csv"),
         projs_dir=os.getenv("NBA_PROJS_DIR", "projections"),
+        base_dir=os.getenv("NBA_LINEUP_DIR", "exports"),
         output_dir=os.getenv("NBA_OUTPUT_DIR", "exports"),
     )
 
