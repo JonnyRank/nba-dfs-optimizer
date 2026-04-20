@@ -14,14 +14,14 @@ import numpy as np
 import pandas as pd
 import pulp
 
-from . import config
+from .config import Config
 
 
 # --- DATA LOADING ---
-def get_latest_projections() -> str:
-    files = glob.glob(os.path.join(config.PROJS_DIR, "NBA-Projs-*.csv"))
+def get_latest_projections(cfg: Config) -> str:
+    files = glob.glob(os.path.join(cfg.projs_dir, "NBA-Projs-*.csv"))
     if not files:
-        raise FileNotFoundError(f"No projection files found in {config.PROJS_DIR}")
+        raise FileNotFoundError(f"No projection files found in {cfg.projs_dir}")
     return max(files, key=os.path.basename)
 
 
@@ -60,7 +60,7 @@ def load_data(projs_file: str, entries_file: str) -> pd.DataFrame:
 
 # --- WORKER FUNCTION (MUST BE TOP-LEVEL) ---
 def generate_single_lineup(
-    df: pd.DataFrame, randomness: float, min_salary: int
+    df: pd.DataFrame, randomness: float, min_salary: int, salary_cap: int, roster_size: int, min_games: int
 ) -> Tuple[List[str], Set[int]]:
     try:
         np.random.seed()
@@ -86,13 +86,13 @@ def generate_single_lineup(
         # Constraints (Using salary_dict instead of df.loc)
         prob += (
             pulp.lpSum([salary_dict[i] * player_vars[i] for i in df.index])
-            <= config.SALARY_CAP
+            <= salary_cap
         )
         prob += (
             pulp.lpSum([salary_dict[i] * player_vars[i] for i in df.index])
             >= min_salary
         )
-        prob += pulp.lpSum([player_vars[i] for i in df.index]) == config.ROSTER_SIZE
+        prob += pulp.lpSum([player_vars[i] for i in df.index]) == roster_size
 
         # Positional
         slots = ["PG", "SG", "SF", "PF", "C", "G", "F", "UTIL"]
@@ -133,7 +133,7 @@ def generate_single_lineup(
             for i in players_in_game:
                 prob += game_vars[game] >= player_vars[i] / 10.0
 
-        prob += pulp.lpSum([game_vars[game] for game in games]) >= config.MIN_GAMES
+        prob += pulp.lpSum([game_vars[game] for game in games]) >= min_games
 
         # Solve
         solver = pulp.HiGHS(msg=False)
@@ -234,15 +234,14 @@ def slot_lineup_by_time(lineup_names: List[str], df: pd.DataFrame) -> List[str]:
 
 
 def run(
+    cfg: Config,
     num_lineups: int = 2500,
     randomness: float = 0.25,
     min_unique: int = 1,
-    min_salary: int = 49500,
-    min_projection: float = 10.0,
 ):
     print("Starting NBA DFS Optimizer (Parallel Mode)...")
     print(
-        f"Settings: {num_lineups} lineups, {randomness * 100:.0f}% randomness, {min_unique} min unique, {min_projection} min proj"
+        f"Settings: {num_lineups} lineups, {randomness * 100:.0f}% randomness, {min_unique} min unique, {cfg.min_projection} min proj"
     )
 
     # Check if randomness is 0
@@ -256,12 +255,12 @@ def run(
         print("Please enable randomness (>0) for parallel mode efficiency.")
 
     try:
-        projs_file = get_latest_projections()
+        projs_file = get_latest_projections(cfg)
         print(f"Using projections: {os.path.basename(projs_file)}")
 
-        df = load_data(projs_file, config.ENTRIES_PATH)
-        df = df[df["Projection"] >= min_projection]
-        print(f"Loaded {len(df)} players with proj >= {min_projection}")
+        df = load_data(projs_file, cfg.entries_path)
+        df = df[df["Projection"] >= cfg.min_projection]
+        print(f"Loaded {len(df)} players with proj >= {cfg.min_projection}")
 
         # DEPRECATED - randomness of 0.25 renders duplicates mathematically improbable
         # Strategy: Generate more than needed to account for duplicates/overlap
@@ -285,7 +284,7 @@ def run(
             # Since df is static, it gets pickled once (or shared via COW on Linux, but picked on Windows)
             futures = [
                 executor.submit(
-                    generate_single_lineup, df, randomness, min_salary
+                    generate_single_lineup, df, randomness, cfg.min_salary, cfg.salary_cap, cfg.roster_size, cfg.min_games
                 )
                 for _ in range(target_lineups)
             ]
@@ -329,7 +328,7 @@ def run(
             is_valid = True
             for prev_indices in selected_indices_list:
                 overlap = len(indices.intersection(prev_indices))
-                if overlap > (config.ROSTER_SIZE - min_unique):
+                if overlap > (cfg.roster_size - min_unique):
                     is_valid = False
                     duplicates_removed += 1
                     break
@@ -363,12 +362,12 @@ def run(
         print(f"Final valid lineups slotted and selected: {len(final_lineups)}")
 
         # Save
-        if not os.path.exists(config.LINEUP_POOL_DIR):
-            os.makedirs(config.LINEUP_POOL_DIR)
+        if not os.path.exists(cfg.lineup_pool_dir):
+            os.makedirs(cfg.lineup_pool_dir)
 
         timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
         output_file = os.path.join(
-            config.LINEUP_POOL_DIR, f"lineup-pool-{timestamp}.csv"
+            cfg.lineup_pool_dir, f"lineup-pool-{timestamp}.csv"
         )
         out_df = pd.DataFrame(
             final_lineups, columns=["PG", "SG", "SF", "PF", "C", "G", "F", "UTIL"]
@@ -382,6 +381,9 @@ def run(
 
 
 def main():
+    from dataclasses import replace
+    from .config import load_config_from_env
+
     parser = argparse.ArgumentParser(description="NBA DFS Optimization Engine (Parallel)")
     parser.add_argument("-n", "--num_lineups", type=int, default=2500, help="Number of lineups to generate (Default: 2500)")
     parser.add_argument("-r", "--randomness", type=float, default=0.25, help="Randomness factor 0.0-1.0 (Default: 0.25)")
@@ -390,12 +392,14 @@ def main():
     parser.add_argument("-mp", "--min_projection", type=float, default=10.0, help="Min projection for a player to be considered (Default: 10.0)")
     args = parser.parse_args()
 
+    cfg = load_config_from_env()
+    cfg = replace(cfg, min_salary=args.min_salary, min_projection=args.min_projection)
+
     run(
+        cfg,
         num_lineups=args.num_lineups,
         randomness=args.randomness,
         min_unique=args.min_unique,
-        min_salary=args.min_salary,
-        min_projection=args.min_projection,
     )
 
 

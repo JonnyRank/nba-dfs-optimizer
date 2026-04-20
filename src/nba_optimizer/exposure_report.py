@@ -5,7 +5,7 @@ import re
 
 import pandas as pd
 
-from . import config
+from .config import Config
 
 
 def get_latest_file(directory: str, prefix: str) -> str:
@@ -15,11 +15,11 @@ def get_latest_file(directory: str, prefix: str) -> str:
     return max(files, key=os.path.getmtime)
 
 
-def run(top_x: int = 0):
+def run(cfg: Config, top_x: int = 0):
     try:
         # 1. Locate latest files
-        entries_file = get_latest_file(config.OUTPUT_DIR, "upload-ready-DKEntries-")
-        projs_file = get_latest_file(config.PROJS_DIR, "NBA-Projs-")
+        entries_file = get_latest_file(cfg.output_dir, "upload-ready-DKEntries-")
+        projs_file = get_latest_file(cfg.projs_dir, "NBA-Projs-")
 
         # 2. Parse Projections for Ownership
         df_projs = pd.read_csv(projs_file)
@@ -105,6 +105,8 @@ def run(top_x: int = 0):
 
 
 def main():
+    from .config import load_config_from_env
+
     parser = argparse.ArgumentParser(description="NBA DFS Exposure Report")
     parser.add_argument(
         "-t",
@@ -115,7 +117,8 @@ def main():
     )
     args = parser.parse_args()
 
-    run(args.top_x)
+    cfg = load_config_from_env()
+    run(cfg, args.top_x)
 
 
 if __name__ == "__main__":

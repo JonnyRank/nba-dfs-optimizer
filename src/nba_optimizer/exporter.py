@@ -5,16 +5,16 @@ from datetime import datetime
 
 import pandas as pd
 
-from . import config
+from .config import Config
 from .utils import get_latest_file, read_ragged_csv
 
 
-def run():
+def run(cfg: Config):
     print("Starting NBA DFS Entry Export...")
 
     try:
         # 1. Load the entire template using the robust utility function
-        df_entries, valid_cols = read_ragged_csv(config.ENTRIES_PATH)
+        df_entries, valid_cols = read_ragged_csv(cfg.entries_path)
 
         # Filter back to just the valid entry columns
         df_entries = df_entries[valid_cols]
@@ -25,7 +25,7 @@ def run():
         print(f"Detected {entry_count} valid entry slots.")
 
         # 3. Load latest ranked lineups
-        ranked_file = get_latest_file(config.RANKED_LINEUP_DIR, "ranked-lineups-*.csv")
+        ranked_file = get_latest_file(cfg.ranked_lineup_dir, "ranked-lineups-*.csv")
         print(f"Using ranked lineups from: {os.path.basename(ranked_file)}")
         df_ranked = pd.read_csv(ranked_file)
 
@@ -55,7 +55,7 @@ def run():
         # 5. Save the combined file
         timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
         output_file = os.path.join(
-            config.OUTPUT_DIR, f"upload-ready-DKEntries-{timestamp}.csv"
+            cfg.output_dir, f"upload-ready-DKEntries-{timestamp}.csv"
         )
 
         # Write updated entries
@@ -69,9 +69,13 @@ def run():
 
 
 def main():
+    from .config import load_config_from_env
+
     parser = argparse.ArgumentParser(description="NBA DFS Entry Exporter")
     parser.parse_args()
-    run()
+
+    cfg = load_config_from_env()
+    run(cfg)
 
 
 if __name__ == "__main__":

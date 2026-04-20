@@ -8,10 +8,12 @@
 |------|------|---------|----------|
 | Files | `snake_case.py` | `late_swapper.py`, `exposure_report.py` | All files in `src/nba_optimizer/` |
 | Functions/methods | `snake_case` | `generate_single_lineup()`, `slot_lineup_by_time()`, `rank_lineups()` | `engine.py`, `ranker.py` |
-| Constants | `UPPER_SNAKE_CASE` | `SALARY_CAP`, `ROSTER_SIZE`, `LINEUP_POOL_DIR` | `config.py` |
+| Classes | `PascalCase` | `Config` | `config.py` |
+| Constants (within Config) | `snake_case` attributes | `salary_cap`, `roster_size`, `min_projection` | `config.py` |
 | Local variables | `snake_case` | `df_players`, `projs_file`, `min_salary` | All modules |
 | DataFrame variables | `df_` prefix | `df_raw`, `df_projs`, `df_ranked`, `df_entries` | `engine.py`, `ranker.py`, `exporter.py` |
 | Dictionary lookup vars | `_dict` suffix | `salary_dict`, `pos_dict`, `own_map`, `proj_map` | `engine.py`, `ranker.py` |
+| Config instances | `cfg` or `config` | `cfg: Config` parameter | All modules' `run()` functions |
 
 ### 2) Formatting and Linting
 
@@ -22,10 +24,11 @@
 
 ### 3) Import and Module Conventions
 
-- Import grouping/order: stdlib → third-party (`pandas`, `numpy`, `pulp`) → local (`config`, `utils`)
-- Within-package imports: Relative (`from . import config`, `from .utils import get_latest_file`)
+- Import grouping/order: stdlib → third-party (`pandas`, `numpy`, `pulp`) → local (`from .config import Config`, `from .utils import get_latest_file`)
+- Within-package imports: Relative (`from .config import Config`, `from .utils import get_latest_file`)
 - Script-level imports: Absolute package imports (`from nba_optimizer import engine, ranker`)
 - No barrel exports; `__init__.py` is empty
+- Configuration: Use dependency injection pattern - modules accept `Config` instance as parameter, initialized via `load_config_from_env()` in orchestrator/main functions
 
 ### 4) Error and Logging Conventions
 
