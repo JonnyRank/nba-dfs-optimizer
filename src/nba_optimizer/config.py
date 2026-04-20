@@ -71,18 +71,3 @@ def load_config_from_env() -> Config:
     config.ensure_directories()
 
     return config
-
-
-# Backward compatibility: expose module-level constants for legacy code
-# These should be removed once all modules are updated
-_default_config = load_config_from_env()
-SALARY_CAP = _default_config.salary_cap
-MIN_SALARY = _default_config.min_salary
-ROSTER_SIZE = _default_config.roster_size
-MIN_GAMES = _default_config.min_games
-MIN_PROJECTION = _default_config.min_projection
-ENTRIES_PATH = _default_config.entries_path
-PROJS_DIR = _default_config.projs_dir
-LINEUP_POOL_DIR = _default_config.lineup_pool_dir
-RANKED_LINEUP_DIR = _default_config.ranked_lineup_dir
-OUTPUT_DIR = _default_config.output_dir

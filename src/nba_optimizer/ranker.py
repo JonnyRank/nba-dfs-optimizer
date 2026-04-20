@@ -7,7 +7,6 @@ from typing import Dict
 import numpy as np
 import pandas as pd
 
-from . import config
 from .config import Config
 from .utils import get_latest_file
 

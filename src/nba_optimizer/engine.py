@@ -14,7 +14,6 @@ import numpy as np
 import pandas as pd
 import pulp
 
-from . import config
 from .config import Config
 
 

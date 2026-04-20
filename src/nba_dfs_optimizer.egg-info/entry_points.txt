@@ -1,0 +1,3 @@
+[console_scripts]
+nba-dfs-optimizer = nba_optimizer.cli:main
+nba-dfs-optimizer-gui = nba_optimizer.gui:main

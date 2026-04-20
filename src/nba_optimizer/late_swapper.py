@@ -7,7 +7,6 @@ from typing import List
 import pandas as pd
 import pulp
 
-from . import config
 from .config import Config
 from .utils import (
     extract_player_id,

@@ -5,7 +5,6 @@ from datetime import datetime
 
 import pandas as pd
 
-from . import config
 from .config import Config
 from .utils import get_latest_file, read_ragged_csv
 
