@@ -8,6 +8,7 @@ import pandas as pd
 import pulp
 
 from . import config
+from .config import Config
 from .utils import (
     extract_player_id,
     get_latest_file,
@@ -50,7 +51,7 @@ def load_data(projs_file: str, entries_file: str) -> pd.DataFrame:
 def solve_late_swap_batch(
     df_pool: pd.DataFrame,
     current_lineup_ids: List[str],
-    min_salary: int,
+    cfg: Config,
     num_to_generate: int,
 ) -> List[List[str]]:
     """Optimizes the remaining slots of a lineup and generates a batch of unique variations."""
@@ -135,9 +136,9 @@ def solve_late_swap_batch(
 
     prob += (
         pulp.lpSum([df_pool.loc[i, "Salary"] * player_vars[i] for i in df_pool.index])
-        <= config.SALARY_CAP - locked_salary_used
+        <= cfg.salary_cap - locked_salary_used
     )
-    adj_min_salary = max(0, min_salary - locked_salary_used)
+    adj_min_salary = max(0, cfg.min_salary - locked_salary_used)
     prob += (
         pulp.lpSum([df_pool.loc[i, "Salary"] * player_vars[i] for i in df_pool.index])
         >= adj_min_salary
@@ -177,7 +178,7 @@ def solve_late_swap_batch(
         for i in players_in_game:
             prob += game_vars[game] >= player_vars[i] / 10.0
 
-    adj_min_games = max(0, config.MIN_GAMES - len(locked_games))
+    adj_min_games = max(0, cfg.min_games - len(locked_games))
     prob += pulp.lpSum([game_vars[game] for game in games]) >= adj_min_games
 
     # 3. Iterative Batch Solving
@@ -219,17 +220,14 @@ def solve_late_swap_batch(
     return generated_lineups
 
 
-def run(
-    min_salary: int = 49500,
-    min_projection: float = 1.0,
-):
+def run(cfg: Config):
     print("Starting Late Swap Optimization...")
 
     try:
-        projs_file = get_latest_file(config.PROJS_DIR, "NBA-Projs-*.csv")
+        projs_file = get_latest_file(cfg.projs_dir, "NBA-Projs-*.csv")
         print(f"Using projections: {os.path.basename(projs_file)}")
 
-        df_entries, entry_cols = read_ragged_csv(config.ENTRIES_PATH)
+        df_entries, entry_cols = read_ragged_csv(cfg.entries_path)
 
         valid_mask = df_entries[entry_cols[0]].notna()
         valid_entries = df_entries[valid_mask]
@@ -244,9 +242,9 @@ def run(
                     if pid:
                         current_ids.add(pid)
 
-        df_pool = load_data(projs_file, config.ENTRIES_PATH)
+        df_pool = load_data(projs_file, cfg.entries_path)
 
-        mask_proj = df_pool["Projection"] >= min_projection
+        mask_proj = df_pool["Projection"] >= cfg.min_projection
         mask_current = df_pool["ID"].isin(current_ids)
         df_pool = df_pool[mask_proj | mask_current].copy()
         df_pool.reset_index(drop=True, inplace=True)
@@ -292,7 +290,7 @@ def run(
             template_players = entries[0][1]
 
             batch_lineups = solve_late_swap_batch(
-                df_pool, template_players, min_salary, num_to_generate
+                df_pool, template_players, cfg, num_to_generate
             )
 
             for j, (idx, _) in enumerate(entries):
@@ -310,7 +308,7 @@ def run(
 
         timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
         output_file = os.path.join(
-            config.OUTPUT_DIR, f"late-swap-entries-{timestamp}.csv"
+            cfg.output_dir, f"late-swap-entries-{timestamp}.csv"
         )
 
         required_cols = [
@@ -342,6 +340,9 @@ def run(
 
 
 def main():
+    from dataclasses import replace
+    from .config import load_config_from_env
+
     parser = argparse.ArgumentParser(description="NBA DFS Late Swap Tool")
     parser.add_argument(
         "-ms", "--min_salary", type=int, default=49500, help="Min salary for a lineup"
@@ -355,7 +356,10 @@ def main():
     )
     args = parser.parse_args()
 
-    run(min_salary=args.min_salary, min_projection=args.min_projection)
+    cfg = load_config_from_env()
+    cfg = replace(cfg, min_salary=args.min_salary, min_projection=args.min_projection)
+
+    run(cfg)
 
 
 if __name__ == "__main__":

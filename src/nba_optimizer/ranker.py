@@ -8,10 +8,11 @@ import numpy as np
 import pandas as pd
 
 from . import config
+from .config import Config
 from .utils import get_latest_file
 
 
-def load_data(lineup_file: str, projs_file: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+def load_data(lineup_file: str, projs_file: str, cfg: Config) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Loads lineups and player data (projections/ownership)."""
     df_lineups = pd.read_csv(lineup_file)
     df_projs = pd.read_csv(projs_file)
@@ -20,7 +21,7 @@ def load_data(lineup_file: str, projs_file: str) -> tuple[pd.DataFrame, pd.DataF
     # Import the engine's merge logic to get full player context
     from .engine import load_data as engine_load_data
 
-    df_players = engine_load_data(projs_file, config.ENTRIES_PATH)
+    df_players = engine_load_data(projs_file, cfg.entries_path)
 
     return df_lineups, df_players
 
@@ -77,6 +78,7 @@ def rank_lineups(
 
 
 def run(
+    cfg: Config,
     proj_weight: float = 0.85,
     own_weight: float = 0.0,
     geo_weight: float = 0.15,
@@ -85,14 +87,14 @@ def run(
 
     try:
         # 1. Identify latest files
-        lineup_file = get_latest_file(config.LINEUP_POOL_DIR, "lineup-pool-*.csv")
-        projs_file = get_latest_file(config.PROJS_DIR, "NBA-Projs-*.csv")
+        lineup_file = get_latest_file(cfg.lineup_pool_dir, "lineup-pool-*.csv")
+        projs_file = get_latest_file(cfg.projs_dir, "NBA-Projs-*.csv")
 
         print(f"Ranking: {os.path.basename(lineup_file)}")
         print(f"Using metrics from: {os.path.basename(projs_file)}")
 
         # 2. Load and merge
-        df_lineups, df_players = load_data(lineup_file, projs_file)
+        df_lineups, df_players = load_data(lineup_file, projs_file, cfg)
 
         # 3. Rank
         weights = {
@@ -103,12 +105,12 @@ def run(
         df_ranked = rank_lineups(df_lineups, df_players, weights)
 
         # 4. Save
-        if not os.path.exists(config.RANKED_LINEUP_DIR):
-            os.makedirs(config.RANKED_LINEUP_DIR)
+        if not os.path.exists(cfg.ranked_lineup_dir):
+            os.makedirs(cfg.ranked_lineup_dir)
 
         timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
         output_file = os.path.join(
-            config.RANKED_LINEUP_DIR, f"ranked-lineups-{timestamp}.csv"
+            cfg.ranked_lineup_dir, f"ranked-lineups-{timestamp}.csv"
         )
 
         cols = [
@@ -132,6 +134,8 @@ def run(
 
 
 def main():
+    from .config import load_config_from_env
+
     parser = argparse.ArgumentParser(description="NBA DFS Lineup Sorter & Ranker")
     parser.add_argument(
         "-pw",
@@ -148,7 +152,10 @@ def main():
     )
     args = parser.parse_args()
 
+    cfg = load_config_from_env()
+
     run(
+        cfg,
         proj_weight=args.proj_weight,
         own_weight=args.own_weight,
         geo_weight=args.geo_weight,
