@@ -155,11 +155,11 @@
 * **LLM Instructions**: Act as a Pandas Data Scientist. Rewrite the `rank_lineups` function in `ranker.py` to eliminate loops/`iterrows()`. Implement the metric calculations using pure, vectorized Pandas DataFrame merges and operations.
 
 ### [Implement] Optimize Late Swapper LP Lookups
-* **Status**: Not Started
+* **Status**: Comitted - To Be Tested
 * **Target Files**: `src/nba_optimizer/late_swapper.py`
 * **Context**: The late swapper is significantly slower at LP construction compared to the main engine because it uses Pandas `df.loc[i, ...]` lookups inside the constraint definition loops.
 * **Acceptance Criteria**:
-  * [ ] The late swapper converts the DataFrame into standard Python dictionaries prior to the PuLP loop (matching the approach used in `engine.py`).
+  * [x] The late swapper converts the DataFrame into standard Python dictionaries prior to the PuLP loop (matching the approach used in `engine.py`).
   * [ ] Prove improved speed on batch swap runs.
 * **LLM Instructions**: Act as a Python Performance Engineer. Update `late_swapper.py`. Convert the iterative `df.loc[]` lookups within the `solve_late_swap_batch` constraint loops into fast Python dictionary lookups, mirroring the optimization pattern already used in `engine.py`.
 
