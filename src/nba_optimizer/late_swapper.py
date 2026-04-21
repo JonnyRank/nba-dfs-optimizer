@@ -126,7 +126,8 @@ def solve_late_swap_batch(
 
     # Pre-compute time scores and store in dictionary for O(1) lookup
     incentive_terms = []
-    df_pool["StartTime"] = df_pool["Game Info"].apply(parse_game_time)
+    if "StartTime" not in df_pool.columns:
+        df_pool["StartTime"] = df_pool["Game Info"].apply(parse_game_time)
     min_time = df_pool["StartTime"].min()
     max_time = df_pool["StartTime"].max()
     time_range = (max_time - min_time).total_seconds() or 1.0
