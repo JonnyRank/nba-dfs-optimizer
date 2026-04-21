@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import pulp
 
-from .config import Config
+from .config import Config, ROSTER_SLOTS
 
 
 # --- DATA LOADING ---
@@ -95,7 +95,7 @@ def generate_single_lineup(
         prob += pulp.lpSum([player_vars[i] for i in df.index]) == roster_size
 
         # Positional
-        slots = ["PG", "SG", "SF", "PF", "C", "G", "F", "UTIL"]
+        slots = ROSTER_SLOTS
         slot_vars = pulp.LpVariable.dicts("slot", (df.index, slots), cat=pulp.LpBinary)
 
         for i in df.index:
@@ -174,7 +174,7 @@ def slot_lineup_by_time(lineup_names: List[str], df: pd.DataFrame) -> List[str]:
         "F": 10,
         "UTIL": 100,
     }
-    slots = ["PG", "SG", "SF", "PF", "C", "G", "F", "UTIL"]
+    slots = ROSTER_SLOTS
 
     start_times = pd.to_datetime(players["StartTime"], errors="coerce")
     min_time = start_times.min()
@@ -370,7 +370,7 @@ def run(
             cfg.lineup_pool_dir, f"lineup-pool-{timestamp}.csv"
         )
         out_df = pd.DataFrame(
-            final_lineups, columns=["PG", "SG", "SF", "PF", "C", "G", "F", "UTIL"]
+            final_lineups, columns=ROSTER_SLOTS
         )
         out_df.to_csv(output_file, index=False)
         print(f"Saved {len(final_lineups)} lineups to {output_file}")

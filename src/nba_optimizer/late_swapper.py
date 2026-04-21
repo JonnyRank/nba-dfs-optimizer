@@ -7,7 +7,7 @@ from typing import List
 import pandas as pd
 import pulp
 
-from .config import Config
+from .config import Config, ROSTER_SLOTS
 from .utils import (
     extract_player_id,
     get_latest_file,
@@ -54,7 +54,7 @@ def solve_late_swap_batch(
     num_to_generate: int,
 ) -> List[List[str]]:
     """Optimizes the remaining slots of a lineup and generates a batch of unique variations."""
-    slots = ["PG", "SG", "SF", "PF", "C", "G", "F", "UTIL"]
+    slots = ROSTER_SLOTS
     flex_scores = {
         "UTIL": 3,
         "G": 2,
@@ -247,7 +247,7 @@ def run(cfg: Config):
         valid_entries = df_entries[valid_mask]
 
         current_ids = set()
-        slots = ["PG", "SG", "SF", "PF", "C", "G", "F", "UTIL"]
+        slots = ROSTER_SLOTS
         for _, row in valid_entries.iterrows():
             for s in slots:
                 val = row.get(s)

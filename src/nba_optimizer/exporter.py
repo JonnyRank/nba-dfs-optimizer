@@ -5,7 +5,7 @@ from datetime import datetime
 
 import pandas as pd
 
-from .config import Config
+from .config import Config, ROSTER_SLOTS
 from .utils import get_latest_file, read_ragged_csv
 
 
@@ -38,7 +38,7 @@ def run(cfg: Config):
             fill_count = entry_count
 
         # 4. Map lineups to entry slots
-        slots = ["PG", "SG", "SF", "PF", "C", "G", "F", "UTIL"]
+        slots = ROSTER_SLOTS
 
         # Explicitly cast columns to object to ensure string assignment works
         for slot in slots:

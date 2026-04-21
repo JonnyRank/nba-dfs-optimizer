@@ -7,7 +7,7 @@ from typing import Dict
 import numpy as np
 import pandas as pd
 
-from .config import Config
+from .config import Config, ROSTER_SLOTS
 from .utils import get_latest_file
 
 
@@ -33,7 +33,7 @@ def rank_lineups(
     own_map = df_players.set_index("Name + ID")["Own_Proj"].to_dict()
 
     lineup_results = []
-    slots = ["PG", "SG", "SF", "PF", "C", "G", "F", "UTIL"]
+    slots = ROSTER_SLOTS
 
     for idx, row in df_lineups.iterrows():
         lineup_names = [row[s] for s in slots]
@@ -121,7 +121,7 @@ def run(
             "Proj_Rank",
             "Own_Rank",
             "Geo_Rank",
-        ] + ["PG", "SG", "SF", "PF", "C", "G", "F", "UTIL"]
+        ] + ROSTER_SLOTS
 
         df_ranked[cols].to_csv(output_file, index=False)
         print(f"Successfully ranked {len(df_ranked)} lineups.")
