@@ -108,8 +108,15 @@ def solve_late_swap_batch(
     prob = pulp.LpProblem("NBA_Late_Swap", pulp.LpMaximize)
     player_vars = pulp.LpVariable.dicts("player", df_pool.index, cat=pulp.LpBinary)
 
+    # Convert DataFrame columns to dictionaries for O(1) lookup (optimization pattern from engine.py)
+    projection_dict = df_pool["Projection"].to_dict()
+    salary_dict = df_pool["Salary"].to_dict()
+    pos_dict = df_pool["Roster Position"].to_dict()
+    name_dict = df_pool["Name + ID"].to_dict()
+    id_dict = df_pool["ID"].to_dict()
+
     base_obj = pulp.lpSum(
-        [df_pool.loc[i, "Projection"] * player_vars[i] for i in df_pool.index]
+        [projection_dict[i] * player_vars[i] for i in df_pool.index]
     )
 
     available_slots = [slots[i] for i, filled in enumerate(filled_slots) if not filled]
@@ -117,40 +124,47 @@ def solve_late_swap_batch(
         "slot", (df_pool.index, available_slots), cat=pulp.LpBinary
     )
 
+    # Pre-compute time scores and store in dictionary for O(1) lookup
     incentive_terms = []
-    df_pool["StartTime"] = df_pool["Game Info"].apply(parse_game_time)
+    if "StartTime" not in df_pool.columns:
+        df_pool["StartTime"] = df_pool["Game Info"].apply(parse_game_time)
     min_time = df_pool["StartTime"].min()
     max_time = df_pool["StartTime"].max()
     time_range = (max_time - min_time).total_seconds() or 1.0
 
+    # Convert StartTime to dict and compute time scores once
+    start_time_dict = df_pool["StartTime"].to_dict()
+    time_score_dict = {}
     for i in df_pool.index:
-        time_score = (
-            df_pool.loc[i, "StartTime"] - min_time
-        ).total_seconds() / time_range
+        time_score_dict[i] = (start_time_dict[i] - min_time).total_seconds() / time_range
+
+    for i in df_pool.index:
         for s in available_slots:
-            weight = time_score * flex_scores.get(s, 1) * 0.001
+            weight = time_score_dict[i] * flex_scores.get(s, 1) * 0.001
             incentive_terms.append(slot_vars[i][s] * weight)
 
     prob += base_obj + pulp.lpSum(incentive_terms)
 
     prob += (
-        pulp.lpSum([df_pool.loc[i, "Salary"] * player_vars[i] for i in df_pool.index])
+        pulp.lpSum([salary_dict[i] * player_vars[i] for i in df_pool.index])
         <= cfg.salary_cap - locked_salary_used
     )
     adj_min_salary = max(0, cfg.min_salary - locked_salary_used)
     prob += (
-        pulp.lpSum([df_pool.loc[i, "Salary"] * player_vars[i] for i in df_pool.index])
+        pulp.lpSum([salary_dict[i] * player_vars[i] for i in df_pool.index])
         >= adj_min_salary
     )
     prob += pulp.lpSum([player_vars[i] for i in df_pool.index]) == num_to_fill
 
+    # Use name_dict to check locked players instead of df.loc
     for i in df_pool.index:
-        if is_player_locked(df_pool.loc[i].get("Name + ID", "")):
+        if is_player_locked(name_dict[i]):
             prob += player_vars[i] == 0
 
+    # Use pos_dict for position eligibility instead of df.loc
     for i in df_pool.index:
         prob += pulp.lpSum([slot_vars[i][s] for s in available_slots]) == player_vars[i]
-        pos_str = str(df_pool.loc[i, "Roster Position"])
+        pos_str = str(pos_dict[i])
         for s in available_slots:
             eligible = False
             if s == "UTIL":
@@ -201,13 +215,14 @@ def solve_late_swap_batch(
         current_lineup_map = lineup_map.copy()
         newly_drafted_indices = []
 
+        # Use id_dict and name_dict for result extraction instead of df.loc
         for i in df_pool.index:
             if pulp.value(player_vars[i]) > 0.5:
-                if df_pool.loc[i, "ID"] not in locked_ids:
+                if id_dict[i] not in locked_ids:
                     newly_drafted_indices.append(i)
                 for s in available_slots:
                     if pulp.value(slot_vars[i][s]) > 0.5:
-                        current_lineup_map[s] = df_pool.loc[i, "Name + ID"]
+                        current_lineup_map[s] = name_dict[i]
 
         generated_lineups.append([current_lineup_map.get(s, "EMPTY") for s in slots])
 
