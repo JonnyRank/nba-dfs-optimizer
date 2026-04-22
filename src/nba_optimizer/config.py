@@ -4,7 +4,8 @@ from dotenv import load_dotenv
 
 
 # --- DRAFTKINGS ROSTER CONSTANTS ---
-ROSTER_SLOTS = ["PG", "SG", "SF", "PF", "C", "G", "F", "UTIL"]
+ROSTER_SLOTS = ("PG", "SG", "SF", "PF", "C", "G", "F", "UTIL")
+ENTRY_HEADER_COLS = ("Entry ID", "Contest Name", "Contest ID", "Entry Fee")
 
 
 @dataclass
