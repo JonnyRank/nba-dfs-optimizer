@@ -3,6 +3,11 @@ from dataclasses import dataclass, field
 from dotenv import load_dotenv
 
 
+# --- DRAFTKINGS ROSTER CONSTANTS ---
+ROSTER_SLOTS = ("PG", "SG", "SF", "PF", "C", "G", "F", "UTIL")
+ENTRY_HEADER_COLS = ("Entry ID", "Contest Name", "Contest ID", "Entry Fee")
+
+
 @dataclass
 class Config:
     """Configuration for NBA DFS Optimizer.

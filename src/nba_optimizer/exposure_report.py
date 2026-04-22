@@ -5,7 +5,7 @@ import re
 
 import pandas as pd
 
-from .config import Config
+from .config import Config, ROSTER_SLOTS
 
 
 def get_latest_file(directory: str, prefix: str) -> str:
@@ -42,7 +42,7 @@ def run(cfg: Config, top_x: int = 0):
             return
 
         # 4. Extract Players from Slots
-        slots = ["PG", "SG", "SF", "PF", "C", "G", "F", "UTIL"]
+        slots = ROSTER_SLOTS
         all_players = []
 
         for slot in slots:
