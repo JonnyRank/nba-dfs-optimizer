@@ -183,12 +183,12 @@
 * **LLM Instructions**: Act as a Python Software Architect. Refactor `config.py` to define a configuration class instead of global variables. Trace all imports of `config.py` across the codebase (`engine.py`, `ranker.py`, `scripts/run_optimizer.py`, etc.) and update them to initialize and pass a configuration instance. Ensure the CLI arguments in the scripts still correctly override these class defaults.
 
 ### [Implement] Centralize Magic Strings and Positional Slots
-* **Status**: Not Started
+* **Status**: Completed
 * **Target Files**: `src/nba_optimizer/config.py` (or new `constants.py`), `src/nba_optimizer/engine.py`, `src/nba_optimizer/late_swapper.py`, `src/nba_optimizer/ranker.py`
 * **Context**: Hardcoded lists of DraftKings roster slots (`["PG", "SG", "SF", "PF", "C", "G", "F", "UTIL"]`) are duplicated across multiple files. They need to be moved to a single source of truth to prevent bugs and enable easier adaptation to other contest types or sports.
 * **Acceptance Criteria**:
-  * [ ] A single constant or Enum representing the roster slots is defined in `config.py` or a dedicated `constants.py` file.
-  * [ ] All hardcoded positional arrays in `engine.py`, `late_swapper.py`, and `ranker.py` are replaced with a reference to this central constant.
+  * [x] A single constant or Enum representing the roster slots is defined in `config.py` or a dedicated `constants.py` file.
+  * [x] All hardcoded positional arrays in `engine.py`, `late_swapper.py`, and `ranker.py` are replaced with a reference to this central constant.
 * **LLM Instructions**: Act as a Python Refactoring Expert. Create a centralized constant for the DraftKings NBA roster slots in `config.py` or a new `constants.py` file. Search through `engine.py`, `late_swapper.py`, and `ranker.py`, and replace all hardcoded lists of these slots with the new central reference.
 
 ---
