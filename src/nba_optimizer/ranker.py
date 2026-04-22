@@ -121,7 +121,7 @@ def run(
             "Proj_Rank",
             "Own_Rank",
             "Geo_Rank",
-        ] + ROSTER_SLOTS
+        ] + list(ROSTER_SLOTS)
 
         df_ranked[cols].to_csv(output_file, index=False)
         print(f"Successfully ranked {len(df_ranked)} lineups.")

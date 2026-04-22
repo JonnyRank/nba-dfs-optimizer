@@ -7,7 +7,7 @@ from typing import List
 import pandas as pd
 import pulp
 
-from .config import Config, ROSTER_SLOTS
+from .config import Config, ROSTER_SLOTS, ENTRY_HEADER_COLS
 from .utils import (
     extract_player_id,
     get_latest_file,
@@ -325,20 +325,7 @@ def run(cfg: Config):
             cfg.output_dir, f"late-swap-entries-{timestamp}.csv"
         )
 
-        required_cols = [
-            "Entry ID",
-            "Contest Name",
-            "Contest ID",
-            "Entry Fee",
-            "PG",
-            "SG",
-            "SF",
-            "PF",
-            "C",
-            "G",
-            "F",
-            "UTIL",
-        ]
+        required_cols = list(ENTRY_HEADER_COLS) + list(ROSTER_SLOTS)
 
         df_output = df_entries[required_cols]
         df_output = df_output[df_output["Entry ID"].notna()]
