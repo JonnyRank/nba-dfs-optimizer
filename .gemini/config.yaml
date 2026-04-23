@@ -20,7 +20,5 @@ ignore_patterns:
   - "*.egg-info/**"
   - "**/__pycache__/**"
   - "**/deprecated/**"
-  - "**/design_docs/**"
   - "**/example_projs/**"
   - "**/.env"
-  - "**/.env.example"
