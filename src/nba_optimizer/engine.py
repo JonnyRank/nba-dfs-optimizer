@@ -15,14 +15,10 @@ import pandas as pd
 import pulp
 
 from .config import Config, ROSTER_SLOTS
+from .utils import get_latest_file
 
 
 # --- DATA LOADING ---
-def get_latest_projections(cfg: Config) -> str:
-    files = glob.glob(os.path.join(cfg.projs_dir, "NBA-Projs-*.csv"))
-    if not files:
-        raise FileNotFoundError(f"No projection files found in {cfg.projs_dir}")
-    return max(files, key=os.path.basename)
 
 
 def load_data(projs_file: str, entries_file: str) -> pd.DataFrame:
@@ -255,7 +251,7 @@ def run(
         print("Please enable randomness (>0) for parallel mode efficiency.")
 
     try:
-        projs_file = get_latest_projections(cfg)
+        projs_file = get_latest_file(cfg.projs_dir, "NBA-Projs-*.csv")
         print(f"Using projections: {os.path.basename(projs_file)}")
 
         df = load_data(projs_file, cfg.entries_path)

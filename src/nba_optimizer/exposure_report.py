@@ -6,20 +6,14 @@ import re
 import pandas as pd
 
 from .config import Config, ROSTER_SLOTS
-
-
-def get_latest_file(directory: str, prefix: str) -> str:
-    files = glob.glob(os.path.join(directory, f"{prefix}*"))
-    if not files:
-        raise FileNotFoundError(f"No files matching {prefix}* found in {directory}")
-    return max(files, key=os.path.getmtime)
+from .utils import get_latest_file
 
 
 def run(cfg: Config, top_x: int = 0):
     try:
         # 1. Locate latest files
-        entries_file = get_latest_file(cfg.output_dir, "upload-ready-DKEntries-")
-        projs_file = get_latest_file(cfg.projs_dir, "NBA-Projs-")
+        entries_file = get_latest_file(cfg.output_dir, "upload-ready-DKEntries-*", use_mtime=True)
+        projs_file = get_latest_file(cfg.projs_dir, "NBA-Projs-*", use_mtime=True)
 
         # 2. Parse Projections for Ownership
         df_projs = pd.read_csv(projs_file)
