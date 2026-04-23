@@ -2,10 +2,6 @@
 # Reference: https://developers.google.com/gemini-code-assist/docs/customize-repo-review
 
 have_fun: false
-
-memory_config:
-  disabled: false
-
 code_review:
   disable: false
   comment_severity_threshold: MEDIUM
@@ -14,11 +10,5 @@ code_review:
     help: false
     summary: true
     code_review: true
-    include_drafts: true
-
-ignore_patterns:
-  - "*.egg-info/**"
-  - "**/__pycache__/**"
-  - "**/deprecated/**"
-  - "**/example_projs/**"
-  - "**/.env"
+    include_drafts: false
+ignore_patterns: []
