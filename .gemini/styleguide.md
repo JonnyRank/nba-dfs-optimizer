@@ -26,7 +26,8 @@ See [Conventions Documentation](../docs/codebase/CONVENTIONS.md) for full detail
 * Files: `snake_case.py`
 * Functions: `snake_case`
 * Classes: `PascalCase`
-* Constants: `UPPER_SNAKE_CASE`
+* `Config` attributes: `snake_case`
+* Module-level constants: `UPPER_SNAKE_CASE`
 * DataFrames: `df_` prefix
 * Dictionaries: `_dict` or `_map` suffix
 
