@@ -1,6 +1,5 @@
 import argparse
 import concurrent.futures
-import glob
 import itertools
 import multiprocessing
 import os

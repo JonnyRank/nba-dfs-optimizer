@@ -1,5 +1,4 @@
 import argparse
-import glob
 import os
 import re
 
@@ -12,8 +11,8 @@ from .utils import get_latest_file
 def run(cfg: Config, top_x: int = 0):
     try:
         # 1. Locate latest files
-        entries_file = get_latest_file(cfg.output_dir, "upload-ready-DKEntries-*", use_mtime=True)
-        projs_file = get_latest_file(cfg.projs_dir, "NBA-Projs-*", use_mtime=True)
+        entries_file = get_latest_file(cfg.output_dir, "upload-ready-DKEntries-*.csv", use_mtime=True)
+        projs_file = get_latest_file(cfg.projs_dir, "NBA-Projs-*.csv", use_mtime=True)
 
         # 2. Parse Projections for Ownership
         df_projs = pd.read_csv(projs_file)
