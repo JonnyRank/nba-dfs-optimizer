@@ -1,3 +1,5 @@
+import sys
+
 from gooey import Gooey, GooeyParser
 
 from .orchestrator import run_pipeline
@@ -5,8 +7,12 @@ from .orchestrator import run_pipeline
 
 @Gooey(
     program_name="Jonny's NBA DFS Optimizer",
-    default_size=(600, 700),
-    progress_regex=r"Lineups generated: (\d+)%"
+    default_size=(600, 800),
+    progress_regex=r"Lineups generated: (\d+)%",
+    target=f'"{sys.executable}" -u -m nba_optimizer.gui',
+    show_success_modal=False,
+    show_stop_warning=False,
+    terminal_font_family='Courier New',
 )
 def main():
     parser = GooeyParser(description="NBA DFS Optimizer - Main Orchestrator")
@@ -20,6 +26,16 @@ def main():
     parser.add_argument("-pw", "--proj_weight", type=float, default=0.8, help="Weight for Projection Rank (Default: 0.8)")
     parser.add_argument("-ow", "--own_weight", type=float, default=0.0, help="Weight for Ownership Rank (Default: 0.0)")
     parser.add_argument("-gw", "--geo_weight", type=float, default=0.2, help="Weight for Geomean Rank (Default: 0.2)")
-    parser.add_argument("-t", "--top_x", type=int, default=0, help="Display only top X exposed players (0 for all)")
+    parser.add_argument(
+        "-t",
+        "--top_x",
+        type=int,
+        default=25,
+        help="Display only top X exposed players (0 for all)",
+    )
 
     run_pipeline(parser.parse_args())
+
+
+if __name__ == "__main__":
+    main()

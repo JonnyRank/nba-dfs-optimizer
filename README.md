@@ -61,7 +61,7 @@ nba-dfs-optimizer -n 2000 -mp 12 -r 0.25 -pw 0.8 -gw 0.2 -t 25
 | `--proj_weight` | `-pw` | 0.8 | Weight for the Projection Rank in final scoring. |
 | `--own_weight` | `-ow` | 0.0 | Weight for the Total Ownership Rank. |
 | `--geo_weight` | `-gw` | 0.2 | Weight for the Geomean Ownership Rank. |
-| `--top_x` | `-t` | 0 | Display only top X exposed players in report (default 0 = display all players used in export). |
+| `--top_x` | `-t` | 25 | Display only top X exposed players in report (Use 0 to display all players used in export). |
 | `--late_swap` | | False | Run late swap re-optimization instead of full generation. |
 
 ### Exposure Report (`exposure_report.py`)

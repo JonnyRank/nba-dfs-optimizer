@@ -73,7 +73,7 @@ def main():
         "-t",
         "--top_x",
         type=int,
-        default=0,
+        default=25,
         help="Display only top X exposed players (0 for all)",
     )
 

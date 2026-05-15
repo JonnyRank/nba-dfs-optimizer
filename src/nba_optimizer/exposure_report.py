@@ -4,11 +4,11 @@ import re
 
 import pandas as pd
 
-from .config import Config, ROSTER_SLOTS
+from .config import ROSTER_SLOTS, Config
 from .utils import get_latest_file
 
 
-def run(cfg: Config, top_x: int = 0):
+def run(cfg: Config, top_x: int = 25):
     try:
         # 1. Locate latest files
         entries_file = get_latest_file(cfg.output_dir, "upload-ready-DKEntries-*.csv", use_mtime=True)
@@ -77,21 +77,31 @@ def run(cfg: Config, top_x: int = 0):
         print(f"Total Lineups: {total_lineups}")
         print(f"Source: {os.path.basename(entries_file)}")
 
-        # Format columns for readability
-        formatters = {
-            "Exposure %": "{:.1f}%".format,
-            "Proj Own %": "{:.1f}%".format,
-            "Leverage": "{:+.1f}".format,
-        }
+        display_df = df_report.head(top_x) if top_x > 0 else df_report
 
-        display_df = df_report.copy()
-        for col, fmt in formatters.items():
-            display_df[col] = display_df[col].apply(fmt)
+        rows = []
+        for _, row in display_df.iterrows():
+            rows.append(
+                {
+                    "Player": row["Player"],
+                    "Exposure": f"{row['Exposure %']:.2f}%",
+                    "Own Proj": f"{row['Proj Own %']:.2f}%",
+                    "Leverage": f"{row['Leverage']:.1f}%",
+                }
+            )
 
-        if top_x > 0:
-            print(display_df.head(top_x).to_string(index=False))
-        else:
-            print(display_df.to_string(index=False))
+        name_w = max(len("Player"), max(len(r["Player"]) for r in rows))
+        exp_w = max(len("Exposure"), max(len(r["Exposure"]) for r in rows))
+        own_w = max(len("Own Proj"), max(len(r["Own Proj"]) for r in rows))
+        lev_w = max(len("Leverage"), max(len(r["Leverage"]) for r in rows))
+
+        print(
+            f"{'Player':^{name_w}}  {'Exposure':^{exp_w}}  {'Own Proj':^{own_w}}  {'Leverage':^{lev_w}}"
+        )
+        for r in rows:
+            print(
+                f"{r['Player']:<{name_w}}  {r['Exposure']:>{exp_w}}  {r['Own Proj']:>{own_w}}  {r['Leverage']:>{lev_w}}"
+            )
 
     except Exception as e:
         print(f"Failed to generate exposure report: {e}")
@@ -105,8 +115,8 @@ def main():
         "-t",
         "--top_x",
         type=int,
-        default=0,
-        help="Limit display to top X highest-exposed players. Use 0 for all.",
+        default=25,
+        help="Limit display to top X highest-exposed players (Default: 25). Use 0 for all",
     )
     args = parser.parse_args()
 

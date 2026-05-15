@@ -46,7 +46,7 @@ def run_pipeline(args):
     print("\n--- Phase 4: Generating Exposure Report ---")
     exposure_report.run(config, top_x=args.top_x)
 
-    print("\n==================================================================")
+    print("\n=================================================================")
     print("Optimization Pipeline Complete!")
     print("Check your exports folder for the 'upload-ready-DKEntries' file.")
-    print("==================================================================")
+    print("=================================================================")
