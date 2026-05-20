@@ -220,12 +220,12 @@ Maintain these documentation files and update as needed:
 
 - **README.md**: Project overview, quick start, basic usage
 - **CHANGELOG.md**: Version history and user-facing changes
-- **docs/**: Detailed documentation
-  - `installation.md`: Setup and installation guide
-  - `configuration.md`: Configuration options and examples
-  - `api.md`: API reference documentation
-  - `contributing.md`: Contribution guidelines
-  - `migration-guides/`: Version migration guides
+- **docs\codebase**: Detailed codebase documentation
+  - `ARCHITECTURE.md`: System design and module responsibilities
+  - `CONVENTIONS.md`: Coding style, patterns, and workspace norms
+  - `INTEGRATIONS.md`: External systems, data sources, and file I/O
+  - `STACK.md`: Runtime, dependencies, and key commands
+  - `STRUCTURE.md`: Mapping, entry points, and module boundaries
 - **examples/**: Working code examples and tutorials
 
 ### Changelog Management

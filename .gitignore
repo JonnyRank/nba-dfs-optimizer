@@ -12,6 +12,7 @@ __pycache__/
 *.egg-info/
 
 # Misc.
+Available-Claude-Skills.md
 nba-dfs-optimizer.code-workspace
 example_projs/
 run_optimizer_pysimplegui.py

@@ -15,8 +15,6 @@
 
 | Debt item | Why it exists | Where | Risk if ignored | Suggested fix |
 |-----------|---------------|-------|-----------------|---------------|
-| `engine.py` has its own `get_latest_projections()` while `utils.py` has `get_latest_file()` | Predates utils extraction | `engine.py:get_latest_projections()` | Inconsistent file resolution behavior | Replace with `utils.get_latest_file(config.PROJS_DIR, "NBA-Projs-*.csv")` |
-| `exposure_report.py` has its own `get_latest_file()` using `getmtime` instead of basename sorting | Different sorting requirement | `exposure_report.py:get_latest_file()` | Two file-finding implementations with different semantics | Use `utils.get_latest_file()` with `use_mtime=True` |
 | `ranker.py` imports `engine.load_data()` for player context | Avoids duplicating merge logic | `ranker.py:load_data()` | Tight coupling between ranker and engine | Extract shared data loading to a common module |
 | Deprecated code in `deprecated/` folder | Legacy late swapper kept for reference | `deprecated/late_swapper_deprecated.py` (12.6KB) | Confusion about which is canonical | Remove or archive outside repo |
 | Legacy `sys.path.insert` script hack | Replaced by package-based imports and `pyproject.toml` entry points | `pyproject.toml`, `scripts/run_optimizer.py`, `scripts/run_optimizer_gui.py` | Resolved | Keep execution standardized via `pip install -e .` and console scripts |
@@ -48,7 +46,7 @@ This is a single-user, locally-run tool with no network exposure. Security risks
 
 ### 6) Resolved Questions (from user, 2026-04-18)
 
-1. **GUI:** Gooey has replaced Streamlit for now. User is researching alternative GUI frameworks due to Gooey's inflexibility (button placement locked to OS, no start-on-enter option). **SQLite:** Still planned but pending architectural decision on whether to use SQLite or migrate to Postgres in a separate project.
+1. **GUI:** Gooey has replaced Streamlit for now. GUI has been customized (program name, window size, progress bar regex, suppressed success/stop modals, Courier New terminal font). Button placement is still OS-controlled and there is no start-on-enter option; user may continue evaluating alternatives. **SQLite:** Still planned but pending architectural decision on whether to use SQLite or migrate to Postgres in a separate project.
 2. **Excel data loader:** Still desired but low priority. Do not implement until user requests it.
 3. **Test suite:** User is conflicted. Previous AI-assisted pytest effort produced opaque, non-useful tests. User values manual testing as a learning tool. Revisit when user is ready — any future implementation should prioritize transparent, domain-relevant tests over coverage metrics.
 4. **Import standardization:** Resolved. Absolute imports in `engine.py` and `exposure_report.py` have been converted to relative imports to match the rest of the package.
@@ -56,8 +54,8 @@ This is a single-user, locally-run tool with no network exposure. Security risks
 ### 7) Evidence
 
 - Scan output: high-churn files, code metrics, directory tree
-- `src/nba_optimizer/engine.py` (duplicate load_data, get_latest_projections)
-- `src/nba_optimizer/exposure_report.py` (duplicate get_latest_file)
+- `src/nba_optimizer/engine.py` (duplicate load_data)
+- `src/nba_optimizer/exposure_report.py` (leverage calculation)
 - `src/nba_optimizer/ranker.py` (engine import dependency)
 - `design_docs/project_plan.md` (planned but unimplemented phases)
 - Git commit history (scan output)

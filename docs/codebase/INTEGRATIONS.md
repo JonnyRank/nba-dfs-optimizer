@@ -7,7 +7,7 @@
 | System | Type | Purpose | Auth model | Criticality | Evidence |
 |--------|------|---------|------------|-------------|----------|
 | DraftKings (file-based) | CSV file exchange | Source of player pool (DKEntries.csv), target for upload-ready exports | None (manual download/upload) | High | `config.py:ENTRIES_PATH`, `exporter.py` |
-| Projection CSVs | Local file | Player projections and ownership data | None (user-generated) | High | `config.py:PROJS_DIR`, `engine.py:get_latest_projections()` |
+| Projection CSVs | Local file | Player projections and ownership data | None (user-generated) | High | `config.py:PROJS_DIR`, `engine.py` (via `utils.get_latest_file()`) |
 | Google Drive (via file path) | Local file system mount | Storage for lineup pools, ranked lineups, projections | OS-level file access | Medium | `.env.example:NBA_LINEUP_DIR`, `config.py` |
 
 ### 2) Data Stores
