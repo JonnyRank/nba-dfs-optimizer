@@ -3,12 +3,12 @@
 ## Active Tasks
 
 ### [Design] Flexible File Parsing for Exposure Report
-* **Status**: Not Started
+* **Status**: Complete
 * **Target Files**: `src/nba_optimizer/exposure_report.py`, `src/nba_optimizer/utils.py`
 * **Context**: The exposure report currently hardcodes the filename prefix (`upload-ready-DKEntries-`). It needs to handle late swap files automatically and allow users to pass an explicit filename argument via CLI.
 * **Acceptance Criteria**:
-  * [ ] CLI accepts an optional `--entries_file` or `--prefix` argument.
-  * [ ] Fallback logic correctly identifies whether to look for standard or late-swap exports if no argument is passed.
+  * [x] CLI accepts an optional `--entries_file` or `--prefix` argument.
+  * [x] Fallback logic correctly identifies whether to look for standard or late-swap exports if no argument is passed.
 * **LLM Instructions**: Act as a software architect. Review `run` and `main` in `exposure_report.py`. Draft a pseudocode plan showing how we will refactor the `get_latest_file` logic and the `argparse` configuration to support this. Wait for my approval before coding.
 
 ### [Design] Graceful Early Interruption for Engine Generator

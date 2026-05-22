@@ -68,11 +68,14 @@ nba-dfs-optimizer -n 2000 -mp 12 -r 0.25 -pw 0.8 -gw 0.2 -t 25
 Generates a detailed breakdown of player exposures from your latest export, comparing your exposure to projected ownership to identify leverage points. This report is automatically generated at the end of an `nba-dfs-optimizer` run, but can also be run standalone:
 
 ```bash
-# Run standalone (shows all exposures)
+# Run standalone (auto-detects latest standard or late-swap export)
 python -m nba_optimizer.exposure_report
 
 # Show only top 10 exposures
 python -m nba_optimizer.exposure_report --top_x 10
+
+# Use a specific entries file
+python -m nba_optimizer.exposure_report --entries_file exports/late-swap-entries-20260522_120000.csv
 ```
 
 ### Late Swap (`late_swapper.py`)
