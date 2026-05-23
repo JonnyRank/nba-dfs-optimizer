@@ -5,7 +5,7 @@ from typing import Optional
 
 import pandas as pd
 
-from .config import ENTRY_FILE_PATTERNS, ROSTER_SLOTS, Config
+from .config import LATE_SWAP_PREFIX, ROSTER_SLOTS, STANDARD_EXPORT_PREFIX, Config
 from .utils import get_latest_file
 
 
@@ -21,9 +21,19 @@ def _resolve_entries_file(cfg: Config, entries_file: Optional[str] = None) -> st
             raise FileNotFoundError(f"Specified entries file not found: {entries_file}")
         return entries_file
 
+    # Extract base and extension from the entries_path (e.g., DKEntries.csv -> DKEntries, .csv)
+    # This allows it to match files like DKEntries(1).csv dynamically.
+    base, ext = os.path.splitext(os.path.basename(cfg.entries_path))
+
+    patterns = (
+        f"{STANDARD_EXPORT_PREFIX}-*.csv",
+        f"{LATE_SWAP_PREFIX}-*.csv",
+        f"{base}*{ext}",
+    )
+
     # Try both patterns; pick whichever is newest by mtime
     candidates = []
-    for pattern in ENTRY_FILE_PATTERNS:
+    for pattern in patterns:
         try:
             candidates.append(get_latest_file(cfg.output_dir, pattern, use_mtime=True))
         except FileNotFoundError:
@@ -31,7 +41,7 @@ def _resolve_entries_file(cfg: Config, entries_file: Optional[str] = None) -> st
 
     if not candidates:
         raise FileNotFoundError(
-            f"No export files found in {cfg.output_dir} matching any known pattern: {ENTRY_FILE_PATTERNS}"
+            f"No export files found in {cfg.output_dir} matching any known pattern: {patterns}"
         )
 
     return max(candidates, key=os.path.getmtime)

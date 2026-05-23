@@ -7,7 +7,7 @@ from typing import List
 import pandas as pd
 import pulp
 
-from .config import Config, ROSTER_SLOTS, ENTRY_HEADER_COLS
+from .config import Config, ENTRY_HEADER_COLS, LATE_SWAP_PREFIX, ROSTER_SLOTS
 from .utils import (
     extract_player_id,
     get_latest_file,
@@ -322,7 +322,7 @@ def run(cfg: Config):
 
         timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
         output_file = os.path.join(
-            cfg.output_dir, f"late-swap-entries-{timestamp}.csv"
+            cfg.output_dir, f"{LATE_SWAP_PREFIX}-{timestamp}.csv"
         )
 
         required_cols = list(ENTRY_HEADER_COLS) + list(ROSTER_SLOTS)

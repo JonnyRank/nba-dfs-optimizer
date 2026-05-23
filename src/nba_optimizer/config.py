@@ -6,10 +6,11 @@ from dotenv import load_dotenv
 # --- DRAFTKINGS ROSTER CONSTANTS ---
 ROSTER_SLOTS = ("PG", "SG", "SF", "PF", "C", "G", "F", "UTIL")
 ENTRY_HEADER_COLS = ("Entry ID", "Contest Name", "Contest ID", "Entry Fee")
-ENTRY_FILE_PATTERNS = (
-    "upload-ready-DKEntries-*.csv",
-    "late-swap-entries-*.csv",
-)
+
+
+# --- EXPORT PREFIXES ---
+STANDARD_EXPORT_PREFIX = "upload-ready-DKEntries"
+LATE_SWAP_PREFIX = "late-swap-entries"
 
 
 @dataclass
