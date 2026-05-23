@@ -1,14 +1,20 @@
 import argparse
 import os
 import re
+from typing import Optional
 
 import pandas as pd
 
 from .config import ROSTER_SLOTS, Config
 from .utils import get_latest_file
 
+ENTRY_FILE_PATTERNS = (
+    "upload-ready-DKEntries-*.csv",
+    "late-swap-entries-*.csv",
+)
 
-def _resolve_entries_file(cfg: Config, entries_file: str = None) -> str:
+
+def _resolve_entries_file(cfg: Config, entries_file: Optional[str] = None) -> str:
     """Resolve the entries file to use for the exposure report.
 
     If *entries_file* is an explicit path, return it directly.
@@ -20,12 +26,11 @@ def _resolve_entries_file(cfg: Config, entries_file: str = None) -> str:
             raise FileNotFoundError(f"Specified entries file not found: {entries_file}")
         return entries_file
 
-    # Try both prefixes; pick whichever is newest by mtime
-    prefixes = ["upload-ready-DKEntries-*.csv", "late-swap-entries-*.csv"]
+    # Try both patterns; pick whichever is newest by mtime
     candidates = []
-    for prefix in prefixes:
+    for pattern in ENTRY_FILE_PATTERNS:
         try:
-            candidates.append(get_latest_file(cfg.output_dir, prefix, use_mtime=True))
+            candidates.append(get_latest_file(cfg.output_dir, pattern, use_mtime=True))
         except FileNotFoundError:
             continue
 
@@ -37,7 +42,7 @@ def _resolve_entries_file(cfg: Config, entries_file: str = None) -> str:
     return max(candidates, key=os.path.getmtime)
 
 
-def run(cfg: Config, top_x: int = 25, entries_file: str = None):
+def run(cfg: Config, top_x: int = 25, entries_file: Optional[str] = None):
     try:
         # 1. Locate latest files
         entries_file = _resolve_entries_file(cfg, entries_file)
