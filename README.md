@@ -75,7 +75,7 @@ python -m nba_optimizer.exposure_report
 python -m nba_optimizer.exposure_report --top_x 10
 
 # Use a specific entries file
-python -m nba_optimizer.exposure_report --entries_file exports/late-swap-entries-20260522_120000.csv
+python -m nba_optimizer.exposure_report --entries_file exports/late-swap-entries-2026-05-22_120000.csv
 ```
 
 ### Late Swap (`late_swapper.py`)

@@ -5,13 +5,8 @@ from typing import Optional
 
 import pandas as pd
 
-from .config import ROSTER_SLOTS, Config
+from .config import ENTRY_FILE_PATTERNS, ROSTER_SLOTS, Config
 from .utils import get_latest_file
-
-ENTRY_FILE_PATTERNS = (
-    "upload-ready-DKEntries-*.csv",
-    "late-swap-entries-*.csv",
-)
 
 
 def _resolve_entries_file(cfg: Config, entries_file: Optional[str] = None) -> str:
@@ -36,7 +31,7 @@ def _resolve_entries_file(cfg: Config, entries_file: Optional[str] = None) -> st
 
     if not candidates:
         raise FileNotFoundError(
-            f"No export files found in {cfg.output_dir} matching any known prefix"
+            f"No export files found in {cfg.output_dir} matching any known pattern: {ENTRY_FILE_PATTERNS}"
         )
 
     return max(candidates, key=os.path.getmtime)
