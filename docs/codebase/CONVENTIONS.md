@@ -9,7 +9,8 @@
 | Files | `snake_case.py` | `late_swapper.py`, `exposure_report.py` | All files in `src/nba_optimizer/` |
 | Functions/methods | `snake_case` | `generate_single_lineup()`, `slot_lineup_by_time()`, `rank_lineups()` | `engine.py`, `ranker.py` |
 | Classes | `PascalCase` | `Config` | `config.py` |
-| Constants (within Config) | `snake_case` attributes | `salary_cap`, `roster_size`, `min_projection` | `config.py` |
+| Module-level constants | `UPPER_SNAKE_CASE` | `SALARY_CAP`, `ROSTER_SIZE`, `ROSTER_SLOTS`, `STANDARD_EXPORT_PREFIX`, `LATE_SWAP_PREFIX` | `config.py` |
+| Constants (within Config dataclass) | `snake_case` attributes | `salary_cap`, `roster_size`, `min_projection` | `config.py` |
 | Local variables | `snake_case` | `df_players`, `projs_file`, `min_salary` | All modules |
 | DataFrame variables | `df_` prefix | `df_raw`, `df_projs`, `df_ranked`, `df_entries` | `engine.py`, `ranker.py`, `exporter.py` |
 | Dictionary lookup vars | `_dict` suffix | `salary_dict`, `pos_dict`, `own_map`, `proj_map` | `engine.py`, `ranker.py` |

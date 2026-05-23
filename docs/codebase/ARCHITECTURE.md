@@ -42,7 +42,7 @@ DKEntries.csv (with locked players) + NBA-Projs-*.csv
 3. **Uniqueness Filtering:** Main process filters candidates by `min_unique` overlap constraint, then parallelizes time-based slot assignment.
 4. **Ranking:** Ranker loads the lineup pool CSV, computes per-lineup Total Projection / Total Ownership / Geomean Ownership, applies user-specified weights to rank positions, and sorts by composite score.
 5. **Export:** Exporter reads the DKEntries template (ragged CSV), fills entry slots with top-ranked lineups, and writes the upload-ready file.
-6. **Reporting:** Exposure report parses the exported file, counts per-player appearances, and computes leverage (exposure % − projected ownership %).
+6. **Reporting:** Exposure report resolves the target entries file via `_resolve_entries_file()`. If `--entries_file` is given, that path is used directly. Otherwise, it tries three glob patterns against `output_dir` in order — `upload-ready-DKEntries-*.csv`, `late-swap-entries-*.csv`, and `{base}*{ext}` (derived from `cfg.entries_path`, e.g. `DKEntries*.csv` to catch variants like `DKEntries(1).csv`) — collects the newest match from each pattern, and returns the overall most-recently-modified candidate. It then parses the file, counts per-player appearances, and computes leverage (exposure % − projected ownership %).
 
 ### 3) Layer/Module Responsibilities
 
@@ -53,7 +53,7 @@ DKEntries.csv (with locked players) + NBA-Projs-*.csv
 | `engine.py` | LP model construction, parallel solving, slot optimization | Ranking, export | `src/nba_optimizer/engine.py` |
 | `ranker.py` | Lineup scoring, weighted rank calculation | Lineup generation | `src/nba_optimizer/ranker.py` |
 | `exporter.py` | DK template parsing, lineup-to-entry mapping | Scoring | `src/nba_optimizer/exporter.py` |
-| `exposure_report.py` | Post-export analytics, leverage calculation | Everything else | `src/nba_optimizer/exposure_report.py` |
+| `exposure_report.py` | Post-export analytics, leverage calculation, flexible file resolution via `_resolve_entries_file()` | Everything else | `src/nba_optimizer/exposure_report.py` |
 | `late_swapper.py` | Lock detection, constrained re-optimization, batch solving | Full lineup generation | `src/nba_optimizer/late_swapper.py` |
 | `orchestrator.py` | Pipeline orchestration, Config initialization and injection | Core logic | `src/nba_optimizer/orchestrator.py` |
 
