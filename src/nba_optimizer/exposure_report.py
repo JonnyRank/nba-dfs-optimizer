@@ -1,17 +1,56 @@
 import argparse
 import os
 import re
+from typing import Optional
 
 import pandas as pd
 
-from .config import ROSTER_SLOTS, Config
+from .config import LATE_SWAP_PREFIX, ROSTER_SLOTS, STANDARD_EXPORT_PREFIX, Config
 from .utils import get_latest_file
 
 
-def run(cfg: Config, top_x: int = 25):
+def _resolve_entries_file(cfg: Config, entries_file: Optional[str] = None) -> str:
+    """Resolve the entries file to use for the exposure report.
+
+    If *entries_file* is an explicit path, return it directly.
+    Otherwise fall back to the most-recently-modified file matching either
+    the standard export prefix or the late-swap prefix.
+    """
+    if entries_file:
+        if not os.path.isfile(entries_file):
+            raise FileNotFoundError(f"Specified entries file not found: {entries_file}")
+        return entries_file
+
+    # Extract base and extension from the entries_path (e.g., DKEntries.csv -> DKEntries, .csv)
+    # This allows it to match files like DKEntries(1).csv dynamically.
+    base, ext = os.path.splitext(os.path.basename(cfg.entries_path))
+
+    patterns = (
+        f"{STANDARD_EXPORT_PREFIX}-*.csv",
+        f"{LATE_SWAP_PREFIX}-*.csv",
+        f"{base}*{ext}",
+    )
+
+    # Try both patterns; pick whichever is newest by mtime
+    candidates = []
+    for pattern in patterns:
+        try:
+            candidates.append(get_latest_file(cfg.output_dir, pattern, use_mtime=True))
+        except FileNotFoundError:
+            continue
+
+    if not candidates:
+        raise FileNotFoundError(
+            f"No export files found in {cfg.output_dir} matching any known pattern: {patterns}"
+        )
+
+    return max(candidates, key=os.path.getmtime)
+
+
+def run(cfg: Config, top_x: int = 25, entries_file: Optional[str] = None):
     try:
         # 1. Locate latest files
-        entries_file = get_latest_file(cfg.output_dir, "upload-ready-DKEntries-*.csv", use_mtime=True)
+        entries_file = _resolve_entries_file(cfg, entries_file)
         projs_file = get_latest_file(cfg.projs_dir, "NBA-Projs-*.csv", use_mtime=True)
 
         # 2. Parse Projections for Ownership
@@ -118,10 +157,18 @@ def main():
         default=25,
         help="Limit display to top X highest-exposed players (Default: 25). Use 0 for all",
     )
+    parser.add_argument(
+        "-e",
+        "--entries_file",
+        type=str,
+        default=None,
+        help="Path to an explicit entries CSV file. "
+        "If omitted, the latest standard or late-swap export is used automatically.",
+    )
     args = parser.parse_args()
 
     cfg = load_config_from_env()
-    run(cfg, args.top_x)
+    run(cfg, args.top_x, entries_file=args.entries_file)
 
 
 if __name__ == "__main__":

@@ -8,6 +8,11 @@ ROSTER_SLOTS = ("PG", "SG", "SF", "PF", "C", "G", "F", "UTIL")
 ENTRY_HEADER_COLS = ("Entry ID", "Contest Name", "Contest ID", "Entry Fee")
 
 
+# --- EXPORT PREFIXES ---
+STANDARD_EXPORT_PREFIX = "upload-ready-DKEntries"
+LATE_SWAP_PREFIX = "late-swap-entries"
+
+
 @dataclass
 class Config:
     """Configuration for NBA DFS Optimizer.

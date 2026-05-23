@@ -5,7 +5,7 @@ from datetime import datetime
 
 import pandas as pd
 
-from .config import Config, ROSTER_SLOTS
+from .config import Config, ROSTER_SLOTS, STANDARD_EXPORT_PREFIX
 from .utils import get_latest_file, read_ragged_csv
 
 
@@ -55,7 +55,7 @@ def run(cfg: Config):
         # 5. Save the combined file
         timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
         output_file = os.path.join(
-            cfg.output_dir, f"upload-ready-DKEntries-{timestamp}.csv"
+            cfg.output_dir, f"{STANDARD_EXPORT_PREFIX}-{timestamp}.csv"
         )
 
         # Write updated entries

@@ -36,8 +36,8 @@ Do not use this skill for:
 - Preserve confirmed user context already captured in `docs/codebase/CONCERNS.md`, especially:
   - Gooey replaced Streamlit for now
   - SQLite historical data is still planned but blocked by a separate architecture decision
-  - the Excel loader is intentionally deferred until the user brings it back up
-  - testing guidance should stay transparent and domain-relevant rather than coverage-driven
+  - The Excel loader is intentionally deferred until the user brings it back up
+  - Testing guidance should stay transparent and domain-relevant rather than coverage-driven
 
 ## Output Contract
 
