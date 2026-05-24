@@ -32,7 +32,7 @@ This installs the `nba-dfs-optimizer` package in editable mode. There is no sepa
 pip install pandas numpy PuLP highspy python-dotenv -e .
 ```
 
-Or simply run `pip install -e .` and proceed despite wxPython errors — the core modules will still work.
+Alternatively, use the --no-deps flag to ensure the core package is linked even if optional GUI dependencies fail to build.
 
 ## Running the Pipeline
 
