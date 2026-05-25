@@ -163,6 +163,17 @@
   * [ ] Prove improved speed on batch swap runs.
 * **LLM Instructions**: Act as a Python Performance Engineer. Update `late_swapper.py`. Convert the iterative `df.loc[]` lookups within the `solve_late_swap_batch` constraint loops into fast Python dictionary lookups, mirroring the optimization pattern already used in `engine.py`.
 
+### [Design] Monte Carlo Contest Simulator (`simulator.py`)
+* **Status**: Design Complete — See [`docs/design/simulator.md`](docs/design/simulator.md)
+* **Target Files**: `src/nba_optimizer/simulator.py` (new), `src/nba_optimizer/config.py`, `src/nba_optimizer/orchestrator.py`, `scripts/run_optimizer.py`
+* **Context**: Add a Monte Carlo simulation stage that consumes generated/ranked lineups and simulates player fantasy outcomes to produce lineup-level metrics (mean score, ceiling, within-pool win frequency, and later contest-field win%, cash%, ROI). Planned in five phases: (1) independent lineup-pool simulation, (2) contest-field simulation, (3) duplicate-aware payout splitting, (4) correlated game-level simulation, (5) late-swap live-state simulation.
+* **Acceptance Criteria**:
+  * [ ] Phase 1: `simulator.py` exposes `run(cfg)`, loads a ranked lineup pool, simulates independent normal draws per player, and writes `sim-lineup-metrics-{timestamp}.csv`.
+  * [ ] Phase 1: `Config` gains `sim_iterations`, `sim_stddev_factor`, and `sim_seed` fields.
+  * [ ] Phase 1: `orchestrator.py` conditionally calls `simulator.run(cfg)` when `--simulate` flag is set.
+  * [ ] Phase 2+: Contest-field support, duplicate-aware payouts, correlation modeling — per design doc phasing.
+* **LLM Instructions**: Act as a Python Data Scientist. Read `docs/design/simulator.md` in full before writing any code. Implement Phase 1 only. Follow all existing module conventions: relative imports, `run(cfg)` entry point, timestamped CSV output via `utils.get_latest_file()`, `try/except` error handling with `traceback.print_exc()`, and `print()`-based progress. Do not modify `engine.py`, `ranker.py`, or `exporter.py`. Add `sim_iterations`, `sim_stddev_factor`, and `sim_seed` to the `Config` dataclass with sensible defaults. Wire the `--simulate` flag into `orchestrator.py` and `scripts/run_optimizer.py`.
+
 ### [Research] Player-Level Leverage Score (Ownership vs. Standard Deviation)
 * **Status**: Not Started
 * **Target Files**: `src/nba_optimizer/utils.py`, `src/nba_optimizer/ranker.py`, `src/nba_optimizer/config.py`
