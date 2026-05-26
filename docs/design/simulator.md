@@ -164,7 +164,7 @@ where $\rho_{ij}$ is a position-pair correlation coefficient (configurable via `
 2. Decompose: $R = Q\Lambda Q^\top$
 3. Clip: $\Lambda^+ = \max(\Lambda, 0)$
 4. Reconstruct: $R^* = Q\Lambda^+ Q^\top$
-5. Normalize diagonal: $R^{**} = D^{-1/2} R^* D^{-1/2}$ where $D = \text{diag}(R^*)$, ensuring $R^{**}_{ii} = 1$
+5. Normalize diagonal: $R^{**} = D^{-1/2} R^* D^{-1/2}$ where $D = \text{diag}(R^*)$ (with a small positive epsilon floor on diagonal elements to prevent division by zero), ensuring $R^{**}_{ii} = 1$
 6. Recover covariance: $\Sigma^* = S\, R^{**}\, S$ where $S = \text{diag}(\sigma_1, \dots, \sigma_n)$
 
 This approach guarantees that the repaired covariance matrix preserves each player's specified standard deviation exactly, which would not hold if eigenvalue clipping were applied directly to $\Sigma$.
