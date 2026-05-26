@@ -108,8 +108,8 @@ $$S_{L,t} = \sum_{i \in L} X_{i,t}$$
 - Mean score: $\bar{S}_L = \frac{1}{T}\sum_t S_{L,t}$
 - Standard deviation of score: $\sigma_{S_L}$
 - p90 / p95: empirical 90th/95th percentile of $S_{L,t}$
-- Within-pool first-place count: how often lineup $L$ had the highest $S_{L,t}$ across all lineups in the pool
-- Within-pool top-10 count: how often lineup $L$ ranked in the top 10 within the pool
+- Within-pool top-1% rate: fraction of iterations where lineup $L$ ranked in the top 1% of all lineups in the pool
+- Within-pool top-10% rate: fraction of iterations where lineup $L$ ranked in the top 10% of all lineups in the pool
 
 **Output:** `sim-lineup-metrics-{timestamp}.csv` with one row per lineup.
 
@@ -230,7 +230,7 @@ def summarize_lineup_results(
     Aggregate per-lineup simulation metrics.
     Returns DataFrame with columns:
         lineup_id, mean_score, stddev_score, p90_score, p95_score,
-        pool_wins, pool_top10
+        pool_top1pct, pool_top10pct
     """
 
 def write_simulation_report(
@@ -292,8 +292,8 @@ def main() -> None:
 | `stddev_score` | float | Standard deviation of simulated lineup scores |
 | `p90_score` | float | 90th percentile simulated score |
 | `p95_score` | float | 95th percentile simulated score |
-| `pool_wins` | int | Number of iterations where this lineup scored highest in the pool |
-| `pool_top10` | int | Number of iterations where this lineup ranked in the pool's top 10 |
+| `pool_top1pct` | float | Fraction of iterations where this lineup ranked in the pool's top 1% |
+| `pool_top10pct` | float | Fraction of iterations where this lineup ranked in the pool's top 10% |
 
 Phase 2+ additions: `contest_wins`, `top1pct_count`, `cash_count`, `expected_payout`, `roi_pct`.
 
@@ -405,7 +405,7 @@ Since there is no automated test suite, validation for Phase 1 should focus on *
 | Std dev convergence | Simulated lineup std dev → $\sqrt{\sum_i \sigma_i^2}$ | Same run; compare mathematically |
 | Reproducibility | Same seed → identical output CSV | Run twice with `--seed 42` |
 | Column integrity | Output CSV has all expected columns, no nulls | `df.isnull().sum()` after load |
-| Pool wins sum to iterations | `pool_wins.sum() == iterations` (one winner per iteration) | Assertion in summarize function |
+| Top-1% rate sanity | `pool_top1pct.mean()` ≈ 0.01 across all lineups (by definition) | Assertion in summarize function |
 | Monotone metrics | Higher-projection lineups should tend to have higher mean sim scores | Visual spot-check in output CSV |
 
 When the test suite is eventually added (see BACKLOG: [Design] Unit Tests for Core LP Logic), deterministic simulation with a fixed seed is straightforward to unit test.

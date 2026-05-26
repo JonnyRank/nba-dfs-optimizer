@@ -166,7 +166,7 @@
 ### [Design] Monte Carlo Contest Simulator (`simulator.py`)
 * **Status**: Design Complete — See [`docs/design/simulator.md`](docs/design/simulator.md)
 * **Target Files**: `src/nba_optimizer/simulator.py` (new), `src/nba_optimizer/config.py`, `src/nba_optimizer/orchestrator.py`, `scripts/run_optimizer.py`
-* **Context**: Add a Monte Carlo simulation stage that consumes generated/ranked lineups and simulates player fantasy outcomes to produce lineup-level metrics (mean score, ceiling, within-pool win frequency, and later contest-field win%, cash%, ROI). Planned in five phases: (1) independent lineup-pool simulation, (2) contest-field simulation, (3) duplicate-aware payout splitting, (4) correlated game-level simulation, (5) late-swap live-state simulation.
+* **Context**: Add a Monte Carlo simulation stage that consumes generated/ranked lineups and simulates player fantasy outcomes to produce lineup-level metrics (mean score, ceiling, within-pool top-1%/top-10% rates, and later contest-field win%, cash%, ROI). Planned in five phases: (1) independent lineup-pool simulation, (2) contest-field simulation, (3) duplicate-aware payout splitting, (4) correlated game-level simulation, (5) late-swap live-state simulation.
 * **Acceptance Criteria**:
   * [ ] Phase 1: `simulator.py` exposes `run(cfg)`, loads a ranked lineup pool, simulates independent normal draws per player, and writes `sim-lineup-metrics-{timestamp}.csv`.
   * [ ] Phase 1: `Config` gains `sim_iterations`, `sim_stddev_factor`, and `sim_seed` fields.
