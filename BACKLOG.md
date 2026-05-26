@@ -172,7 +172,7 @@
   * [ ] Phase 1: `Config` gains `sim_iterations`, `sim_stddev_factor`, and `sim_seed` fields.
   * [ ] Phase 1: `orchestrator.py` conditionally calls `simulator.run(cfg)` when `--simulate` flag is set.
   * [ ] Phase 2+: Contest-field support, duplicate-aware payouts, correlation modeling — per design doc phasing.
-* **LLM Instructions**: Act as a Python Data Scientist. Read `docs/design/simulator.md` in full before writing any code. Implement Phase 1 only. Follow all existing module conventions: relative imports, `run(cfg)` entry point, timestamped CSV output via `utils.get_latest_file()`, `try/except` error handling with `traceback.print_exc()`, and `print()`-based progress. Do not modify `engine.py`, `ranker.py`, or `exporter.py`. Add `sim_iterations`, `sim_stddev_factor`, and `sim_seed` to the `Config` dataclass with sensible defaults. Wire the `--simulate` flag into `orchestrator.py` and `scripts/run_optimizer.py`.
+* **LLM Instructions**: Act as a Python Data Scientist. Read `docs/design/simulator.md` in full before writing any code. Implement Phase 1 only. Follow all existing module conventions: relative imports, `run(cfg)` entry point, resolve latest inputs via `utils.get_latest_file()` and write timestamped outputs using `datetime.now().strftime(...)` following existing module patterns, `try/except` error handling with `traceback.print_exc()`, and `print()`-based progress. Do not modify `engine.py`, `ranker.py`, or `exporter.py`. Add `sim_iterations`, `sim_stddev_factor`, and `sim_seed` to the `Config` dataclass with sensible defaults. Wire the `--simulate` flag into `orchestrator.py` and `scripts/run_optimizer.py`.
 
 ### [Research] Player-Level Leverage Score (Ownership vs. Standard Deviation)
 * **Status**: Not Started

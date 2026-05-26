@@ -9,7 +9,7 @@
 
 `simulator.py` would add a **Monte Carlo contest simulation stage** to the existing pipeline. Its job is to answer a question the current pipeline cannot: *given a pool of generated and ranked lineups, which ones perform best under uncertainty and real contest structure?*
 
-The ranker already scores lineups deterministically using projected ownership and total projection. The simulator would complement this by running thousands of stochastic draws from player outcome distributions, then aggregating lineup-level metrics — mean score, score ceiling, win frequency, top-1% frequency, cash frequency, and expected payout/ROI — across those simulated contests.
+The ranker already scores lineups deterministically using projected ownership and total projection. The simulator would complement this by running thousands of stochastic draws from player outcome distributions, then aggregating lineup-level metrics — mean score, score ceiling, and within-pool rank frequencies — across those simulated iterations. Contest-field metrics (win frequency, top-1% frequency, cash frequency, expected payout/ROI) are deferred to Phases 2–3.
 
 The goal for an initial implementation is **lineup-pool simulation only**: simulate outcomes for the user's own generated lineups, not a full GPP contest field. Contest-field simulation, duplicate-aware payout splitting, and correlation modeling are planned but deferred to later phases.
 
@@ -19,7 +19,7 @@ The goal for an initial implementation is **lineup-pool simulation only**: simul
 
 ### In scope (Phase 1)
 
-- Load player projections and standard deviations from the existing merged player data.
+- Load player projections and standard deviations from the DKEntries and projection CSVs (the same source files used by `engine.py`). Player distributions are keyed by the `Name + ID` string (e.g., `"LeBron James (12345678)"`) to match the lineup CSV format produced by the engine and ranker.
 - Load a lineup pool from `lineup-pool-{timestamp}.csv` or `ranked-lineups-{timestamp}.csv`.
 - Simulate player fantasy scores using independent normal draws.
 - Aggregate per-lineup metrics: mean, standard deviation, p90/p95, and within-pool rank frequencies.
@@ -65,10 +65,11 @@ DKEntries.csv + NBA-Projs-*.csv
 The simulator is invoked after the ranker and before or instead of the exporter, or run standalone against any existing lineup pool file. The orchestrator (`orchestrator.py`) would conditionally call `simulator.run()` based on a new `--simulate` flag, analogous to how `--late_swap` routes to `late_swapper.run()` today.
 
 The simulator must **not**:
-- Import from or depend on `engine.py`, `ranker.py`, `exporter.py`, or `late_swapper.py` for anything other than shared utilities.
 - Perform LP lineup generation.
 - Reformat lineups for DraftKings export.
 - Compute or apply ranking weights.
+
+**Data loading dependency note:** The simulator needs to merge DKEntries and projection CSVs to build per-player distributions keyed by `Name + ID`. Until the shared data loading consolidation (see BACKLOG) is completed, the simulator may reuse `engine.load_data()` for this purpose — the same pattern `ranker.py` already uses. This is an acknowledged coupling that the consolidation task will resolve.
 
 ---
 
@@ -158,10 +159,15 @@ $$\Sigma_{ij} = \rho_{ij} \cdot \sigma_i \cdot \sigma_j, \quad \Sigma_{ii} = \si
 
 where $\rho_{ij}$ is a position-pair correlation coefficient (configurable via `config.py` or a correlation table CSV).
 
-**PSD repair:** Before sampling, apply eigenvalue clipping to ensure $\Sigma$ is positive semidefinite:
-1. Decompose: $\Sigma = Q\Lambda Q^\top$
-2. Clip: $\Lambda^+ = \max(\Lambda, 0)$
-3. Reconstruct: $\Sigma^* = Q\Lambda^+ Q^\top$
+**PSD repair:** Before sampling, apply eigenvalue clipping to the **correlation matrix** $R$ (not the covariance matrix $\Sigma$) to preserve exact player-level variances:
+1. Construct correlation matrix: $R_{ij} = \rho_{ij}$, $R_{ii} = 1$
+2. Decompose: $R = Q\Lambda Q^\top$
+3. Clip: $\Lambda^+ = \max(\Lambda, 0)$
+4. Reconstruct: $R^* = Q\Lambda^+ Q^\top$
+5. Normalize diagonal: $R^{**} = D^{-1/2} R^* D^{-1/2}$ where $D = \text{diag}(R^*)$, ensuring $R^{**}_{ii} = 1$
+6. Recover covariance: $\Sigma^* = S\, R^{**}\, S$ where $S = \text{diag}(\sigma_1, \dots, \sigma_n)$
+
+This approach guarantees that the repaired covariance matrix preserves each player's specified standard deviation exactly, which would not hold if eigenvalue clipping were applied directly to $\Sigma$.
 
 This is Phase 4 rather than Phase 1 because validating correlated simulation outputs is harder — the simpler independent model is easier to sanity-check and should be proven first.
 
@@ -198,33 +204,42 @@ def build_player_distribution_inputs(
     default_stddev_factor: float = 0.25
 ) -> dict[str, tuple[float, float]]:
     """
-    Build {player_name: (mean, stddev)} lookup from player DataFrame.
+    Build {player_key: (mean, stddev)} lookup from player DataFrame.
+    player_key is the Name+ID string (e.g., "LeBron James (12345678)").
     Applies default stddev = projection * default_stddev_factor for missing values.
     """
 
 def simulate_player_outcomes(
-    player_dist: dict[str, tuple[float, float]],
+    player_keys: list[str],
+    player_dist_dict: dict[str, tuple[float, float]],
     iterations: int = 10000,
     seed: int | None = None
-) -> dict[str, np.ndarray]:
+) -> np.ndarray:
     """
     Draw T independent normal samples per player.
-    Returns {player_name: np.ndarray of shape (iterations,)}.
+    Returns np.ndarray of shape (len(player_keys), iterations) aligned with player_keys order.
     """
 
-def score_lineups_from_samples(\n    df_lineups: pd.DataFrame,\n    player_samples_dict: dict[str, np.ndarray],
+def score_lineups_from_samples(
+    df_lineups: pd.DataFrame,
+    player_samples: np.ndarray,
+    player_keys: list[str],
     player_cols: list[str]
 ) -> np.ndarray:
     """
     Compute lineup scores for each simulation iteration.
+    player_samples: shape (num_players, iterations), aligned with player_keys.
     Returns np.ndarray of shape (num_lineups, iterations).
     """
 
-def summarize_lineup_results(\n    scores_array: np.ndarray,\n    df_lineups: pd.DataFrame\n) -> pd.DataFrame:\n    \"\"\"\n    Aggregate per-lineup simulation metrics.\n    Returns DataFrame with columns:\n        lineup_id, players, mean_score, stddev_score, p90_score, p95_score,\n        pool_top1pct, pool_top10pct\n    \"\"\"\n
+def summarize_lineup_results(
+    scores_array: np.ndarray,
+    df_lineups: pd.DataFrame
+) -> pd.DataFrame:
     """
     Aggregate per-lineup simulation metrics.
     Returns DataFrame with columns:
-        lineup_id, mean_score, stddev_score, p90_score, p95_score,
+        lineup_id, players, mean_score, stddev_score, p90_score, p95_score,
         pool_top1pct, pool_top10pct
     """
 
@@ -281,8 +296,8 @@ def main() -> None:
 
 | Column | Type | Description |
 |--------|------|-------------|
-| `lineup_id` | int | Row index from lineup pool file |
-| `players` | str | Comma-separated player names (for reference) |
+| `lineup_id` | int | 1-based row number in the input lineup file (regardless of whether it is `lineup-pool-*.csv` or `ranked-lineups-*.csv`) |
+| `players` | str | Comma-separated player Name+ID strings (for reference) |
 | `mean_score` | float | Mean simulated lineup score across all iterations |
 | `stddev_score` | float | Standard deviation of simulated lineup scores |
 | `p90_score` | float | 90th percentile simulated score |
@@ -298,9 +313,11 @@ Phase 2+ additions: `contest_wins`, `top1pct_count`, `cash_count`, `expected_pay
 
 ### Required player columns
 
+Player distributions are keyed by the `Name + ID` string (constructed during the DKEntries + projection CSV merge, matching the format used in lineup pool CSVs). The simulator needs the following columns from the merged data:
+
 | Column | Source | Fallback |
 |--------|--------|----------|
-| `Name` | Projection CSV | — |
+| `Name + ID` | DKEntries.csv (constructed from `Name` + `ID`) | — |
 | `Fpts` or `Projection` | Projection CSV | None — required |
 | `StdDev` | Projection CSV | `Projection * 0.25` (configurable) |
 | `Own%` or `Ownership` | Projection CSV | Not required for Phase 1 |
@@ -367,7 +384,7 @@ Within each game, players' outcomes are correlated: a high-scoring game tends to
 - Grouping players by `game_id` / `matchup`.
 - Building a correlation matrix $R$ from position-pair heuristics (same team PG-SG positive, opposing team positive/negative by role, etc.).
 - Computing covariance: $\Sigma_{ij} = \rho_{ij}\sigma_i\sigma_j$.
-- Repairing $\Sigma$ to be positive semidefinite before drawing from $\mathcal{N}(\mu, \Sigma)$.
+- Repairing $R$ to be positive semidefinite (eigenvalue clipping on the correlation matrix, then diagonal normalization) before recovering $\Sigma = S\,R^{**}\,S$.
 
 A configurable `correlation_table.csv` (position pair → $\rho$) would allow tuning without code changes.
 
