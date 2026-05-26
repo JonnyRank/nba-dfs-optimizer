@@ -206,7 +206,7 @@ def build_player_distribution_inputs(
     """
     Build {player_key: (mean, stddev)} lookup from player DataFrame.
     player_key is the Name+ID string (e.g., "LeBron James (12345678)").
-    Applies default stddev = projection * default_stddev_factor for missing values.
+    Applies default stddev = projection * default_stddev_factor for missing values, enforcing a minimum positive floor (e.g., 0.1) to prevent ValueError during sampling.
     """
 
 def simulate_player_outcomes(
@@ -302,8 +302,8 @@ def main() -> None:
 | `stddev_score` | float | Standard deviation of simulated lineup scores |
 | `p90_score` | float | 90th percentile simulated score |
 | `p95_score` | float | 95th percentile simulated score |
-| `pool_top1pct` | float | Fraction of iterations where this lineup ranked in the pool's top 1% |
-| `pool_top10pct` | float | Fraction of iterations where this lineup ranked in the pool's top 10% |
+| `pool_top1pct` | float | Fraction of iterations where this lineup ranked in the pool's top 1%. For small pools (< 100 lineups), the top-1% threshold is computed as `max(1, ceil(0.01 * num_lineups))` to avoid degenerate zero-lineup buckets. |
+| `pool_top10pct` | float | Fraction of iterations where this lineup ranked in the pool's top 10%. For small pools (< 10 lineups), the threshold is `max(1, ceil(0.10 * num_lineups))`. |
 
 Phase 2+ additions: `contest_wins`, `top1pct_count`, `cash_count`, `expected_payout`, `roi_pct`.
 
@@ -318,9 +318,9 @@ Player distributions are keyed by the `Name + ID` string (constructed during the
 | Column | Source | Fallback |
 |--------|--------|----------|
 | `Name + ID` | DKEntries.csv (constructed from `Name` + `ID`) | — |
-| `Fpts` or `Projection` | Projection CSV | None — required |
-| `StdDev` | Projection CSV | `Projection * 0.25` (configurable) |
-| `Own%` or `Ownership` | Projection CSV | Not required for Phase 1 |
+| `Projection` | Projection CSV | None — required |
+| `StdDev` | Projection CSV | `Projection * 0.25` (configurable), with a minimum positive floor (e.g., 0.1) |
+| `Own_Proj` | Merged player data (via `engine.load_data()`) | Not required for Phase 1 |
 | `Matchup` or `Game` | DKEntries.csv or projection CSV | Not required until Phase 4 (correlation) |
 
 ### Config additions
@@ -413,7 +413,7 @@ Since there is no automated test suite, validation for Phase 1 should focus on *
 
 | Check | What to verify | How |
 |-------|----------------|-----|
-| Mean convergence | Simulated mean lineup score → sum of player projections | Run 100k iterations; compare to `df_lineups["Total Proj"]` |
+| Mean convergence | Simulated mean lineup score → sum of player projections | Run 100k iterations; compare to `Total_Projection` column (from ranked-lineups) or recompute sum of player projections (from lineup-pool) |
 | Std dev convergence | Simulated lineup std dev → $\sqrt{\sum_i \sigma_i^2}$ | Same run; compare mathematically |
 | Reproducibility | Same seed → identical output CSV | Run twice with `--seed 42` |
 | Column integrity | Output CSV has all expected columns, no nulls | `df.isnull().sum()` after load |
@@ -450,9 +450,9 @@ Add `sim_iterations`, `sim_stddev_factor`, and `sim_seed` fields to the `Config`
 
 No changes required. The simulator reads the ranked lineup CSV as a consumer, not a collaborator.
 
-### `scripts/run_optimizer.py` / `scripts/run_optimizer_gui.py`
+### `src/nba_optimizer/cli.py` / `src/nba_optimizer/gui.py`
 
-Add `--simulate` as an argparse flag, passed through to the orchestrator. This is a thin interface change only.
+Add `--simulate` as an argparse flag in `cli.py` (and `gui.py`), passed through to `orchestrator.run_pipeline()`. Note: `scripts/run_optimizer.py` is a thin wrapper that calls `cli.main()` and does not define argparse flags itself.
 
 ---
 
