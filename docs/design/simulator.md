@@ -220,10 +220,7 @@ def score_lineups_from_samples(\n    df_lineups: pd.DataFrame,\n    player_sampl
     Returns np.ndarray of shape (num_lineups, iterations).
     """
 
-def summarize_lineup_results(
-    scores_array: np.ndarray,
-    lineup_ids: list[str | int]
-) -> pd.DataFrame:
+def summarize_lineup_results(\n    scores_array: np.ndarray,\n    df_lineups: pd.DataFrame\n) -> pd.DataFrame:\n    \"\"\"\n    Aggregate per-lineup simulation metrics.\n    Returns DataFrame with columns:\n        lineup_id, players, mean_score, stddev_score, p90_score, p95_score,\n        pool_top1pct, pool_top10pct\n    \"\"\"\n
     """
     Aggregate per-lineup simulation metrics.
     Returns DataFrame with columns:
