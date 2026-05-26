@@ -212,9 +212,7 @@ def simulate_player_outcomes(
     Returns {player_name: np.ndarray of shape (iterations,)}.
     """
 
-def score_lineups_from_samples(
-    df_lineups: pd.DataFrame,
-    player_samples: dict[str, np.ndarray],
+def score_lineups_from_samples(\n    df_lineups: pd.DataFrame,\n    player_samples_dict: dict[str, np.ndarray],
     player_cols: list[str]
 ) -> np.ndarray:
     """
