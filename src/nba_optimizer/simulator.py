@@ -129,7 +129,7 @@ def score_lineups_from_samples(
     lineup_players = df_lineups[player_cols].to_numpy()
     flat_players = lineup_players.ravel()
 
-    missing = [p for p in flat_players if p not in player_idx_map]
+    missing = [p for p in pd.unique(flat_players) if p not in player_idx_map]
     if missing:
         sample_missing = ", ".join(str(p) for p in missing[:10])
         raise ValueError(
