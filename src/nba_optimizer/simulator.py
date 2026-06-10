@@ -218,9 +218,9 @@ def run(
         if not player_cols:
             raise ValueError(f"Could not find any roster slot columns in {resolved_lineup_file}")
 
-        stddev_factor = getattr(cfg, "sim_stddev_factor", 0.25)
-        seed = seed if seed is not None else getattr(cfg, "sim_seed", None)
-        iterations = int(iterations if iterations is not None else getattr(cfg, "sim_iterations", 10000))
+        stddev_factor = cfg.sim_stddev_factor
+        seed = seed if seed is not None else cfg.sim_seed
+        iterations = int(iterations if iterations is not None else cfg.sim_iterations)
 
         print(f"Using lineup file: {os.path.basename(resolved_lineup_file)}")
         print(f"Iterations: {iterations}; StdDev fallback factor: {stddev_factor}; Seed: {seed}")
