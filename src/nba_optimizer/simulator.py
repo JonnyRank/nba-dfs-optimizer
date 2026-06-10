@@ -161,8 +161,8 @@ def summarize_lineup_results(scores_array: np.ndarray, df_lineups: pd.DataFrame)
     top1_k = max(1, math.ceil(0.01 * num_lineups))
     top10_k = max(1, math.ceil(0.10 * num_lineups))
 
-    top1_idx = np.argpartition(-scores_array, top1_k - 1, axis=0)[:top1_k, :]
-    top10_idx = np.argpartition(-scores_array, top10_k - 1, axis=0)[:top10_k, :]
+    top1_idx = np.argpartition(scores_array, num_lineups - top1_k, axis=0)[num_lineups - top1_k:, :]
+    top10_idx = np.argpartition(scores_array, num_lineups - top10_k, axis=0)[num_lineups - top10_k:, :]
 
     top1_counts = np.bincount(top1_idx.ravel(), minlength=num_lineups)
     top10_counts = np.bincount(top10_idx.ravel(), minlength=num_lineups)
