@@ -68,14 +68,11 @@ def build_player_distribution_inputs(
 
     dist_dict: Dict[str, Tuple[float, float]] = {}
 
-    for _, row in df_work.iterrows():
-        key = row["Name + ID"]
+    for key, proj, stddev_val in zip(df_work["Name + ID"], df_work["Projection"], df_work["StdDev"]):
         if pd.isna(key):
             continue
 
-        mean = float(row["Projection"]) if not pd.isna(row["Projection"]) else 0.0
-
-        stddev_val = row["StdDev"]
+        mean = float(proj) if not pd.isna(proj) else 0.0
         if pd.isna(stddev_val) or float(stddev_val) <= 0:
             stddev = abs(mean) * float(default_stddev_factor)
         else:
