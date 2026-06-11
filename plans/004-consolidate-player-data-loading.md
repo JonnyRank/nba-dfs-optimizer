@@ -13,6 +13,7 @@
 - **Depends on**: `plans/001-establish-verification-baseline.md`
 - **Category**: tech-debt
 - **Planned at**: commit `d6cbd5f`, 2026-06-11
+- **Issue**: https://github.com/JonnyRank/nba-dfs-optimizer/issues/43
 
 ## Why this matters
 

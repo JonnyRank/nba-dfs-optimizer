@@ -13,6 +13,7 @@
 - **Depends on**: `plans/001-establish-verification-baseline.md`, `plans/004-consolidate-player-data-loading.md`
 - **Category**: perf
 - **Planned at**: commit `d6cbd5f`, 2026-06-11
+- **Issue**: https://github.com/JonnyRank/nba-dfs-optimizer/issues/44
 
 ## Why this matters
 

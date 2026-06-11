@@ -13,6 +13,7 @@
 - **Depends on**: none
 - **Category**: tests
 - **Planned at**: commit `d6cbd5f`, 2026-06-11
+- **Issue**: https://github.com/JonnyRank/nba-dfs-optimizer/issues/40
 
 ## Why this matters
 
