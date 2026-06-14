@@ -36,6 +36,12 @@ python scripts/run_optimizer_gui.py
 
 Each package module also has its own `main()` and can be run directly when needed.
 
+**Note on GUI dependencies:** The `Gooey` and `wxPython` GUI dependencies may fail to install in headless or CI environments. If you encounter build errors for `wxPython`, you can safely ignore them — the core optimizer functionality works without the GUI. To install without GUI deps:
+
+```bash
+pip install pandas numpy PuLP highspy python-dotenv -e .
+```
+
 ## Conventions
 
 - Inside `src/nba_optimizer/`, use relative imports such as `from . import config` and `from .utils import get_latest_file`.
@@ -59,6 +65,11 @@ Each package module also has its own `main()` and can be run directly when neede
 There is no formal automated test suite. Prefer targeted manual verification with real CSV inputs and output inspection.
 
 Do not add generic or opaque tests just to increase coverage. If you add tests in the future, they must be transparent, domain-relevant, and directly tied to real optimizer behavior.
+
+To verify basic code correctness after changes, run:
+```bash
+python -c "from nba_optimizer import engine, ranker, exporter"
+```
 
 ## Documentation
 
