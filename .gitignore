@@ -17,3 +17,5 @@ nba-dfs-optimizer.code-workspace
 example_projs/
 run_optimizer_pysimplegui.py
 .github/logs*
+
+.claude/worktrees*
