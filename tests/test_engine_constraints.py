@@ -56,11 +56,11 @@ def _is_slot_eligible(pos_str: str, slot: str) -> bool:
 
 def test_lineup_size_and_salary_bounds():
     """A solved lineup has exactly roster_size players within the salary band."""
-    df = _build_pool()
+    df_pool = _build_pool()
     cfg = Config()
 
     lineup_names, selected_indices = generate_single_lineup(
-        df,
+        df_pool,
         randomness=0.0,
         min_salary=cfg.min_salary,
         salary_cap=cfg.salary_cap,
@@ -72,18 +72,18 @@ def test_lineup_size_and_salary_bounds():
     assert len(lineup_names) == cfg.roster_size
     assert len(selected_indices) == cfg.roster_size
 
-    total_salary = df.loc[list(selected_indices), "Salary"].sum()
+    total_salary = df_pool.loc[list(selected_indices), "Salary"].sum()
     assert cfg.min_salary <= total_salary <= cfg.salary_cap
 
 
 def test_lineup_respects_position_eligibility_and_min_games():
     """Every selected player can fill at least one DK slot, and the
     lineup spans at least min_games distinct games."""
-    df = _build_pool()
+    df_pool = _build_pool()
     cfg = Config()
 
     lineup_names, selected_indices = generate_single_lineup(
-        df,
+        df_pool,
         randomness=0.0,
         min_salary=cfg.min_salary,
         salary_cap=cfg.salary_cap,
@@ -93,11 +93,11 @@ def test_lineup_respects_position_eligibility_and_min_games():
 
     assert lineup_names is not None, "expected a feasible lineup for this pool"
 
-    selected = df.loc[list(selected_indices)]
+    df_selected = df_pool.loc[list(selected_indices)]
 
     # Every selected player is slot-eligible for at least one of the 8 slots.
-    for pos_str in selected["Roster Position"]:
+    for pos_str in df_selected["Roster Position"]:
         assert any(_is_slot_eligible(pos_str, slot) for slot in ROSTER_SLOTS)
 
     # The lineup spans at least min_games distinct games.
-    assert selected["Game"].nunique() >= cfg.min_games
+    assert df_selected["Game"].nunique() >= cfg.min_games

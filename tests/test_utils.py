@@ -46,23 +46,23 @@ def test_read_ragged_csv_preserves_valid_columns_and_pads_ragged_rows():
     """read_ragged_csv keeps the real header columns and pads short/long rows."""
     csv_path = os.path.join(FIXTURES_DIR, "ragged_sample.csv")
 
-    df, valid_cols = read_ragged_csv(csv_path, max_columns=6)
+    df_ragged, valid_cols = read_ragged_csv(csv_path, max_columns=6)
 
     # The original 4 header columns are reported back unchanged.
     assert valid_cols == ["Entry ID", "Contest Name", "Contest ID", "Entry Fee"]
 
     # The padded frame has 2 extra dummy columns appended.
-    assert df.columns.tolist() == valid_cols + ["extra_0", "extra_1"]
+    assert df_ragged.columns.tolist() == valid_cols + ["extra_0", "extra_1"]
 
     # The first row had no extra values, so the padding columns are NaN.
-    assert pd.isna(df.loc[0, "extra_0"])
-    assert pd.isna(df.loc[0, "extra_1"])
+    assert pd.isna(df_ragged.loc[0, "extra_0"])
+    assert pd.isna(df_ragged.loc[0, "extra_1"])
 
     # The second (ragged) row's extra values land in the padding columns.
-    assert df.loc[1, "extra_0"] == "extra_value_a"
-    assert df.loc[1, "extra_1"] == "extra_value_b"
+    assert df_ragged.loc[1, "extra_0"] == "extra_value_a"
+    assert df_ragged.loc[1, "extra_1"] == "extra_value_b"
 
     # Valid columns retain their original data for both rows. Entry ID is
     # read as a string (object dtype) to avoid losing precision on large IDs.
-    assert df.loc[0, "Entry ID"] == "111"
-    assert df.loc[1, "Entry ID"] == "333"
+    assert df_ragged.loc[0, "Entry ID"] == "111"
+    assert df_ragged.loc[1, "Entry ID"] == "333"
