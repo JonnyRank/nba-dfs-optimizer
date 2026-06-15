@@ -102,3 +102,23 @@ The project uses environment variables for path configuration to avoid exposing 
 - `NBA_OUTPUT_DIR`: Directory where the final upload-ready files are saved.
 
 Core roster constants (salary cap, roster size, etc.) are managed in `config.py`.
+
+## Testing
+
+A small, deterministic test suite covers shared CSV-parsing helpers and the
+core LP constraints used by the engine (roster size, salary band, positional
+eligibility, and minimum games). It is a safety rail for refactors, not a
+substitute for manual verification against real DraftKings exports.
+
+Install the dev dependencies and run the suite:
+
+```bash
+pip install -e .[dev]
+python -m pytest -q
+```
+
+Run a focused subset:
+
+```bash
+python -m pytest tests/test_engine_constraints.py tests/test_utils.py -q
+```

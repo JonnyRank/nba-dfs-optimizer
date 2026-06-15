@@ -130,11 +130,11 @@
 * **LLM Instructions**: Act as a Python Packaging Expert. Generate a `pyproject.toml` file mapping to the existing `src/` layout. Ensure script entry points for the CLI and GUI are defined. Provide instructions on removing the `sys.path` hacks.
 
 ### [Design] Unit Tests for Core LP Logic and Data Loading
-* **Status**: Not Started
+* **Status**: Done (baseline) - `tests/test_engine_constraints.py` and `tests/test_utils.py`, see `plans/001-establish-verification-baseline.md`
 * **Target Files**: `tests/` (new), `src/nba_optimizer/engine.py`, `src/nba_optimizer/utils.py`
 * **Context**: The project currently relies entirely on manual verification. We need to introduce automated unit tests to catch regressions, starting specifically with the mathematical LP constraint logic and the CSV parsing/merging.
 * **Acceptance Criteria**:
-  * [ ] Propose a testing strategy using `pytest` that feeds dummy/mock data into `generate_single_lineup` to ensure salary caps and positional constraints are respected.
+  * [x] Propose a testing strategy using `pytest` that feeds dummy/mock data into `generate_single_lineup` to ensure salary caps and positional constraints are respected.
 * **LLM Instructions**: Act as a Senior QA Engineer. Draft a strategy for setting up a `pytest` suite for the `nba_optimizer`. Do not test the GUI or the orchestrator yet; focus solely on writing deterministic tests for the `PuLP` constraints in `engine.py` and the data loading in `utils.py`. Propose 3 specific test cases.
 
 ### [Research] Reduce Multiprocessing Serialization Overhead
