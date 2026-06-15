@@ -9,7 +9,7 @@
 | Files | `snake_case.py` | `late_swapper.py`, `exposure_report.py` | All files in `src/nba_optimizer/` |
 | Functions/methods | `snake_case` | `generate_single_lineup()`, `slot_lineup_by_time()`, `rank_lineups()` | `engine.py`, `ranker.py` |
 | Classes | `PascalCase` | `Config` | `config.py` |
-| Module-level constants | `UPPER_SNAKE_CASE` | `SALARY_CAP`, `ROSTER_SIZE`, `ROSTER_SLOTS`, `STANDARD_EXPORT_PREFIX`, `LATE_SWAP_PREFIX` | `config.py` |
+| Module-level constants | `UPPER_SNAKE_CASE` | `ROSTER_SLOTS`, `ENTRY_HEADER_COLS`, `STANDARD_EXPORT_PREFIX`, `LATE_SWAP_PREFIX` | `config.py` |
 | Constants (within Config dataclass) | `snake_case` attributes | `salary_cap`, `roster_size`, `min_projection` | `config.py` |
 | Local variables | `snake_case` | `df_players`, `projs_file`, `min_salary` | All modules |
 | DataFrame variables | `df_` prefix | `df_raw`, `df_projs`, `df_ranked`, `df_entries` | `engine.py`, `ranker.py`, `exporter.py` |
@@ -40,8 +40,8 @@
 
 ### 5) Testing Conventions
 
-- No formal test suite exists. Git history shows deleted test files (`tests/test_late_swapper.py`, `tests/test_data/DKEntries.csv`) that were removed.
-- Verification is manual: run the pipeline and inspect generated CSVs.
+- A small deterministic pytest baseline exists: `tests/test_utils.py` and `tests/test_engine_constraints.py`, covering shared parsing helpers and core `engine.generate_single_lineup` LP constraints (see `docs/codebase/TESTING.md`). Git history also shows earlier deleted test files (`tests/test_late_swapper.py`, `tests/test_data/DKEntries.csv`) that were removed; the current suite is a fresh baseline, not a restoration.
+- `ranker.py`, `exporter.py`, `exposure_report.py`, and `late_swapper.py` remain untested. Verification for those is manual: run the pipeline and inspect generated CSVs.
 
 ### 6) Evidence
 

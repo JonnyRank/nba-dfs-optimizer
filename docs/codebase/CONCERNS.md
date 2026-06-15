@@ -57,5 +57,4 @@ This is a single-user, locally-run tool with no network exposure. Security risks
 - `src/nba_optimizer/engine.py` (duplicate load_data)
 - `src/nba_optimizer/exposure_report.py` (leverage calculation)
 - `src/nba_optimizer/ranker.py` (engine import dependency)
-- `design_docs/project_plan.md` (planned but unimplemented phases)
 - Git commit history (scan output)

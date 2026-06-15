@@ -11,6 +11,10 @@ Use the codebase docs for details instead of re-discovering the repo each time:
 - `docs/codebase/TESTING.md`
 - `docs/codebase/INTEGRATIONS.md`
 
+## Environment
+
+This project runs on Windows with PowerShell. Use PowerShell-compatible syntax for shell commands and status line configuration, not bash/POSIX syntax.
+
 ## Architecture
 
 This repo is a sequential file-based pipeline:
@@ -62,13 +66,14 @@ pip install pandas numpy PuLP highspy python-dotenv -e .
 
 ## Testing And Verification
 
-There is no formal automated test suite. Prefer targeted manual verification with real CSV inputs and output inspection.
+A small deterministic pytest baseline exists (`tests/test_utils.py`, `tests/test_engine_constraints.py`), covering shared parsing helpers and core `engine.generate_single_lineup` LP constraints. `ranker.py`, `exporter.py`, `exposure_report.py`, and `late_swapper.py` remain untested — prefer targeted manual verification with real CSV inputs and output inspection for those.
 
-Do not add generic or opaque tests just to increase coverage. If you add tests in the future, they must be transparent, domain-relevant, and directly tied to real optimizer behavior.
+Do not add generic or opaque tests just to increase coverage. New tests must be transparent, domain-relevant, and directly tied to real optimizer behavior. See `docs/codebase/TESTING.md` for details.
 
 To verify basic code correctness after changes, run:
 ```bash
 python -c "from nba_optimizer import engine, ranker, exporter"
+python -m pytest -q
 ```
 
 ## Documentation
@@ -76,3 +81,5 @@ python -c "from nba_optimizer import engine, ranker, exporter"
 When updating project guidance, prefer linking to the existing docs in `docs/codebase/` instead of duplicating content here.
 
 When working on a GitHub issue, check if the task is already described in `backlog.md`. If so, update the task status upon completion.
+
+This repo uses an existing mature AGENTS.md. When refreshing docs, identify the relevant recent commits and make targeted edits rather than regenerating documentation wholesale.

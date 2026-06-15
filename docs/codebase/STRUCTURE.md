@@ -8,10 +8,11 @@
 |------|---------|----------|
 | `src/nba_optimizer/` | Core package: engine, ranker, exporter, late swapper, config, utilities | All `.py` files in directory |
 | `scripts/` | Entry point scripts (CLI orchestrator, GUI launchers) | `run_optimizer.py`, `run_optimizer_gui.py` |
-| `design_docs/` | Project plan, data loader spec, standardization instructions | `project_plan.md`, `implement_data_loader.md` |
 | `deprecated/` | Archived code no longer in active use | `late_swapper_deprecated.py` |
 | `example_projs/` | Sample projection CSV for reference | `NBA-Projs-2026-02-11_153604.csv` |
 | `docs/codebase/` | Auto-generated codebase documentation | This file |
+| `tests/` | Deterministic pytest baseline (utils + engine constraints) and small CSV fixtures | `tests/test_utils.py`, `tests/test_engine_constraints.py`, `tests/fixtures/` |
+| `.claude/skills/` | Project-level Claude Code skills (e.g. codebase audit/improve workflow) | `.claude/skills/improve/SKILL.md` |
 
 ### 2) Entry Points
 

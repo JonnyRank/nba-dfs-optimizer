@@ -7,7 +7,7 @@
 | Area | Value | Evidence |
 |------|-------|----------|
 | Primary language | Python 3.x | `requirements.txt`, all source files |
-| Runtime + version | CPython 3.x (project plan states 3.10+) | `design_docs/project_plan.md` |
+| Runtime + version | CPython >=3.10 | `pyproject.toml:requires-python` |
 | Package manager | pip | `requirements.txt` |
 | Module/build system | Standard `src/` layout with `__init__.py` packages | `src/nba_optimizer/__init__.py` |
 

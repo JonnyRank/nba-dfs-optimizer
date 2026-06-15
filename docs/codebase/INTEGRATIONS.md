@@ -15,9 +15,9 @@
 | Store | Role | Access layer | Key risk | Evidence |
 |-------|------|--------------|----------|----------|
 | Local filesystem (CSV) | All inter-stage data persistence | `pandas.read_csv()` / `DataFrame.to_csv()` | No transactional integrity; stale files from failed runs may be picked up | All modules |
-| Google Drive (mounted) | Projection source and lineup export storage | OS file path | Availability depends on Drive sync status | `.env.example`, `design_docs/project_plan.md` |
+| Google Drive (mounted) | Projection source and lineup export storage | OS file path | Availability depends on Drive sync status | `.env.example` |
 
-No databases are used. The project plan mentions SQLite for historical data as a future phase, but it is not implemented.
+No databases are used.
 
 ### 3) Secrets and Credentials Handling
 
