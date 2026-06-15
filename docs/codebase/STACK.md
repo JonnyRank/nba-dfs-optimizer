@@ -27,13 +27,17 @@
 
 | Tool | Purpose | Evidence |
 |------|---------|----------|
-| None configured | No linter, formatter, or test runner configured | Scan output: "No linting or formatting config files found" |
+| pytest | Dev-only test runner for `tests/` (deterministic baseline suite) | `pyproject.toml` `[project.optional-dependencies].dev` |
+| None configured | No linter or formatter configured | Scan output: "No linting or formatting config files found" |
 
 ### 4) Key Commands
 
 ```bash
 # Install
 pip install -e .
+
+# Install with dev/test dependencies
+pip install -e .[dev]
 
 # Run full pipeline (CLI)
 python scripts/run_optimizer.py -n 2500 -r 0.25
@@ -44,7 +48,10 @@ python scripts/run_optimizer_gui.py
 # Run late swap
 python scripts/run_optimizer.py --late_swap
 
-# No build, test, or lint commands configured
+# Run the test suite
+python -m pytest -q
+
+# No build or lint commands configured
 ```
 
 ### 5) Environment and Config

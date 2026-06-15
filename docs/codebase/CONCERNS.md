@@ -6,7 +6,7 @@
 
 | Severity | Concern | Evidence | Impact | Suggested action |
 |----------|---------|----------|--------|------------------|
-| High | No automated tests | No test files in repo; test files were deleted | Regressions go undetected; manual verification only | Add unit tests for core LP logic and data loading |
+| Medium | Automated tests cover only a small baseline | `tests/test_utils.py`, `tests/test_engine_constraints.py` cover shared parsing helpers and core `generate_single_lineup` constraints; `ranker.py`, `exporter.py`, `exposure_report.py`, and `late_swapper.py` remain untested | Regressions in ranking, export, and late-swap logic go undetected; manual verification still required for most of the pipeline | Extend the suite with focused characterization tests as those modules are touched (see `docs/codebase/TESTING.md`) |
 | High | Duplicate `load_data()` implementations | `engine.py:load_data()` vs `late_swapper.py:load_data()` have different CSV parsing logic | Bugs fixed in one may not be fixed in the other; subtle data inconsistencies | Consolidate into `utils.py` or a shared data loader |
 | Medium | Stale file pickup after failed runs | All modules use "latest file by timestamp" heuristic | A failed engine run leaves a partial lineup pool that the ranker may pick up | Add validation (e.g., row count check) or a run-ID linking mechanism |
 | Medium | `engine.py` is 400+ lines mixing data loading, LP construction, slotting, and orchestration | `engine.py` (13.9KB, highest churn at 14 commits) | Hard to modify one concern without risking another | Extract `load_data`, `slot_lineup_by_time`, and `generate_single_lineup` into focused modules |
