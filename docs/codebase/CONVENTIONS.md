@@ -41,7 +41,9 @@
 ### 5) Testing Conventions
 
 - A small deterministic pytest baseline exists: `tests/test_utils.py` and `tests/test_engine_constraints.py`, covering shared parsing helpers and core `engine.generate_single_lineup` LP constraints (see `docs/codebase/TESTING.md`). Git history also shows earlier deleted test files (`tests/test_late_swapper.py`, `tests/test_data/DKEntries.csv`) that were removed; the current suite is a fresh baseline, not a restoration.
-- `ranker.py`, `exporter.py`, `exposure_report.py`, and `late_swapper.py` remain untested. Verification for those is manual: run the pipeline and inspect generated CSVs.
+- `ranker.py` and `exporter.py` have partial coverage: `tests/test_pipeline_artifacts.py` verifies that their `run()` functions honour explicit artifact paths and preserve the latest-file fallback. End-to-end ranking and export logic is not covered by automated tests.
+- `exposure_report.py` has partial coverage: `tests/test_pipeline_artifacts.py` covers `_resolve_entries_file()` (explicit path, missing path, and latest-file fallback). The report-generation logic itself is not covered.
+- `late_swapper.py` remains untested. Verification for untested paths is manual: run the pipeline and inspect generated CSVs.
 
 ### 6) Evidence
 
