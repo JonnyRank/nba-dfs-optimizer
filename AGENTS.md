@@ -40,10 +40,10 @@ python scripts/run_optimizer_gui.py
 
 Each package module also has its own `main()` and can be run directly when needed.
 
-**Note on GUI dependencies:** The `Gooey` and `wxPython` GUI dependencies may fail to install in headless or CI environments. If you encounter build errors for `wxPython`, you can safely ignore them — the core optimizer functionality works without the GUI. To install without GUI deps:
+**GUI dependencies are optional.** Core install (`pip install -e .`) is clean in headless and CI environments. To include the GUI:
 
 ```bash
-pip install pandas numpy PuLP highspy python-dotenv -e .
+pip install -e .[gui]
 ```
 
 ## Conventions

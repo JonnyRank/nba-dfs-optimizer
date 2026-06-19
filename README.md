@@ -31,7 +31,11 @@ Use `pip install -e .` as the standard install path. `requirements.txt` is kept 
 1. Clone the repository.
 2. Install the project and required dependencies:
    ```bash
+   # Core CLI (recommended for headless / agent environments)
    pip install -e .
+
+   # With GUI support (requires a desktop display)
+   pip install -e .[gui]
    ```
 3. Configure your environment:
    - Copy `.env.example` to `.env`.
