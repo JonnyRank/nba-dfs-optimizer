@@ -11,7 +11,7 @@
 | `deprecated/` | Archived code no longer in active use | `late_swapper_deprecated.py` |
 | `example_projs/` | Sample projection CSV for reference | `NBA-Projs-2026-02-11_153604.csv` |
 | `docs/codebase/` | Auto-generated codebase documentation | This file |
-| `tests/` | Deterministic pytest baseline (utils + engine constraints) and small CSV fixtures | `tests/test_utils.py`, `tests/test_engine_constraints.py`, `tests/fixtures/` |
+| `tests/` | Deterministic pytest baseline (utils, engine constraints, pipeline artifact handoff) and small CSV fixtures | `tests/test_utils.py`, `tests/test_engine_constraints.py`, `tests/test_pipeline_artifacts.py`, `tests/fixtures/` |
 | `.claude/skills/` | Project-level Claude Code skills (e.g. codebase audit/improve workflow) | `.claude/skills/improve/SKILL.md` |
 
 ### 2) Entry Points

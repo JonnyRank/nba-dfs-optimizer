@@ -2,6 +2,7 @@ import argparse
 import os
 import traceback
 from datetime import datetime
+from typing import Optional
 
 import pandas as pd
 
@@ -9,7 +10,19 @@ from .config import Config, ROSTER_SLOTS, STANDARD_EXPORT_PREFIX
 from .utils import get_latest_file, read_ragged_csv
 
 
-def run(cfg: Config):
+def run(cfg: Config, ranked_file: Optional[str] = None) -> str:
+    """Export top-ranked lineups into a DraftKings-compatible CSV.
+
+    Args:
+        cfg: Pipeline configuration.
+        ranked_file: Explicit path to a ranked-lineups CSV. When omitted, the
+            most recent file in ``cfg.ranked_lineup_dir`` is used (standalone
+            fallback behaviour).
+
+    Returns:
+        Path to the written export CSV, or an empty string if the run failed
+        before producing output.
+    """
     print("Starting NBA DFS Entry Export...")
 
     try:
@@ -24,8 +37,10 @@ def run(cfg: Config):
         entry_count = valid_mask.sum()
         print(f"Detected {entry_count} valid entry slots.")
 
-        # 3. Load latest ranked lineups
-        ranked_file = get_latest_file(cfg.ranked_lineup_dir, "ranked-lineups-*.csv")
+        # 3. Load ranked lineups — use explicit path when provided, otherwise fall
+        #    back to latest-file discovery (standalone / direct module invocation).
+        if not ranked_file:
+            ranked_file = get_latest_file(cfg.ranked_lineup_dir, "ranked-lineups-*.csv")
         print(f"Using ranked lineups from: {os.path.basename(ranked_file)}")
         df_ranked = pd.read_csv(ranked_file)
 
@@ -62,10 +77,12 @@ def run(cfg: Config):
         df_entries.to_csv(output_file, index=False, na_rep="")
 
         print(f"Successfully exported {fill_count} lineups to {output_file}")
+        return output_file
 
     except Exception as e:
         print(f"Error: {e}")
         traceback.print_exc()
+        return ""
 
 
 def main():

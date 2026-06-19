@@ -233,7 +233,13 @@ def run(
     num_lineups: int = 2500,
     randomness: float = 0.25,
     min_unique: int = 1,
-):
+) -> str:
+    """Run the lineup generation engine.
+
+    Returns:
+        Path to the written lineup-pool CSV, or an empty string if the run
+        failed before producing output.
+    """
     print("Starting NBA DFS Optimizer (Parallel Mode)...")
     print(
         f"Settings: {num_lineups} lineups, {randomness * 100:.0f}% randomness, {min_unique} min unique, {cfg.min_projection} min proj"
@@ -369,10 +375,12 @@ def run(
         )
         out_df.to_csv(output_file, index=False)
         print(f"Saved {len(final_lineups)} lineups to {output_file}")
+        return output_file
 
     except Exception as e:
         print(f"Error: {e}")
         traceback.print_exc()
+        return ""
 
 
 def main():

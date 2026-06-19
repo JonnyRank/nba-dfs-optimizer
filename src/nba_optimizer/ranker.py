@@ -2,7 +2,7 @@ import argparse
 import os
 import traceback
 from datetime import datetime
-from typing import Dict
+from typing import Dict, Optional
 
 import numpy as np
 import pandas as pd
@@ -81,13 +81,35 @@ def run(
     proj_weight: float = 0.85,
     own_weight: float = 0.0,
     geo_weight: float = 0.15,
-):
+    lineup_file: Optional[str] = None,
+    projs_file: Optional[str] = None,
+) -> str:
+    """Rank the lineup pool.
+
+    Args:
+        cfg: Pipeline configuration.
+        proj_weight: Weight applied to the projection rank.
+        own_weight: Weight applied to the total ownership rank.
+        geo_weight: Weight applied to the geomean ownership rank.
+        lineup_file: Explicit path to a lineup-pool CSV. When omitted,
+            the most recent file in ``cfg.lineup_pool_dir`` is used (standalone
+            fallback behaviour).
+        projs_file: Explicit path to a projections CSV. When omitted,
+            the most recent file in ``cfg.projs_dir`` is used.
+
+    Returns:
+        Path to the written ranked-lineups CSV, or an empty string if the run
+        failed before producing output.
+    """
     print("Starting NBA DFS Sorter & Ranker...")
 
     try:
-        # 1. Identify latest files
-        lineup_file = get_latest_file(cfg.lineup_pool_dir, "lineup-pool-*.csv")
-        projs_file = get_latest_file(cfg.projs_dir, "NBA-Projs-*.csv")
+        # 1. Identify files — use explicit paths when provided, otherwise fall back
+        #    to latest-file discovery (standalone / direct module invocation).
+        if not lineup_file:
+            lineup_file = get_latest_file(cfg.lineup_pool_dir, "lineup-pool-*.csv")
+        if not projs_file:
+            projs_file = get_latest_file(cfg.projs_dir, "NBA-Projs-*.csv")
 
         print(f"Ranking: {os.path.basename(lineup_file)}")
         print(f"Using metrics from: {os.path.basename(projs_file)}")
@@ -126,10 +148,12 @@ def run(
         df_ranked[cols].to_csv(output_file, index=False)
         print(f"Successfully ranked {len(df_ranked)} lineups.")
         print(f"Saved to: {output_file}")
+        return output_file
 
     except Exception as e:
         print(f"Error: {e}")
         traceback.print_exc()
+        return ""
 
 
 def main():
