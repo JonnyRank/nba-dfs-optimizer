@@ -2,7 +2,7 @@ import argparse
 import os
 import traceback
 from datetime import datetime
-from typing import Dict
+from typing import Dict, Optional
 
 import numpy as np
 import pandas as pd
@@ -81,8 +81,8 @@ def run(
     proj_weight: float = 0.85,
     own_weight: float = 0.0,
     geo_weight: float = 0.15,
-    lineup_file: str = None,
-    projs_file: str = None,
+    lineup_file: Optional[str] = None,
+    projs_file: Optional[str] = None,
 ) -> str:
     """Rank the lineup pool.
 
@@ -106,9 +106,9 @@ def run(
     try:
         # 1. Identify files — use explicit paths when provided, otherwise fall back
         #    to latest-file discovery (standalone / direct module invocation).
-        if lineup_file is None:
+        if not lineup_file:
             lineup_file = get_latest_file(cfg.lineup_pool_dir, "lineup-pool-*.csv")
-        if projs_file is None:
+        if not projs_file:
             projs_file = get_latest_file(cfg.projs_dir, "NBA-Projs-*.csv")
 
         print(f"Ranking: {os.path.basename(lineup_file)}")

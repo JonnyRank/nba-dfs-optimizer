@@ -207,21 +207,25 @@ class TestRankerExplicitLineupFile:
         assert "ranked-lineups" in os.path.basename(result)
 
     def test_uses_explicit_lineup_file_not_latest(self, tmp_path):
-        """ranker.run() reads the explicitly named file, not an older stale file."""
+        """ranker.run() reads the explicitly named file even when it is not the newest on disk.
+
+        The stale file (0 rows) has the newest timestamp name and would be picked by
+        get_latest_file(). The explicit file (2 rows) has an older timestamp. If the
+        output has 2 rows, explicit binding won over latest-file discovery.
+        """
         from nba_optimizer import ranker
 
         cfg = _make_config(tmp_path)
         os.makedirs(cfg.ranked_lineup_dir, exist_ok=True)
         os.makedirs(cfg.projs_dir, exist_ok=True)
 
-        # Write a "stale" pool — empty, should cause failure if read.
-        stale_path = str(tmp_path / "exports" / "lineup-pools" / "lineup-pool-2026-01-01_000000.csv")
+        # Stale pool: 0 rows, NEWEST name — get_latest_file() would pick this.
+        stale_path = str(tmp_path / "exports" / "lineup-pools" / "lineup-pool-2026-01-01_235959.csv")
         os.makedirs(os.path.dirname(stale_path), exist_ok=True)
         pd.DataFrame(columns=list(ROSTER_SLOTS)).to_csv(stale_path, index=False)
 
-        # Write the "current" pool — also newest by name, but we'll only pass the stale
-        # path to prove explicit binding; here we actually pass the good one.
-        explicit_path = str(tmp_path / "exports" / "lineup-pools" / "lineup-pool-2026-01-01_235959.csv")
+        # Explicit pool: 2 rows, OLDER name — only used if explicit binding works.
+        explicit_path = str(tmp_path / "exports" / "lineup-pools" / "lineup-pool-2026-01-01_000000.csv")
         projs_path = str(tmp_path / "projections" / "NBA-Projs-2026-01-01.csv")
 
         _build_lineup_pool_csv(explicit_path)
@@ -231,7 +235,7 @@ class TestRankerExplicitLineupFile:
         result = ranker.run(cfg, lineup_file=explicit_path, projs_file=projs_path)
         assert result and os.path.isfile(result)
 
-        # The ranked output should have the two rows from the explicit pool, not 0.
+        # 2 rows means the explicit (older) file was used, not the stale newest file.
         df_out = pd.read_csv(result)
         assert len(df_out) == 2
 
@@ -257,32 +261,37 @@ class TestExporterExplicitRankedFile:
         assert "upload-ready-DKEntries" in os.path.basename(result)
 
     def test_uses_explicit_ranked_file_not_latest(self, tmp_path):
-        """exporter.run() uses the passed ranked_file, ignoring any other files on disk."""
+        """exporter.run() uses the passed ranked_file even when it is not the newest on disk.
+
+        The stale file (0 lineups) has the newest timestamp name and would be picked by
+        get_latest_file(). The explicit file (1 lineup) has an older timestamp. A filled
+        entry slot in the output proves the explicit file was used.
+        """
         from nba_optimizer import exporter
 
         cfg = _make_config(tmp_path)
         os.makedirs(cfg.ranked_lineup_dir, exist_ok=True)
         os.makedirs(cfg.output_dir, exist_ok=True)
 
-        # Write a stale ranked file with 0 lineups.
-        stale_path = str(tmp_path / "exports" / "ranked-lineups" / "ranked-lineups-2026-01-01_000000.csv")
+        # Stale ranked file: 0 lineups, NEWEST name — get_latest_file() would pick this.
+        stale_path = str(tmp_path / "exports" / "ranked-lineups" / "ranked-lineups-2026-01-01_235959.csv")
         cols = ["Final_Rank", "Lineup_Score", "Total_Projection",
                 "Total_Ownership", "Geomean_Ownership", "Proj_Rank",
                 "Own_Rank", "Geo_Rank"] + list(ROSTER_SLOTS)
+        os.makedirs(os.path.dirname(stale_path), exist_ok=True)
         pd.DataFrame(columns=cols).to_csv(stale_path, index=False)
 
-        # Write the explicit ranked file with 1 lineup.
-        explicit_path = str(tmp_path / "exports" / "ranked-lineups" / "ranked-lineups-2026-01-01_235959.csv")
+        # Explicit ranked file: 1 lineup, OLDER name — only used if explicit binding works.
+        explicit_path = str(tmp_path / "exports" / "ranked-lineups" / "ranked-lineups-2026-01-01_000000.csv")
         _build_ranked_lineups_csv(explicit_path)
         _build_dkentries_csv(cfg.entries_path)
 
         result = exporter.run(cfg, ranked_file=explicit_path)
         assert result and os.path.isfile(result)
 
-        # The exported file should have the 1 lineup row from explicit, not 0.
+        # A filled entry slot proves the explicit (older, 1-lineup) file was used, not the stale newest.
         df_out = pd.read_csv(result)
         filled = df_out["Entry ID"].notna()
-        # At least one slot should be populated with a player name.
         assert df_out.loc[filled, ROSTER_SLOTS[0]].notna().any()
 
 

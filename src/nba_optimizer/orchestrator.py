@@ -31,6 +31,9 @@ def run_pipeline(args):
         randomness=args.randomness,
         min_unique=args.min_unique,
     )
+    if not lineup_pool_file:
+        print("Error: Lineup generation failed. Aborting pipeline.")
+        return
 
     print("\n--- Phase 2: Ranking Lineups ---")
     ranked_file = ranker.run(
@@ -38,20 +41,26 @@ def run_pipeline(args):
         proj_weight=args.proj_weight,
         own_weight=args.own_weight,
         geo_weight=args.geo_weight,
-        lineup_file=lineup_pool_file if lineup_pool_file else None,
+        lineup_file=lineup_pool_file,
     )
+    if not ranked_file:
+        print("Error: Lineup ranking failed. Aborting pipeline.")
+        return
 
     print("\n--- Phase 3: Exporting to DraftKings CSV ---")
     export_file = exporter.run(
         config,
-        ranked_file=ranked_file if ranked_file else None,
+        ranked_file=ranked_file,
     )
+    if not export_file:
+        print("Error: Export failed. Aborting pipeline.")
+        return
 
     print("\n--- Phase 4: Generating Exposure Report ---")
     exposure_report.run(
         config,
         top_x=args.top_x,
-        entries_file=export_file if export_file else None,
+        entries_file=export_file,
     )
 
     print("\n=================================================================")

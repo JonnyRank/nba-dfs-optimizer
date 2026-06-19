@@ -2,6 +2,7 @@ import argparse
 import os
 import traceback
 from datetime import datetime
+from typing import Optional
 
 import pandas as pd
 
@@ -9,7 +10,7 @@ from .config import Config, ROSTER_SLOTS, STANDARD_EXPORT_PREFIX
 from .utils import get_latest_file, read_ragged_csv
 
 
-def run(cfg: Config, ranked_file: str = None) -> str:
+def run(cfg: Config, ranked_file: Optional[str] = None) -> str:
     """Export top-ranked lineups into a DraftKings-compatible CSV.
 
     Args:
@@ -38,7 +39,7 @@ def run(cfg: Config, ranked_file: str = None) -> str:
 
         # 3. Load ranked lineups — use explicit path when provided, otherwise fall
         #    back to latest-file discovery (standalone / direct module invocation).
-        if ranked_file is None:
+        if not ranked_file:
             ranked_file = get_latest_file(cfg.ranked_lineup_dir, "ranked-lineups-*.csv")
         print(f"Using ranked lineups from: {os.path.basename(ranked_file)}")
         df_ranked = pd.read_csv(ranked_file)
