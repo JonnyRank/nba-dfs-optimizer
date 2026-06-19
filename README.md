@@ -46,6 +46,8 @@ Use `pip install -e .` as the standard install path. `requirements.txt` is kept 
 ### The Orchestrator
 The easiest way to run the full pipeline is using the `nba-dfs-optimizer` console command (installed via `pip install -e .`) or `scripts/run_optimizer.py`. This runs the Engine, Ranker, Exporter, and Exposure Report sequentially.
 
+When run through the orchestrator, each stage passes its output file path directly to the next stage. This means a stale output from a previous failed run cannot be silently picked up between stages. Each individual stage (`ranker.py`, `exporter.py`, `exposure_report.py`) still supports standalone invocation via `python -m nba_optimizer.<module>`, in which case it falls back to resolving the most recent matching file from disk.
+
 ```bash
 # Basic run (default settings)
 nba-dfs-optimizer

@@ -65,13 +65,16 @@ DKEntries.csv (with locked players) + NBA-Projs-*.csv
 | PuLP LP model with HiGHS solver | `engine.py`, `late_swapper.py` | Core optimization mechanism for roster construction |
 | Positional eligibility matrix (slot_vars) | `engine.py:generate_single_lineup()`, `engine.py:slot_lineup_by_time()`, `late_swapper.py:solve_late_swap_batch()` | DraftKings requires specific position-to-slot mapping with flex rules |
 | Timestamped CSV artifacts | All modules | Enables pipeline stages to find the latest output without shared memory |
+| Explicit artifact handoff in orchestrated runs | `orchestrator.py` captures the return value of each stage and passes it as an explicit parameter to the next | Prevents stale files from a failed previous run from being picked up mid-pipeline |
+| Latest-file fallback for standalone usage | `ranker.run()`, `exporter.run()`, `exposure_report.run()` | When a stage is invoked directly (not via the orchestrator) its explicit-path parameters default to `None` and the module falls back to `get_latest_file()` discovery |
 | Dict-based lookup optimization | `engine.py` (salary_dict, pos_dict, name_dict) | Avoids expensive `df.loc` inside LP constraint loops |
 | `main()` with argparse per module | All modules | Allows standalone execution of any pipeline stage |
 | `dataclasses.replace()` for config override | `orchestrator.py`, module `main()` functions | Immutably overrides Config defaults with CLI arguments |
 
 ### 5) Known Architectural Risks
 
-- **File-system coupling:** All inter-stage communication is via timestamped CSVs. If a stage fails mid-pipeline, stale files from previous runs may be picked up by subsequent stages (the "latest file" heuristic).
+- **File-system coupling (orchestrated path — mitigated):** When run through the orchestrator, each stage now passes its output path explicitly to the next stage, so stale files from a prior partial run cannot be picked up. The "latest file" heuristic is preserved only for standalone direct-module invocation (`python -m nba_optimizer.ranker`, etc.).
+- **File-system coupling (standalone path — remaining):** Running any stage module directly still relies on the newest matching file in the relevant directory. A stale file from a failed run could still be picked up when a stage is invoked outside the orchestrator.
 - **Data loading duplication:** `engine.py` and `late_swapper.py` each have their own `load_data()` function with subtly different CSV parsing logic. `ranker.py` imports `engine.load_data()` to reuse it but this creates a cross-module dependency.
 - **DataFrame pickling overhead on Windows:** `ProcessPoolExecutor` pickles the full DataFrame for each worker on Windows (no copy-on-write). For large player pools this adds serialization cost.
 - **Worker function signature complexity:** The `generate_single_lineup()` worker must receive all config values as individual parameters (salary_cap, roster_size, min_games) since it cannot access the Config instance in the multiprocessing context.

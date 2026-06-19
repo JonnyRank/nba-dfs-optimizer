@@ -25,7 +25,7 @@ def run_pipeline(args):
         return
 
     print("\n--- Phase 1: Generating Lineups ---")
-    engine.run(
+    lineup_pool_file = engine.run(
         config,
         num_lineups=args.num_lineups,
         randomness=args.randomness,
@@ -33,18 +33,26 @@ def run_pipeline(args):
     )
 
     print("\n--- Phase 2: Ranking Lineups ---")
-    ranker.run(
+    ranked_file = ranker.run(
         config,
         proj_weight=args.proj_weight,
         own_weight=args.own_weight,
         geo_weight=args.geo_weight,
+        lineup_file=lineup_pool_file if lineup_pool_file else None,
     )
 
     print("\n--- Phase 3: Exporting to DraftKings CSV ---")
-    exporter.run(config)
+    export_file = exporter.run(
+        config,
+        ranked_file=ranked_file if ranked_file else None,
+    )
 
     print("\n--- Phase 4: Generating Exposure Report ---")
-    exposure_report.run(config, top_x=args.top_x)
+    exposure_report.run(
+        config,
+        top_x=args.top_x,
+        entries_file=export_file if export_file else None,
+    )
 
     print("\n=================================================================")
     print("Optimization Pipeline Complete!")
