@@ -115,7 +115,13 @@ def generate_single_lineup(
             prob += pulp.lpSum([slot_vars[i][s] for i in df.index]) == 1
 
         # Min Games
-        # The 'Game' column is now pre-processed in load_data
+        # The 'Game' column is now pre-processed in load_data.
+        # game_vars[g] is an indicator for "game g is represented in the lineup".
+        # The <= link forces the indicator to 0 unless at least one of that
+        # game's players is selected, so requiring the indicators to sum to
+        # >= min_games is a genuine "span at least min_games distinct games"
+        # constraint. A one-directional >= link would leave the indicators free
+        # to switch on for empty games, making the floor non-binding.
         games = df["Game"].unique()
         game_vars = pulp.LpVariable.dicts("game", games, cat=pulp.LpBinary)
 
@@ -125,8 +131,9 @@ def generate_single_lineup(
 
         for game in games:
             players_in_game = game_to_players[game]
-            for i in players_in_game:
-                prob += game_vars[game] >= player_vars[i] / 10.0
+            prob += game_vars[game] <= pulp.lpSum(
+                [player_vars[i] for i in players_in_game]
+            )
 
         prob += pulp.lpSum([game_vars[game] for game in games]) >= min_games
 

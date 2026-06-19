@@ -186,10 +186,17 @@ def solve_late_swap_batch(
     games = df_pool["Game"].unique()
     game_vars = pulp.LpVariable.dicts("game", games, cat=pulp.LpBinary)
 
+    # game_vars[g] can only be 1 when at least one of that game's players is
+    # drafted into an open slot. Locked players have player_vars fixed to 0, so
+    # their (already-started) games never count here -- which is correct, since
+    # locked games are accounted for separately via adj_min_games below. The <=
+    # link is what makes the >= adj_min_games floor a real constraint; a
+    # one-directional >= link would leave it non-binding.
     for game in games:
         players_in_game = df_pool[df_pool["Game"] == game].index
-        for i in players_in_game:
-            prob += game_vars[game] >= player_vars[i] / 10.0
+        prob += game_vars[game] <= pulp.lpSum(
+            [player_vars[i] for i in players_in_game]
+        )
 
     adj_min_games = max(0, cfg.min_games - len(locked_games))
     prob += pulp.lpSum([game_vars[game] for game in games]) >= adj_min_games
