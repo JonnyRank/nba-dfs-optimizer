@@ -20,8 +20,8 @@
 | PuLP | 3.3.0 | Linear programming model formulation | `requirements.txt` |
 | highspy | 1.12.0 | HiGHS LP solver backend for PuLP | `requirements.txt` |
 | python-dotenv | 1.2.2 | Load `.env` file for path configuration | `requirements.txt`, `src/nba_optimizer/config.py` |
-| Gooey | 1.0.8.1 | Desktop GUI wrapper around argparse | `requirements.txt`, `scripts/run_optimizer_gui.py` |
-| wxPython | 4.2.5 | GUI toolkit required by Gooey | `requirements.txt` |
+| Gooey | 1.0.8.1 | Desktop GUI wrapper around argparse (optional `gui` extra) | `pyproject.toml`, `scripts/run_optimizer_gui.py` |
+| wxPython | 4.2.5 | GUI toolkit required by Gooey (optional `gui` extra) | `pyproject.toml` |
 
 ### 3) Development Toolchain
 
@@ -33,11 +33,14 @@
 ### 4) Key Commands
 
 ```bash
-# Install
+# Install (core CLI only)
 pip install -e .
 
 # Install with dev/test dependencies
 pip install -e .[dev]
+
+# Install with GUI dependencies (requires a display; will fail in headless environments)
+pip install -e .[gui]
 
 # Run full pipeline (CLI)
 python scripts/run_optimizer.py -n 2500 -r 0.25

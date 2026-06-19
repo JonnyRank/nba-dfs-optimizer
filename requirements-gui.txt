@@ -1,0 +1,6 @@
+# GUI extras requirements mirror.
+# Source of truth: pyproject.toml [project.optional-dependencies.gui]
+# Install with: pip install -e .[gui]
+
+Gooey==1.0.8.1
+wxPython==4.2.5

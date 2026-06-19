@@ -21,18 +21,14 @@ These docs are maintained and accurate. Use them instead of re-discovering the r
 ## Setup and Build
 
 ```bash
+# Core CLI install (no GUI dependencies)
 pip install -e .
+
+# Install with GUI support (requires a display; will fail in headless environments)
+pip install -e .[gui]
 ```
 
-This installs the `nba-dfs-optimizer` package in editable mode. There is no separate build step.
-
-**Note:** The `Gooey` and `wxPython` GUI dependencies may fail to install in headless/CI environments. If you encounter build errors for `wxPython`, you can safely ignore them — the GUI is not required for core optimizer functionality. To work around this in a headless environment, install without GUI deps:
-
-```bash
-pip install pandas numpy PuLP highspy python-dotenv -e .
-```
-
-Alternatively, use the --no-deps flag to ensure the core package is linked even if optional GUI dependencies fail to build.
+This installs the `nba-dfs-optimizer` package in editable mode. There is no separate build step. GUI dependencies (`Gooey`, `wxPython`) are optional extras and are not required for the core optimizer functionality.
 
 ## Running the Pipeline
 
@@ -127,4 +123,4 @@ Prefer linking to existing docs in `docs/codebase/` instead of duplicating conte
 - **No secrets or credentials** — `.env` contains only local file paths
 - **Windows-primary development** — the owner develops on Windows, but the code is cross-platform Python
 - **No database** — all data exchange is via CSV files on the local filesystem
-- **wxPython installation errors are expected** in headless/Linux environments and can be safely ignored for non-GUI work
+- **GUI dependencies are optional** — `Gooey` and `wxPython` are only needed for `pip install -e .[gui]`; the core `pip install -e .` is clean in headless/Linux environments
