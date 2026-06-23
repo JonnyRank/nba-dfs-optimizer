@@ -63,61 +63,41 @@ def _build_projs_csv(path: str) -> None:
 
 
 def _build_dkentries_csv(path: str) -> None:
-    """Write a DKEntries CSV that works for both exporter and ranker (via engine.load_data).
+    """Write a DKEntries CSV that works for both exporter and the shared loader.
 
     The real DraftKings DKEntries.csv has two sections:
     - Row 0: entry header (Entry ID, Contest Name, ..., roster slots)
     - Rows 1-N: filled entry rows
-    - Rows N+1 through N+7: junk / instruction rows
-    - Row N+8: player-pool header (contains "Position" column)
-    - Rows N+9+: player rows with ID, Salary, etc.
+    - Rows N+1+: player-pool section beginning with a header that contains
+      "Position,Name + ID,Name,ID" (the sentinel ``parse_dk_entries`` searches for)
 
-    ``exporter`` uses ``read_ragged_csv`` which reads row 0 as the header and
-    treats everything else as data — so "Entry ID" must be in row 0.
-    ``engine.load_data`` reads with ``skiprows=7`` counting from the top of the
-    file, then looks for a "Position" column.
-
-    To satisfy both callers in tests, we place:
-    - Row 0: entry/roster header
-    - Rows 1-2: entry data rows
-    - Rows 3-9: 7 junk/padding rows (so skiprows=7 lands on row 10 = player header)
-    - Row 10: player-pool header with "Position", "Name + ID", "ID", etc.
-    - Rows 11+: player data rows
+    ``exporter`` uses ``read_ragged_csv`` which reads row 0 as the header.
+    ``parse_dk_entries`` (used by engine, late_swapper, and ranker) scans for
+    the sentinel line and reads from there onward.
     """
     slots = list(ROSTER_SLOTS)
     slot_header = ",".join(slots)
     empty_slots = ",".join([""] * len(slots))
 
-    # engine.load_data reads with skiprows=7, so the player header must be at
-    # 0-indexed row 7. engine.load_data looks for "Position" column, then slices
-    # from that column onwards and expects "ID", "Name + ID", "Salary",
-    # "Roster Position", "Game Info" all to appear after (or at) that slice.
-    # Column order must be: Position, Name + ID, ID, Roster Position, Salary, Game Info
+    # Player pool header must contain "Position,Name + ID,Name,ID" exactly so
+    # that parse_dk_entries can locate the section.  The real DK format is:
+    # Position, Name + ID, Name, ID, Roster Position, Salary, Game Info, ...
     player_rows = "\n".join([
-        f"PG,PG1 (1),1,PG,6200,GAMEA@GAMEB 01/01/2026 07:00PM ET",
-        f"SG,SG1 (2),2,SG,6200,GAMEA@GAMEB 01/01/2026 07:00PM ET",
-        f"SF,SF1 (3),3,SF,6200,GAMEA@GAMEB 01/01/2026 07:00PM ET",
-        f"PF,PF1 (4),4,PF,6200,GAMEA@GAMEB 01/01/2026 07:00PM ET",
-        f"C,C1 (5),5,C,6200,GAMEA@GAMEB 01/01/2026 07:00PM ET",
-        f"PG,G1 (6),6,PG/SG,6200,GAMEC@GAMED 01/01/2026 09:00PM ET",
-        f"SF,F1 (7),7,SF/PF,6200,GAMEC@GAMED 01/01/2026 09:00PM ET",
-        f"C,U1 (8),8,C,6200,GAMEC@GAMED 01/01/2026 09:00PM ET",
+        "PG,PG1 (1),PG1,1,PG,6200,GAMEA@GAMEB 01/01/2026 07:00PM ET",
+        "SG,SG1 (2),SG1,2,SG,6200,GAMEA@GAMEB 01/01/2026 07:00PM ET",
+        "SF,SF1 (3),SF1,3,SF,6200,GAMEA@GAMEB 01/01/2026 07:00PM ET",
+        "PF,PF1 (4),PF1,4,PF,6200,GAMEA@GAMEB 01/01/2026 07:00PM ET",
+        "C,C1 (5),C1,5,C,6200,GAMEA@GAMEB 01/01/2026 07:00PM ET",
+        "PG,G1 (6),G1,6,PG/SG,6200,GAMEC@GAMED 01/01/2026 09:00PM ET",
+        "SF,F1 (7),F1,7,SF/PF,6200,GAMEC@GAMED 01/01/2026 09:00PM ET",
+        "C,U1 (8),U1,8,C,6200,GAMEC@GAMED 01/01/2026 09:00PM ET",
     ])
 
-    # engine.load_data reads with skiprows=7, so the player header must be at
-    # 0-indexed row 7. We place:
-    #   row 0: entry header
-    #   row 1: entry row 1
-    #   row 2: entry row 2
-    #   rows 3-6: 4 junk rows  (rows 0-6 = 7 rows total to skip)
-    #   row 7: player-pool header  ← this is what skiprows=7 exposes as header
-    #   rows 8+: player data rows
     content = (
         f"Entry ID,Contest Name,Contest ID,Entry Fee,{slot_header}\n"
         f"111111,Main Slate,999999,3,{empty_slots}\n"
         f"222222,Main Slate,999999,3,{empty_slots}\n"
-        + ",,,,\n" * 4  # 4 junk rows (rows 3-6); together with rows 0-2 = 7 skipped
-        + "Position,Name + ID,ID,Roster Position,Salary,Game Info\n"
+        + "Position,Name + ID,Name,ID,Roster Position,Salary,Game Info\n"
         + player_rows + "\n"
     )
     os.makedirs(os.path.dirname(path), exist_ok=True)

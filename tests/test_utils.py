@@ -5,12 +5,21 @@ pipeline (engine, ranker, exporter, late_swapper) all rely on for parsing
 DraftKings CSV exports.
 """
 
+import io
 import os
+import textwrap
 from datetime import datetime
 
 import pandas as pd
+import pytest
 
-from nba_optimizer.utils import extract_player_id, parse_game_time, read_ragged_csv
+from nba_optimizer.utils import (
+    extract_player_id,
+    merge_player_pool,
+    parse_dk_entries,
+    parse_game_time,
+    read_ragged_csv,
+)
 
 FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "fixtures")
 
@@ -66,3 +75,124 @@ def test_read_ragged_csv_preserves_valid_columns_and_pads_ragged_rows():
     # read as a string (object dtype) to avoid losing precision on large IDs.
     assert df_ragged.loc[0, "Entry ID"] == "111"
     assert df_ragged.loc[1, "Entry ID"] == "333"
+
+
+# ---------------------------------------------------------------------------
+# Shared player-pool loader contract tests
+# ---------------------------------------------------------------------------
+
+_DKENTRIES_CONTENT = textwrap.dedent("""\
+    Entry ID,Contest Name,Contest ID,Entry Fee,PG,SG,SF,PF,C,G,F,UTIL
+    111111,Main Slate,999999,3,,,,,,,,
+    Position,Name + ID,Name,ID,Roster Position,Salary,Game Info
+    PG,Alice (1),Alice,1,PG,6200,AAA@BBB 01/01/2026 07:00PM ET
+    SG,Bob (2),Bob,2,SG,5800,AAA@BBB 01/01/2026 07:00PM ET
+""")
+
+_PROJS_CONTENT = textwrap.dedent("""\
+    ID,Name,Projection,Own_Proj,Team,Opponent
+    1,Alice,42.0,25.0,AAA,BBB
+""")
+
+
+@pytest.fixture()
+def dk_entries_file(tmp_path):
+    p = tmp_path / "DKEntries.csv"
+    p.write_text(_DKENTRIES_CONTENT)
+    return str(p)
+
+
+@pytest.fixture()
+def projs_df():
+    return pd.read_csv(io.StringIO(_PROJS_CONTENT))
+
+
+def test_parse_dk_entries_finds_player_pool_section(dk_entries_file):
+    """parse_dk_entries returns only the player-pool rows with normalized IDs."""
+    df = parse_dk_entries(dk_entries_file)
+    assert list(df["ID"]) == ["1", "2"]
+    assert "Name + ID" in df.columns
+
+
+def test_parse_dk_entries_raises_on_missing_sentinel(tmp_path):
+    """parse_dk_entries raises ValueError when no player-pool header is found."""
+    bad = tmp_path / "bad.csv"
+    bad.write_text("Entry ID,Contest Name\n111,Main\n")
+    with pytest.raises(ValueError, match="Could not find player pool section"):
+        parse_dk_entries(str(bad))
+
+
+def test_merge_player_pool_inner_drops_unmatched_players(projs_df):
+    """inner merge keeps only players present in both pool and projections."""
+    df_players = pd.DataFrame([
+        {"ID": "1", "Name + ID": "Alice (1)", "Roster Position": "PG",
+         "Salary": "6200", "Game Info": "AAA@BBB 01/01/2026 07:00PM ET"},
+        {"ID": "2", "Name + ID": "Bob (2)", "Roster Position": "SG",
+         "Salary": "5800", "Game Info": "AAA@BBB 01/01/2026 07:00PM ET"},
+    ])
+    df = merge_player_pool(df_players, projs_df, how="inner")
+    # Bob (ID=2) has no projection entry — inner merge excludes him
+    assert len(df) == 1
+    assert df.iloc[0]["ID"] == "1"
+    assert df.iloc[0]["Projection"] == 42.0
+
+
+def test_merge_player_pool_left_retains_unmatched_with_zero_projection(projs_df):
+    """left merge keeps pool players missing from projections; Projection becomes 0."""
+    df_players = pd.DataFrame([
+        {"ID": "1", "Name + ID": "Alice (1)", "Roster Position": "PG",
+         "Salary": "6200", "Game Info": "AAA@BBB 01/01/2026 07:00PM ET"},
+        {"ID": "2", "Name + ID": "Bob (2)", "Roster Position": "SG",
+         "Salary": "5800", "Game Info": "AAA@BBB 01/01/2026 07:00PM ET"},
+    ])
+    df = merge_player_pool(df_players, projs_df, how="left")
+    # Both players retained
+    assert len(df) == 2
+    alice = df[df["ID"] == "1"].iloc[0]
+    bob = df[df["ID"] == "2"].iloc[0]
+    assert alice["Projection"] == 42.0
+    assert bob["Projection"] == 0.0
+
+
+def test_merge_player_pool_salary_is_numeric(projs_df):
+    """merge_player_pool casts Salary to a numeric type."""
+    df_players = pd.DataFrame([
+        {"ID": "1", "Name + ID": "Alice (1)", "Roster Position": "PG",
+         "Salary": "6200", "Game Info": "AAA@BBB 01/01/2026 07:00PM ET"},
+    ])
+    df = merge_player_pool(df_players, projs_df, how="inner")
+    assert pd.api.types.is_numeric_dtype(df["Salary"])
+
+
+def test_engine_style_output_has_start_time_and_game_columns(dk_entries_file, projs_df):
+    """Engine-style load (inner + simple split) produces StartTime and Game columns."""
+    from nba_optimizer.utils import parse_game_time
+
+    df_players = parse_dk_entries(dk_entries_file)
+    df = merge_player_pool(df_players, projs_df, how="inner")
+    df["StartTime"] = df["Game Info"].apply(parse_game_time)
+    df["Game"] = df["Game Info"].str.split(" ").str[0]
+
+    assert "StartTime" in df.columns
+    assert "Game" in df.columns
+    assert df.iloc[0]["Game"] == "AAA@BBB"
+    assert df.iloc[0]["StartTime"] == datetime(2026, 1, 1, 19, 0)
+
+
+def test_late_swap_style_output_has_game_column(dk_entries_file, projs_df):
+    """Late-swap-style load (left + derive_game_key) produces a Game column."""
+    from nba_optimizer.utils import derive_game_key
+
+    df_players = parse_dk_entries(dk_entries_file)
+    df = merge_player_pool(df_players, projs_df, how="left")
+
+    n = len(df)
+    team_series = df["Team"] if "Team" in df.columns else pd.Series([None] * n, index=df.index)
+    opp_series = df["Opponent"] if "Opponent" in df.columns else pd.Series([None] * n, index=df.index)
+    gi_series = df["Game Info"] if "Game Info" in df.columns else pd.Series([""] * n, index=df.index)
+    df["Game"] = [derive_game_key(t, o, gi) for t, o, gi in zip(team_series, opp_series, gi_series)]
+
+    assert "Game" in df.columns
+    # Alice has Team=AAA, Opponent=BBB from projs → canonical key is "AAA@BBB"
+    alice = df[df["ID"] == "1"].iloc[0]
+    assert alice["Game"] == "AAA@BBB"

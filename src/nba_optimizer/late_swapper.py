@@ -1,5 +1,4 @@
 import argparse
-import io
 import os
 import traceback
 from datetime import datetime
@@ -14,6 +13,8 @@ from .utils import (
     extract_player_id,
     get_latest_file,
     is_player_locked,
+    merge_player_pool,
+    parse_dk_entries,
     parse_game_time,
     read_ragged_csv,
 )
@@ -56,31 +57,10 @@ def _attach_game_column(df: pd.DataFrame) -> None:
 
 def load_data(projs_file: str, entries_file: str) -> pd.DataFrame:
     """Loads player pool and projections."""
-    with open(entries_file, "r") as f:
-        lines = f.readlines()
-
-    player_pool_start_idx = -1
-    for i, line in enumerate(lines):
-        if "Position,Name + ID,Name,ID" in line:
-            player_pool_start_idx = i
-            break
-
-    if player_pool_start_idx == -1:
-        raise ValueError("Could not find player pool section in DKEntries.csv")
-
-    df_raw = pd.read_csv(io.StringIO("".join(lines[player_pool_start_idx:])))
-    df_players = df_raw.dropna(subset=["ID"])
-    df_players["ID"] = df_players["ID"].astype(str).str.split(".").str[0]
-
+    df_players = parse_dk_entries(entries_file)
     df_projs = pd.read_csv(projs_file)
-    df_projs["ID"] = df_projs["ID"].astype(str)
-
-    df = pd.merge(df_players, df_projs, on="ID", how="left")
-    df["Projection"] = pd.to_numeric(df["Projection"]).fillna(0)
-    df["Salary"] = pd.to_numeric(df["Salary"])
-
+    df = merge_player_pool(df_players, df_projs, how="left")
     _attach_game_column(df)
-
     return df
 
 

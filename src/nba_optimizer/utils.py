@@ -1,3 +1,4 @@
+import io
 import os
 import glob
 import re
@@ -109,3 +110,61 @@ def read_ragged_csv(
         engine="python",
     )
     return df, valid_cols
+
+
+def parse_dk_entries(entries_file: str) -> pd.DataFrame:
+    """Parse the DKEntries CSV player-pool section into a DataFrame.
+
+    Searches for the header row containing "Position,Name + ID,Name,ID"
+    (which may appear after contest metadata rows) and reads everything
+    from that header onward. Works for both the pre-lock (engine) and
+    post-lock (late-swap) variants of the DraftKings export because both
+    use the same player-pool section format.
+
+    Returns a DataFrame with ID normalized to a plain integer string and
+    rows with a missing ID dropped.
+    """
+    with open(entries_file, "r") as f:
+        lines = f.readlines()
+
+    pool_start = -1
+    for i, line in enumerate(lines):
+        if "Position,Name + ID,Name,ID" in line:
+            pool_start = i
+            break
+
+    if pool_start == -1:
+        raise ValueError(f"Could not find player pool section in {entries_file}")
+
+    df_players = pd.read_csv(io.StringIO("".join(lines[pool_start:])))
+    df_players = df_players.dropna(subset=["ID"]).copy()
+    df_players["ID"] = df_players["ID"].astype(str).str.split(".").str[0]
+    return df_players
+
+
+def merge_player_pool(
+    df_players: pd.DataFrame, df_projs: pd.DataFrame, how: str
+) -> pd.DataFrame:
+    """Merge a parsed player-pool DataFrame with a projections DataFrame.
+
+    Normalizes ``ID`` on the projections side before merging. After the
+    merge, casts ``Salary`` to numeric and, for ``how="left"`` merges,
+    fills any missing ``Projection`` values with 0 (retaining current-
+    lineup players who have no projection entry).
+
+    Args:
+        df_players: Output of ``parse_dk_entries``.
+        df_projs: Raw projections CSV loaded via ``pd.read_csv``.
+        how: ``"inner"`` for engine (only projected players) or
+            ``"left"`` for late-swap (retain all pool players).
+
+    Returns:
+        Merged DataFrame ready for column-level additions (StartTime, Game).
+    """
+    df_projs = df_projs.copy()
+    df_projs["ID"] = df_projs["ID"].astype(str)
+    df = pd.merge(df_players, df_projs, on="ID", how=how)
+    df["Salary"] = pd.to_numeric(df["Salary"])
+    if how == "left":
+        df["Projection"] = pd.to_numeric(df["Projection"]).fillna(0)
+    return df
