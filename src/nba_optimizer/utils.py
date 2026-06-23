@@ -72,13 +72,14 @@ def derive_game_key(team, opponent, game_info: str = "") -> str:
     if ta and opp:
         return "@".join(sorted([ta, opp]))
 
-    match = re.match(r"\s*([A-Za-z]{2,4})@([A-Za-z]{2,4})", str(game_info))
+    gi = "" if pd.isna(game_info) else str(game_info).strip()
+    match = re.match(r"\s*([A-Za-z]{2,4})@([A-Za-z]{2,4})", gi)
     if match:
         return "@".join(sorted([match.group(1).upper(), match.group(2).upper()]))
 
     if ta:
         return ta
-    return str(game_info).split(" ")[0]
+    return gi.split(" ")[0] if gi else ""
 
 
 def read_ragged_csv(

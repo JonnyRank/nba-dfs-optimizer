@@ -55,6 +55,11 @@ def test_derive_game_key_last_resort_is_team_alone():
     assert derive_game_key("LAL", np.nan, "In Progress") == "LAL"
 
 
+def test_derive_game_key_handles_all_missing():
+    """All-NaN inputs return an empty key rather than the string 'nan'."""
+    assert derive_game_key(np.nan, np.nan, np.nan) == ""
+
+
 # --- real-fixture parsing: locks and game identity ---
 
 
@@ -127,6 +132,62 @@ def test_solve_batch_enforces_min_games():
     picked = [p for p in lineups[0] if p not in ("EMPTY", "ERROR")]
     assert len(picked) == len(ROSTER_SLOTS)
     games = {df_pool.set_index("Name + ID").loc[p, "Game"] for p in picked}
+    assert len(games) >= cfg.min_games
+
+
+def _mixed_game_pool() -> pd.DataFrame:
+    """Pool where the locked player's game (GAMEA) also has draftable players.
+
+    GAMEA can fill every open slot at the highest projection, and it already
+    holds the locked player -- so a naive floor that lets GAMEA count toward
+    min_games again (via a newly-drafted GAMEA player) would happily return an
+    all-GAMEA lineup. Only excluding already-locked games from the floor forces
+    a GAMEB pick and a genuinely 2-game final lineup.
+    """
+    rows = [
+        # Name + ID, ID, Salary, Roster Position, Projection, Game Info, Game
+        ("LkPG (100) (LOCKED)", "100", 6200, "PG", 50, "GAMEA", "GAMEA"),
+        ("SGa (2)", "2", 6200, "SG", 40, "GAMEA", "GAMEA"),
+        ("SFa (3)", "3", 6200, "SF", 40, "GAMEA", "GAMEA"),
+        ("PFa (4)", "4", 6200, "PF", 40, "GAMEA", "GAMEA"),
+        ("Ca (5)", "5", 6200, "C", 40, "GAMEA", "GAMEA"),
+        ("Ga (6)", "6", 6200, "PG/SG", 40, "GAMEA", "GAMEA"),
+        ("Fa (7)", "7", 6200, "SF/PF", 40, "GAMEA", "GAMEA"),
+        ("Ua (8)", "8", 6200, "C", 40, "GAMEA", "GAMEA"),
+        # GAMEB substitutes: slot-compatible but lower projection.
+        ("Ub (9)", "9", 6200, "C", 38, "GAMEB", "GAMEB"),
+        ("Gb (10)", "10", 6200, "PG/SG", 38, "GAMEB", "GAMEB"),
+    ]
+    df = pd.DataFrame(
+        rows,
+        columns=[
+            "Name + ID", "ID", "Salary", "Roster Position",
+            "Projection", "Game Info", "Game",
+        ],
+    )
+    df["StartTime"] = pd.Timestamp("2026-03-25 19:00")
+    return df
+
+
+def test_min_games_excludes_locked_game_from_floor():
+    """A locked game that still has draftable players must not satisfy the
+    min_games floor twice. The final lineup must span >= min_games real games
+    even when the projection-optimal open-slot fill stays in the locked game."""
+    df_pool = _mixed_game_pool()
+    cfg = replace(Config(), min_salary=0, salary_cap=50000, min_games=2)
+
+    # PG is locked in GAMEA; the other seven slots are re-optimized.
+    template = [
+        "LkPG (100) (LOCKED)", "SGa (2)", "SFa (3)", "PFa (4)",
+        "Ca (5)", "Ga (6)", "Fa (7)", "Ua (8)",
+    ]
+
+    lineups = late_swapper.solve_late_swap_batch(df_pool, template, cfg, num_to_generate=1)
+
+    picked = [p for p in lineups[0] if p not in ("EMPTY", "ERROR")]
+    assert len(picked) == len(ROSTER_SLOTS)
+    game_by_name = df_pool.set_index("Name + ID")["Game"].to_dict()
+    games = {game_by_name[p] for p in picked}
     assert len(games) >= cfg.min_games
 
 

@@ -49,6 +49,10 @@ def load_data(projs_file: str, entries_file: str) -> pd.DataFrame:
     df["StartTime"] = df["Game Info"].apply(parse_time)
     df["Salary"] = pd.to_numeric(df["Salary"])
 
+    # The pre-lock pipeline always has real matchup strings here (no "In
+    # Progress" games), so the raw split is sufficient. This intentionally
+    # diverges from late_swapper.load_data, which must use derive_game_key to
+    # recover started games from the team/opponent pair.
     df["Game"] = df["Game Info"].str.split(" ").str[0]
     return df
 
