@@ -55,6 +55,35 @@ def parse_game_time(game_info: str) -> datetime:
         return datetime.max
 
 
+def derive_game_key(team, opponent, game_info: str = "") -> str:
+    """Return a canonical, order-independent game identifier (e.g. "ATL@DET").
+
+    During late swap, DraftKings replaces the "Game Info" matchup string with
+    "In Progress" once a game has started, which erases the team pairing. The
+    team/opponent pair from the projections feed survives that, so it is the
+    preferred source: both LAL(opp IND) and IND(opp LAL) collapse to the same
+    "IND@LAL" key regardless of which side a player is on. Fallbacks, in order:
+    parse a matchup out of "Game Info" (works for not-yet-started games), then
+    the team alone (the only remaining signal for an in-progress player who is
+    missing from projections).
+    """
+    ta = "" if pd.isna(team) else str(team).strip()
+    opp = "" if pd.isna(opponent) else str(opponent).strip()
+    if ta and opp:
+        return "@".join(sorted([ta, opp]))
+
+    gi = "" if pd.isna(game_info) else str(game_info).strip()
+    match = re.match(r"\s*([A-Za-z]{2,4})@([A-Za-z]{2,4})", gi)
+    if match:
+        return "@".join(sorted([match.group(1).upper(), match.group(2).upper()]))
+
+    if ta:
+        return ta
+    if opp:
+        return opp
+    return gi.split(" ")[0] if gi else ""
+
+
 def read_ragged_csv(
     file_path: str, max_columns: int = 25
 ) -> Tuple[pd.DataFrame, List[str]]:

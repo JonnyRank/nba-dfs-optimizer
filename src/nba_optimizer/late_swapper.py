@@ -1,4 +1,5 @@
 import argparse
+import io
 import os
 import traceback
 from datetime import datetime
@@ -9,12 +10,48 @@ import pulp
 
 from .config import Config, ENTRY_HEADER_COLS, LATE_SWAP_PREFIX, ROSTER_SLOTS
 from .utils import (
+    derive_game_key,
     extract_player_id,
     get_latest_file,
     is_player_locked,
     parse_game_time,
     read_ragged_csv,
 )
+
+
+def _attach_game_column(df: pd.DataFrame) -> None:
+    """Add a canonical, order-independent "Game" column to ``df`` in place.
+
+    Prefers the projections team/opponent pair (which survives DraftKings'
+    "In Progress" relabeling of started games), falling back to the pool's
+    TeamAbbrev when a player is absent from projections, then to the "Game
+    Info" matchup string. This is what lets min_games count locked,
+    already-started games correctly during swaps. Robust to any of those
+    columns being absent (e.g. when called on a bare pool in a unit test).
+    """
+    n = len(df)
+    if "Team" in df.columns and "TeamAbbrev" in df.columns:
+        team_series = df["Team"].where(df["Team"].notna(), df["TeamAbbrev"])
+    elif "Team" in df.columns:
+        team_series = df["Team"]
+    elif "TeamAbbrev" in df.columns:
+        team_series = df["TeamAbbrev"]
+    else:
+        team_series = pd.Series([None] * n, index=df.index)
+    opp_series = (
+        df["Opponent"]
+        if "Opponent" in df.columns
+        else pd.Series([None] * n, index=df.index)
+    )
+    game_info_series = (
+        df["Game Info"]
+        if "Game Info" in df.columns
+        else pd.Series([""] * n, index=df.index)
+    )
+    df["Game"] = [
+        derive_game_key(t, o, gi)
+        for t, o, gi in zip(team_series, opp_series, game_info_series)
+    ]
 
 
 def load_data(projs_file: str, entries_file: str) -> pd.DataFrame:
@@ -31,8 +68,6 @@ def load_data(projs_file: str, entries_file: str) -> pd.DataFrame:
     if player_pool_start_idx == -1:
         raise ValueError("Could not find player pool section in DKEntries.csv")
 
-    import io
-
     df_raw = pd.read_csv(io.StringIO("".join(lines[player_pool_start_idx:])))
     df_players = df_raw.dropna(subset=["ID"])
     df_players["ID"] = df_players["ID"].astype(str).str.split(".").str[0]
@@ -43,6 +78,8 @@ def load_data(projs_file: str, entries_file: str) -> pd.DataFrame:
     df = pd.merge(df_players, df_projs, on="ID", how="left")
     df["Projection"] = pd.to_numeric(df["Projection"]).fillna(0)
     df["Salary"] = pd.to_numeric(df["Salary"])
+
+    _attach_game_column(df)
 
     return df
 
@@ -65,6 +102,12 @@ def solve_late_swap_batch(
         "PF": 1,
         "C": 1,
     }
+
+    # The canonical "Game" column is normally added in load_data; derive it
+    # here too if this is called with a bare pool (e.g. a unit test) so
+    # locked-game accounting below always has a consistent key to read.
+    if "Game" not in df_pool.columns:
+        _attach_game_column(df_pool)
 
     locked_ids = set()
     lineup_map = {}
@@ -94,8 +137,7 @@ def solve_late_swap_batch(
                 player_data = df_pool[df_pool["ID"] == pid]
                 if not player_data.empty:
                     locked_salary_used += player_data.iloc[0]["Salary"]
-                    game = player_data.iloc[0]["Game Info"].split(" ")[0]
-                    locked_games.add(game)
+                    locked_games.add(player_data.iloc[0]["Game"])
 
     # Fast path: If the lineup is completely locked, return it N times.
     num_to_fill = sum(1 for filled in filled_slots if not filled)
@@ -127,7 +169,10 @@ def solve_late_swap_batch(
     # Pre-compute time scores and store in dictionary for O(1) lookup
     incentive_terms = []
     if "StartTime" not in df_pool.columns:
-        df_pool["StartTime"] = df_pool["Game Info"].apply(parse_game_time)
+        if "Game Info" in df_pool.columns:
+            df_pool["StartTime"] = df_pool["Game Info"].apply(parse_game_time)
+        else:
+            df_pool["StartTime"] = pd.Timestamp.max
     min_time = df_pool["StartTime"].min()
     max_time = df_pool["StartTime"].max()
     time_range = (max_time - min_time).total_seconds() or 1.0
@@ -182,17 +227,32 @@ def solve_late_swap_batch(
     for s in available_slots:
         prob += pulp.lpSum([slot_vars[i][s] for i in df_pool.index]) == 1
 
-    df_pool["Game"] = df_pool["Game Info"].str.split(" ").str[0]
-    games = df_pool["Game"].unique()
-    game_vars = pulp.LpVariable.dicts("game", games, cat=pulp.LpBinary)
+    # The floor counts only games NOT already covered by locked players; those
+    # are credited via adj_min_games below. Restricting to new games keeps
+    # len(locked_games) + (new games selected) an exact distinct-game count
+    # even for a "mixed" game that holds both a locked player and a draftable
+    # one -- otherwise that single physical game could satisfy the floor twice.
+    # game_vars[g] can only be 1 when at least one of g's players is drafted
+    # into an open slot; this <= link is what makes the >= floor binding (a
+    # one-directional >= link would leave it non-binding). The groupby mirrors
+    # the lookup pattern in engine.py instead of boolean-indexing in the loop.
+    new_games = [
+        g
+        for g in df_pool["Game"].unique()
+        if g not in locked_games and pd.notna(g) and g != ""
+    ]
+    game_vars = pulp.LpVariable.dicts("game", new_games, cat=pulp.LpBinary)
+    game_to_players = df_pool.groupby("Game").groups
 
-    for game in games:
-        players_in_game = df_pool[df_pool["Game"] == game].index
-        for i in players_in_game:
-            prob += game_vars[game] >= player_vars[i] / 10.0
+    for game in new_games:
+        players_in_game = game_to_players[game]
+        prob += game_vars[game] <= pulp.lpSum(
+            [player_vars[i] for i in players_in_game]
+        )
 
     adj_min_games = max(0, cfg.min_games - len(locked_games))
-    prob += pulp.lpSum([game_vars[game] for game in games]) >= adj_min_games
+    if adj_min_games > 0:
+        prob += pulp.lpSum([game_vars[game] for game in new_games]) >= adj_min_games
 
     # 3. Iterative Batch Solving
     generated_lineups = []

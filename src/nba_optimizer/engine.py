@@ -49,6 +49,10 @@ def load_data(projs_file: str, entries_file: str) -> pd.DataFrame:
     df["StartTime"] = df["Game Info"].apply(parse_time)
     df["Salary"] = pd.to_numeric(df["Salary"])
 
+    # The pre-lock pipeline always has real matchup strings here (no "In
+    # Progress" games), so the raw split is sufficient. This intentionally
+    # diverges from late_swapper.load_data, which must use derive_game_key to
+    # recover started games from the team/opponent pair.
     df["Game"] = df["Game Info"].str.split(" ").str[0]
     return df
 
@@ -115,8 +119,14 @@ def generate_single_lineup(
             prob += pulp.lpSum([slot_vars[i][s] for i in df.index]) == 1
 
         # Min Games
-        # The 'Game' column is now pre-processed in load_data
-        games = df["Game"].unique()
+        # The 'Game' column is now pre-processed in load_data.
+        # game_vars[g] is an indicator for "game g is represented in the lineup".
+        # The <= link forces the indicator to 0 unless at least one of that
+        # game's players is selected, so requiring the indicators to sum to
+        # >= min_games is a genuine "span at least min_games distinct games"
+        # constraint. A one-directional >= link would leave the indicators free
+        # to switch on for empty games, making the floor non-binding.
+        games = [g for g in df["Game"].unique() if pd.notna(g) and g != ""]
         game_vars = pulp.LpVariable.dicts("game", games, cat=pulp.LpBinary)
 
         # Use pandas groupby to create a dictionary of {game: [list_of_indices]}
@@ -125,8 +135,9 @@ def generate_single_lineup(
 
         for game in games:
             players_in_game = game_to_players[game]
-            for i in players_in_game:
-                prob += game_vars[game] >= player_vars[i] / 10.0
+            prob += game_vars[game] <= pulp.lpSum(
+                [player_vars[i] for i in players_in_game]
+            )
 
         prob += pulp.lpSum([game_vars[game] for game in games]) >= min_games
 
