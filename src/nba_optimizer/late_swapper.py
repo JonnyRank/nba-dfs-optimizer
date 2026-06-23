@@ -172,7 +172,7 @@ def solve_late_swap_batch(
         if "Game Info" in df_pool.columns:
             df_pool["StartTime"] = df_pool["Game Info"].apply(parse_game_time)
         else:
-            df_pool["StartTime"] = datetime.max
+            df_pool["StartTime"] = pd.Timestamp.max
     min_time = df_pool["StartTime"].min()
     max_time = df_pool["StartTime"].max()
     time_range = (max_time - min_time).total_seconds() or 1.0
@@ -236,7 +236,11 @@ def solve_late_swap_batch(
     # into an open slot; this <= link is what makes the >= floor binding (a
     # one-directional >= link would leave it non-binding). The groupby mirrors
     # the lookup pattern in engine.py instead of boolean-indexing in the loop.
-    new_games = [g for g in df_pool["Game"].unique() if g not in locked_games]
+    new_games = [
+        g
+        for g in df_pool["Game"].unique()
+        if g not in locked_games and pd.notna(g) and g != ""
+    ]
     game_vars = pulp.LpVariable.dicts("game", new_games, cat=pulp.LpBinary)
     game_to_players = df_pool.groupby("Game").groups
 
@@ -247,7 +251,8 @@ def solve_late_swap_batch(
         )
 
     adj_min_games = max(0, cfg.min_games - len(locked_games))
-    prob += pulp.lpSum([game_vars[game] for game in new_games]) >= adj_min_games
+    if adj_min_games > 0:
+        prob += pulp.lpSum([game_vars[game] for game in new_games]) >= adj_min_games
 
     # 3. Iterative Batch Solving
     generated_lineups = []

@@ -79,6 +79,8 @@ def derive_game_key(team, opponent, game_info: str = "") -> str:
 
     if ta:
         return ta
+    if opp:
+        return opp
     return gi.split(" ")[0] if gi else ""
 
 

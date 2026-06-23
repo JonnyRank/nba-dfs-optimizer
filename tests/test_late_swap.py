@@ -61,6 +61,11 @@ def test_derive_game_key_handles_all_missing():
     assert derive_game_key(np.nan, np.nan, np.nan) == ""
 
 
+def test_derive_game_key_opponent_fallback():
+    """With only the opponent known, prefer it over the Game Info split."""
+    assert derive_game_key(np.nan, "IND", "In Progress") == "IND"
+
+
 # --- real-fixture parsing: locks and game identity ---
 
 

@@ -126,7 +126,7 @@ def generate_single_lineup(
         # >= min_games is a genuine "span at least min_games distinct games"
         # constraint. A one-directional >= link would leave the indicators free
         # to switch on for empty games, making the floor non-binding.
-        games = df["Game"].unique()
+        games = [g for g in df["Game"].unique() if pd.notna(g) and g != ""]
         game_vars = pulp.LpVariable.dicts("game", games, cat=pulp.LpBinary)
 
         # Use pandas groupby to create a dictionary of {game: [list_of_indices]}

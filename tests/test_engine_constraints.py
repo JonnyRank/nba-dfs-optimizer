@@ -132,6 +132,32 @@ def test_lineup_respects_position_eligibility_and_min_games():
     assert df_selected["Game"].nunique() >= cfg.min_games
 
 
+def test_min_games_ignores_players_with_unknown_game():
+    """A player with a missing (NaN) game key must not break the solve or
+    count toward min_games. Without filtering NaN out of the games list, the
+    groupby lookup raises KeyError and generate_single_lineup returns None."""
+    df_pool = _build_single_game_dominant_pool()
+    ghost = pd.DataFrame(
+        [("Ghost (99)", 3000, "PG/SG", 5, float("nan"))],
+        columns=["Name + ID", "Salary", "Roster Position", "Projection", "Game"],
+    )
+    df_pool = pd.concat([df_pool, ghost], ignore_index=True)
+    cfg = Config()
+
+    lineup_names, selected_indices = generate_single_lineup(
+        df_pool,
+        randomness=0.0,
+        min_salary=cfg.min_salary,
+        salary_cap=cfg.salary_cap,
+        roster_size=cfg.roster_size,
+        min_games=cfg.min_games,
+    )
+
+    assert lineup_names is not None, "a NaN game key must not break the solve"
+    df_selected = df_pool.loc[list(selected_indices)]
+    assert df_selected["Game"].dropna().nunique() >= cfg.min_games
+
+
 def test_min_games_is_enforced_against_single_game_optimum():
     """min_games forces a second game even when the projection-optimal
     lineup would otherwise come entirely from one game.
