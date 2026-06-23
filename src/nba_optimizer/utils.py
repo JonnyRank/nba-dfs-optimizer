@@ -2,6 +2,8 @@ import io
 import os
 import glob
 import re
+from typing import Literal
+
 import pandas as pd
 from datetime import datetime
 from typing import Tuple, List, Optional
@@ -124,7 +126,7 @@ def parse_dk_entries(entries_file: str) -> pd.DataFrame:
     Returns a DataFrame with ID normalized to a plain integer string and
     rows with a missing ID dropped.
     """
-    with open(entries_file, "r", encoding="utf-8") as f:
+    with open(entries_file, "r", encoding="utf-8-sig") as f:
         lines = f.readlines()
 
     pool_start = -1
@@ -143,7 +145,7 @@ def parse_dk_entries(entries_file: str) -> pd.DataFrame:
 
 
 def merge_player_pool(
-    df_players: pd.DataFrame, df_projs: pd.DataFrame, how: str
+    df_players: pd.DataFrame, df_projs: pd.DataFrame, how: Literal["inner", "left"]
 ) -> pd.DataFrame:
     """Merge a parsed player-pool DataFrame with a projections DataFrame.
 
@@ -176,6 +178,6 @@ def merge_player_pool(
     df_merged["Salary"] = pd.to_numeric(df_merged["Salary"])
     if "Projection" in df_merged.columns:
         df_merged["Projection"] = pd.to_numeric(df_merged["Projection"])
-    if how == "left":
-        df_merged["Projection"] = df_merged["Projection"].fillna(0)
+        if how == "left":
+            df_merged["Projection"] = df_merged["Projection"].fillna(0)
     return df_merged
