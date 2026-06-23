@@ -101,7 +101,7 @@ def _build_dkentries_csv(path: str) -> None:
         + player_rows + "\n"
     )
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w") as fh:
+    with open(path, "w", encoding="utf-8") as fh:
         fh.write(content)
 
 

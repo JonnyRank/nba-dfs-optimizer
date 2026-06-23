@@ -59,9 +59,9 @@ def load_data(projs_file: str, entries_file: str) -> pd.DataFrame:
     """Loads player pool and projections."""
     df_players = parse_dk_entries(entries_file)
     df_projs = pd.read_csv(projs_file)
-    df = merge_player_pool(df_players, df_projs, how="left")
-    _attach_game_column(df)
-    return df
+    df_pool = merge_player_pool(df_players, df_projs, how="left")
+    _attach_game_column(df_pool)
+    return df_pool
 
 
 def solve_late_swap_batch(
