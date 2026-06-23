@@ -20,12 +20,13 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from nba_optimizer import late_swapper
+from nba_optimizer import engine, late_swapper
 from nba_optimizer.config import Config, ROSTER_SLOTS
 from nba_optimizer.utils import derive_game_key, extract_player_id, is_player_locked
 
 FIXTURES = Path(__file__).parent / "fixtures"
 SWAPPABLE_ENTRIES = FIXTURES / "swappable-DKEntries.csv"
+UNFILLED_ENTRIES = FIXTURES / "unfilled-DKEntries.csv"
 PROJS_SAMPLE = FIXTURES / "NBA-Projs-sample.csv"
 
 # IDs drawn from the fixtures (03-25 slate).
@@ -81,6 +82,24 @@ def test_load_data_detects_locks_in_pool_and_resolves_in_progress_games():
     # Two in-progress locked players from different real games stay distinct
     # (the old Game-Info split bucketed both as "In").
     assert by_id.loc[LUKA, "Game"] != by_id.loc[BAM, "Game"]
+
+
+# --- pre-lock (standard pipeline) entries parse cleanly ---
+
+
+def test_unfilled_entries_parse_as_prelock_pool():
+    """The pre-lock DKEntries export (empty lineups, full matchup strings)
+    loads through engine.load_data with no locked players, and games resolve
+    to their real matchups -- the standard pipeline's input shape."""
+    df = engine.load_data(str(PROJS_SAMPLE), str(UNFILLED_ENTRIES))
+
+    assert len(df) > 0, "expected players parsed from the pre-lock pool"
+    # Nothing is locked before any game starts.
+    assert not df["Name + ID"].apply(is_player_locked).any()
+    # Game Info carries real matchups here (no "In Progress"), so engine's
+    # split keys games by matchup.
+    by_id = df.set_index("ID")
+    assert by_id.loc[LUKA, "Game"] == "LAL@IND"
 
 
 # --- min_games is binding through the late-swap solver ---

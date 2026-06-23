@@ -1,4 +1,5 @@
 import argparse
+import io
 import os
 import traceback
 from datetime import datetime
@@ -66,8 +67,6 @@ def load_data(projs_file: str, entries_file: str) -> pd.DataFrame:
 
     if player_pool_start_idx == -1:
         raise ValueError("Could not find player pool section in DKEntries.csv")
-
-    import io
 
     df_raw = pd.read_csv(io.StringIO("".join(lines[player_pool_start_idx:])))
     df_players = df_raw.dropna(subset=["ID"])
@@ -170,7 +169,10 @@ def solve_late_swap_batch(
     # Pre-compute time scores and store in dictionary for O(1) lookup
     incentive_terms = []
     if "StartTime" not in df_pool.columns:
-        df_pool["StartTime"] = df_pool["Game Info"].apply(parse_game_time)
+        if "Game Info" in df_pool.columns:
+            df_pool["StartTime"] = df_pool["Game Info"].apply(parse_game_time)
+        else:
+            df_pool["StartTime"] = datetime.max
     min_time = df_pool["StartTime"].min()
     max_time = df_pool["StartTime"].max()
     time_range = (max_time - min_time).total_seconds() or 1.0
