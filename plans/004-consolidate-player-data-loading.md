@@ -80,7 +80,7 @@ Current-state excerpts (as of commit `2b9b262`):
       return df_lineups, df_players
   ```
 
-- `src/nba_optimizer/utils.py:8-84` already contains `get_latest_file`, `extract_player_id`, `parse_game_time`, `derive_game_key`, and `read_ragged_csv`. The `derive_game_key` function (added in commit `2b9b262`) is already the shared game-key logic; it is the right abstraction for any shared loader's game column attachment.
+- `src/nba_optimizer/utils.py:8-111` already contains `get_latest_file`, `extract_player_id`, `is_player_locked`, `parse_game_time`, `derive_game_key`, and `read_ragged_csv`. The `derive_game_key` function (added in commit `2b9b262`, lines 58-84) is already the shared game-key logic; it is the right abstraction for any shared loader's game column attachment. `read_ragged_csv` is at lines 87-111.
 
 Repo conventions to follow:
 
