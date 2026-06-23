@@ -2,7 +2,7 @@
 
 > **Executor instructions**: Follow this plan step by step. Run every verification command and confirm the expected result before moving to the next step. If anything in the "STOP conditions" section occurs, stop and report — do not improvise. When done, update the status row for this plan in `plans/README.md`.
 >
-> **Drift check (run first)**: `git diff --stat d6cbd5f..HEAD -- src/nba_optimizer/ranker.py src/nba_optimizer/utils.py README.md docs/codebase/CONCERNS.md BACKLOG.md tests`
+> **Drift check (run first)**: `git diff --stat 2b9b262..HEAD -- src/nba_optimizer/ranker.py src/nba_optimizer/utils.py README.md docs/codebase/CONCERNS.md BACKLOG.md tests`
 > If any in-scope file changed since this plan was written, compare the "Current state" excerpts against the live code before proceeding; on a mismatch, treat it as a STOP condition.
 
 ## Status
@@ -12,7 +12,7 @@
 - **Risk**: LOW
 - **Depends on**: `plans/001-establish-verification-baseline.md`, `plans/004-consolidate-player-data-loading.md`
 - **Category**: perf
-- **Planned at**: commit `d6cbd5f`, 2026-06-11
+- **Planned at**: commit `2b9b262`, 2026-06-23 (refreshed from `d6cbd5f` — see reconcile note below)
 - **Issue**: https://github.com/JonnyRank/nba-dfs-optimizer/issues/44
 
 ## Why this matters
@@ -165,3 +165,7 @@ Stop and report back if:
 - Reviewers should compare semantics, not just speed. A faster ranker that changes lineup ordering is a regression.
 - Keep the floor behavior for geometric mean ownership explicit in code; it is easy to lose during vectorization.
 - If future ranking metrics are added, prefer composing additional vectorized columns rather than reintroducing row iteration.
+
+## Reconcile note (2026-06-23)
+
+This plan was refreshed from commit `d6cbd5f` to `2b9b262`. The finding is unchanged: `ranker.py` still uses `iterrows()` at line 38 in `rank_lineups()`. Since the original plan was written, `ranker.py`'s `run()` function was extended (plan 003) to accept explicit `lineup_file` / `projs_file` parameters and return the output path — but `rank_lineups()` itself (the target of this plan) is untouched. The current-state excerpts at lines 28-76 remain accurate. Plan 004 is still TODO (and is a prerequisite), so this plan remains executable in order after plan 004 lands.
