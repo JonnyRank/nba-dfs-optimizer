@@ -166,11 +166,16 @@ def merge_player_pool(
     # pandas reads the column as float64 and astype(str) would give "12345.0",
     # which would silently fail to match the "12345" IDs from parse_dk_entries.
     df_projs["ID"] = df_projs["ID"].astype(str).str.split(".").str[0]
-    # Drop projs Name column before merging to avoid Name_x/Name_y suffixes;
-    # all downstream code uses "Name + ID", never bare "Name".
-    df_projs = df_projs.drop(columns=["Name"], errors="ignore")
+    # Drop DK-owned columns from projs to avoid _x/_y suffix collisions.
+    # df_players (from DKEntries) is authoritative for these values.
+    df_projs = df_projs.drop(
+        columns=["Name", "Salary", "Position", "Roster Position", "Game Info"],
+        errors="ignore",
+    )
     df_merged = pd.merge(df_players, df_projs, on="ID", how=how)
     df_merged["Salary"] = pd.to_numeric(df_merged["Salary"])
+    if "Projection" in df_merged.columns:
+        df_merged["Projection"] = pd.to_numeric(df_merged["Projection"])
     if how == "left":
-        df_merged["Projection"] = pd.to_numeric(df_merged["Projection"]).fillna(0)
+        df_merged["Projection"] = df_merged["Projection"].fillna(0)
     return df_merged
