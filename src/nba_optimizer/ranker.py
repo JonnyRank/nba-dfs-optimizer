@@ -16,10 +16,10 @@ def load_data(lineup_file: str, projs_file: str, cfg: Config) -> tuple[pd.DataFr
     df_lineups = pd.read_csv(lineup_file)
     df_projs = pd.read_csv(projs_file)
     df_players = parse_dk_entries(cfg.entries_path)
-    df = merge_player_pool(df_players, df_projs, how="inner")
-    df["StartTime"] = df["Game Info"].apply(parse_game_time)
-    df["Game"] = df["Game Info"].str.split(" ").str[0]
-    return df_lineups, df
+    df_merged = merge_player_pool(df_players, df_projs, how="inner")
+    df_merged["StartTime"] = df_merged["Game Info"].apply(parse_game_time)
+    df_merged["Game"] = df_merged["Game Info"].str.split(" ").str[0]
+    return df_lineups, df_merged
 
 
 def rank_lineups(

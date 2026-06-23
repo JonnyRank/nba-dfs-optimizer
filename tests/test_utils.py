@@ -196,3 +196,25 @@ def test_late_swap_style_output_has_game_column(dk_entries_file, projs_df):
     # Alice has Team=AAA, Opponent=BBB from projs → canonical key is "AAA@BBB"
     alice = df[df["ID"] == "1"].iloc[0]
     assert alice["Game"] == "AAA@BBB"
+
+
+def test_merge_player_pool_normalizes_float_projs_ids(dk_entries_file):
+    """merge_player_pool strips '.0' from projs IDs when pandas reads them as float.
+
+    When a projections CSV has any NaN in the ID column, pandas upcasts the
+    whole column to float64. astype(str) then gives '12345.0'. Without the
+    str.split('.').str[0] normalization, the merge silently produces zero rows.
+
+    Uses parse_dk_entries to get the real object-dtype ID column that
+    production code passes to merge_player_pool.
+    """
+    df_players = parse_dk_entries(dk_entries_file)
+    # Simulate float64 IDs (what pandas produces when the ID column has any NaN)
+    df_projs_float = pd.read_csv(io.StringIO(textwrap.dedent("""\
+        ID,Projection,Own_Proj,Team,Opponent
+        ,50.0,10.0,ZZZ,YYY
+        1.0,42.0,25.0,AAA,BBB
+    """)))
+    df = merge_player_pool(df_players, df_projs_float, how="inner")
+    assert len(df) == 1, "float ID in projs should still match after normalization"
+    assert df.iloc[0]["Projection"] == 42.0

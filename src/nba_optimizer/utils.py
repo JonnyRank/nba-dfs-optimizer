@@ -124,7 +124,7 @@ def parse_dk_entries(entries_file: str) -> pd.DataFrame:
     Returns a DataFrame with ID normalized to a plain integer string and
     rows with a missing ID dropped.
     """
-    with open(entries_file, "r") as f:
+    with open(entries_file, "r", encoding="utf-8") as f:
         lines = f.readlines()
 
     pool_start = -1
@@ -162,9 +162,15 @@ def merge_player_pool(
         Merged DataFrame ready for column-level additions (StartTime, Game).
     """
     df_projs = df_projs.copy()
-    df_projs["ID"] = df_projs["ID"].astype(str)
-    df = pd.merge(df_players, df_projs, on="ID", how=how)
-    df["Salary"] = pd.to_numeric(df["Salary"])
+    # Normalize projs ID the same way as parse_dk_entries: if any ID is NaN,
+    # pandas reads the column as float64 and astype(str) would give "12345.0",
+    # which would silently fail to match the "12345" IDs from parse_dk_entries.
+    df_projs["ID"] = df_projs["ID"].astype(str).str.split(".").str[0]
+    # Drop projs Name column before merging to avoid Name_x/Name_y suffixes;
+    # all downstream code uses "Name + ID", never bare "Name".
+    df_projs = df_projs.drop(columns=["Name"], errors="ignore")
+    df_merged = pd.merge(df_players, df_projs, on="ID", how=how)
+    df_merged["Salary"] = pd.to_numeric(df_merged["Salary"])
     if how == "left":
-        df["Projection"] = pd.to_numeric(df["Projection"]).fillna(0)
-    return df
+        df_merged["Projection"] = pd.to_numeric(df_merged["Projection"]).fillna(0)
+    return df_merged
