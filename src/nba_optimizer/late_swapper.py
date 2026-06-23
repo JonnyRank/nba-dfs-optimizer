@@ -9,6 +9,7 @@ import pulp
 
 from .config import Config, ENTRY_HEADER_COLS, LATE_SWAP_PREFIX, ROSTER_SLOTS
 from .utils import (
+    derive_game_key,
     extract_player_id,
     get_latest_file,
     is_player_locked,
@@ -44,6 +45,27 @@ def load_data(projs_file: str, entries_file: str) -> pd.DataFrame:
     df["Projection"] = pd.to_numeric(df["Projection"]).fillna(0)
     df["Salary"] = pd.to_numeric(df["Salary"])
 
+    # Canonical game key per player. Prefer the projections team/opponent pair
+    # (which survives DraftKings' "In Progress" relabeling of started games),
+    # falling back to the pool's TeamAbbrev when a player is absent from
+    # projections, then to the "Game Info" matchup string. This is what lets
+    # min_games count locked, already-started games correctly during swaps.
+    if "Team" in df.columns and "TeamAbbrev" in df.columns:
+        team_series = df["Team"].where(df["Team"].notna(), df["TeamAbbrev"])
+    elif "Team" in df.columns:
+        team_series = df["Team"]
+    else:
+        team_series = df.get("TeamAbbrev", pd.Series([None] * len(df), index=df.index))
+    opp_series = (
+        df["Opponent"]
+        if "Opponent" in df.columns
+        else pd.Series([None] * len(df), index=df.index)
+    )
+    df["Game"] = [
+        derive_game_key(t, o, gi)
+        for t, o, gi in zip(team_series, opp_series, df["Game Info"])
+    ]
+
     return df
 
 
@@ -65,6 +87,12 @@ def solve_late_swap_batch(
         "PF": 1,
         "C": 1,
     }
+
+    # The canonical "Game" column is normally added in load_data; derive a
+    # fallback from "Game Info" if this is called with a bare pool (e.g. a unit
+    # test) so locked-game accounting below always has a key to read.
+    if "Game" not in df_pool.columns:
+        df_pool["Game"] = df_pool["Game Info"].str.split(" ").str[0]
 
     locked_ids = set()
     lineup_map = {}
@@ -94,8 +122,7 @@ def solve_late_swap_batch(
                 player_data = df_pool[df_pool["ID"] == pid]
                 if not player_data.empty:
                     locked_salary_used += player_data.iloc[0]["Salary"]
-                    game = player_data.iloc[0]["Game Info"].split(" ")[0]
-                    locked_games.add(game)
+                    locked_games.add(player_data.iloc[0]["Game"])
 
     # Fast path: If the lineup is completely locked, return it N times.
     num_to_fill = sum(1 for filled in filled_slots if not filled)
@@ -182,7 +209,6 @@ def solve_late_swap_batch(
     for s in available_slots:
         prob += pulp.lpSum([slot_vars[i][s] for i in df_pool.index]) == 1
 
-    df_pool["Game"] = df_pool["Game Info"].str.split(" ").str[0]
     games = df_pool["Game"].unique()
     game_vars = pulp.LpVariable.dicts("game", games, cat=pulp.LpBinary)
 

@@ -1,0 +1,41 @@
+Entry ID,Contest Name,Contest ID,Entry Fee,PG,SG,SF,PF,C,G,F,UTIL,,Instructions,,,,,,,,
+5096367541,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,,,,,,,,,,1. Column A lists all of your contest entries for this draftgroup,,,,,,,,
+5096367542,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,,,,,,,,,,2. Your current lineup is listed next to each entry (blank for reservations),,,,,,,,
+5096367543,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,,,,,,,,,,3. You can change the lineup for an entry by entering the IDs of the players in the row next to that entry,,,,,,,,
+5096367544,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,,,,,,,,,,4. Use data from the Name+ID column or the ID column; you cannot use just the player's name,,,,,,,,
+5096367545,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,,,,,,,,,,5. For faster processing only include entries you are changing in the file you upload,,,,,,,,
+5096367546,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,,,,,,,,,,,,,,,,,,
+5096367547,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,,,,,,,,,,Position,Name + ID,Name,ID,Roster Position,Salary,Game Info,TeamAbbrev,AvgPointsPerGame
+5096367548,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,,,,,,,,,,PG,Luka Doncic (42398185),Luka Doncic,42398185,PG/G/UTIL,12200,LAL@IND 03/25/2026 07:00PM ET,LAL,60.43
+5096367549,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,,,,,,,,,,C,Victor Wembanyama (42398188),Victor Wembanyama,42398188,C/UTIL,11300,SAS@MEM 03/25/2026 08:00PM ET,SAS,50.36
+5096367550,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,,,,,,,,,,PG,Cade Cunningham (42398190),Cade Cunningham,42398190,PG/G/UTIL,10900,ATL@DET 03/25/2026 07:00PM ET,DET,50.2
+5096367551,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,,,,,,,,,,PF,Jalen Johnson (42398193),Jalen Johnson,42398193,PF/F/UTIL,10700,ATL@DET 03/25/2026 07:00PM ET,ATL,50.75
+5096367552,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,,,,,,,,,,PG,Shai Gilgeous-Alexander (42398196),Shai Gilgeous-Alexander,42398196,PG/G/UTIL,10500,OKC@BOS 03/25/2026 07:30PM ET,OKC,51.33
+5096367553,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,,,,,,,,,,PG,Tyrese Maxey (42398199),Tyrese Maxey,42398199,PG/G/UTIL,10000,CHI@PHI 03/25/2026 07:00PM ET,PHI,49.06
+5096367554,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,,,,,,,,,,PG,Josh Giddey (42398205),Josh Giddey,42398205,PG/G/UTIL,9600,CHI@PHI 03/25/2026 07:00PM ET,CHI,45.24
+5096367555,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,,,,,,,,,,SG,Anthony Edwards (42398202),Anthony Edwards,42398202,SG/G/UTIL,9600,HOU@MIN 03/25/2026 09:30PM ET,MIN,45.3
+5096367556,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,,,,,,,,,,C,Joel Embiid (42398208),Joel Embiid,42398208,C/UTIL,9500,CHI@PHI 03/25/2026 07:00PM ET,PHI,44.95
+5096367557,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,,,,,,,,,,SG/SF,Jaylen Brown (42398210),Jaylen Brown,42398210,SG/SF/F/G/UTIL,9300,OKC@BOS 03/25/2026 07:30PM ET,BOS,46.37
+5096367558,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,,,,,,,,,,SG,Donovan Mitchell (42398215),Donovan Mitchell,42398215,SG/G/UTIL,9200,MIA@CLE 03/25/2026 07:30PM ET,CLE,45.26
+5096367559,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,,,,,,,,,,PG,James Harden (42398218),James Harden,42398218,PG/G/UTIL,9100,MIA@CLE 03/25/2026 07:30PM ET,CLE,45.77
+5096367560,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,,,,,,,,,,C,Alperen Sengun (42398221),Alperen Sengun,42398221,C/UTIL,9100,HOU@MIN 03/25/2026 09:30PM ET,HOU,43.77
+5096367612,NBA $12K And-One [20 Entry Max],189162279,$1 ,,,,,,,,,,C,Bam Adebayo (42398223),Bam Adebayo,42398223,C/UTIL,9000,MIA@CLE 03/25/2026 07:30PM ET,MIA,41.27
+5096367613,NBA $12K And-One [20 Entry Max],189162279,$1 ,,,,,,,,,,PF/C,Evan Mobley (42398225),Evan Mobley,42398225,PF/C/F/UTIL,9000,MIA@CLE 03/25/2026 07:30PM ET,CLE,40.35
+5096367614,NBA $12K And-One [20 Entry Max],189162279,$1 ,,,,,,,,,,SG/SF,Kevin Durant (42398229),Kevin Durant,42398229,SG/SF/F/G/UTIL,8900,HOU@MIN 03/25/2026 09:30PM ET,HOU,41.73
+5096367615,NBA $12K And-One [20 Entry Max],189162279,$1 ,,,,,,,,,,PF,Jayson Tatum (42398234),Jayson Tatum,42398234,PF/F/UTIL,8800,OKC@BOS 03/25/2026 07:30PM ET,BOS,38.53
+5096367616,NBA $12K And-One [20 Entry Max],189162279,$1 ,,,,,,,,,,PF,Julius Randle (42398237),Julius Randle,42398237,PF/F/UTIL,8600,HOU@MIN 03/25/2026 09:30PM ET,MIN,39.72
+5096367617,NBA $12K And-One [20 Entry Max],189162279,$1 ,,,,,,,,,,SF,Lauri Markkanen (42398245),Lauri Markkanen,42398245,SF/F/UTIL,8500,WAS@UTA 03/25/2026 09:00PM ET,UTA,42.32
+5096367618,NBA $12K And-One [20 Entry Max],189162279,$1 ,,,,,,,,,,C,Jalen Duren (42398240),Jalen Duren,42398240,C/UTIL,8500,ATL@DET 03/25/2026 07:00PM ET,DET,37.45
+5096367619,NBA $12K And-One [20 Entry Max],189162279,$1 ,,,,,,,,,,PF,LeBron James (42398242),LeBron James,42398242,PF/F/UTIL,8500,LAL@IND 03/25/2026 07:00PM ET,LAL,40.69
+5096367620,NBA $12K And-One [20 Entry Max],189162279,$1 ,,,,,,,,,,PG,Amen Thompson (42398248),Amen Thompson,42398248,PG/G/UTIL,8400,HOU@MIN 03/25/2026 09:30PM ET,HOU,39.08
+5096367621,NBA $12K And-One [20 Entry Max],189162279,$1 ,,,,,,,,,,PG/SG,VJ Edgecombe (42398251),VJ Edgecombe,42398251,PG/SG/G/UTIL,8300,CHI@PHI 03/25/2026 07:00PM ET,PHI,33.35
+5096367622,NBA $12K And-One [20 Entry Max],189162279,$1 ,,,,,,,,,,PG,Ja Morant (42398255),Ja Morant,42398255,PG/G/UTIL,8300,SAS@MEM 03/25/2026 08:00PM ET,MEM,37.51
+5096367623,NBA $12K And-One [20 Entry Max],189162279,$1 ,,,,,,,,,,PG/SG,Austin Reaves (42398258),Austin Reaves,42398258,PG/SG/G/UTIL,8200,LAL@IND 03/25/2026 07:00PM ET,LAL,40.64
+5096367624,NBA $12K And-One [20 Entry Max],189162279,$1 ,,,,,,,,,,PF,Chet Holmgren (42398266),Chet Holmgren,42398266,PF/F/UTIL,8000,OKC@BOS 03/25/2026 07:30PM ET,OKC,35.33
+5096367625,NBA $12K And-One [20 Entry Max],189162279,$1 ,,,,,,,,,,C,Anthony Davis (42398273),Anthony Davis,42398273,C/UTIL,8000,WAS@UTA 03/25/2026 09:00PM ET,WAS,44.06
+5096367626,NBA $12K And-One [20 Entry Max],189162279,$1 ,,,,,,,,,,PG/SG,Tyler Herro (42398269),Tyler Herro,42398269,PG/SG/G/UTIL,8000,MIA@CLE 03/25/2026 07:30PM ET,MIA,35.7
+5096367627,NBA $12K And-One [20 Entry Max],189162279,$1 ,,,,,,,,,,PG/SG,Quentin Grimes (42398262),Quentin Grimes,42398262,PG/SG/G/UTIL,8000,CHI@PHI 03/25/2026 07:00PM ET,PHI,26.12
+5096367628,NBA $12K And-One [20 Entry Max],189162279,$1 ,,,,,,,,,,PG,Isaiah Collier (42398275),Isaiah Collier,42398275,PG/G/UTIL,7900,WAS@UTA 03/25/2026 09:00PM ET,UTA,27.74
+5096367629,NBA $12K And-One [20 Entry Max],189162279,$1 ,,,,,,,,,,PF/C,Pascal Siakam (42398278),Pascal Siakam,42398278,PF/C/F/UTIL,7800,LAL@IND 03/25/2026 07:00PM ET,IND,40.05
+5096367630,NBA $12K And-One [20 Entry Max],189162279,$1 ,,,,,,,,,,SF,Jalen Williams (42398285),Jalen Williams,42398285,SF/F/UTIL,7700,OKC@BOS 03/25/2026 07:30PM ET,OKC,34.05
+5096367631,NBA $12K And-One [20 Entry Max],189162279,$1 ,,,,,,,,,,PG,Keyonte George (42398282),Keyonte George,42398282,PG/G/UTIL,7700,WAS@UTA 03/25/2026 09:00PM ET,UTA,39.92
