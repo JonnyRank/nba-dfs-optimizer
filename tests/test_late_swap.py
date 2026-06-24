@@ -13,7 +13,6 @@ The synthetic solver test isolates the min_games constraint itself.
 """
 
 import glob
-import os
 from dataclasses import replace
 from pathlib import Path
 
