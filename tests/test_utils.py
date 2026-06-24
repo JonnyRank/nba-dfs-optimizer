@@ -200,16 +200,15 @@ def test_late_swap_style_output_has_game_column(dk_entries_file):
 def test_attach_game_column_teamabbrev_fallback():
     """_attach_game_column uses TeamAbbrev when Team is absent from the merged pool.
 
-    This exercises the Team → TeamAbbrev priority cascade in _attach_game_column
-    that the derive_game_key unit tests don't cover.
+    This exercises the Team → TeamAbbrev priority cascade in _attach_game_column.
+    Game Info is intentionally omitted so the result must come from TeamAbbrev +
+    Opponent — if TeamAbbrev were ignored the test would fail.
     """
     from nba_optimizer.late_swapper import _attach_game_column
 
     df = pd.DataFrame([
-        {"ID": "1", "Name + ID": "Alice (1)", "TeamAbbrev": "AAA",
-         "Game Info": "AAA@BBB 01/01/2026 07:00PM ET"},
-        {"ID": "2", "Name + ID": "Bob (2)", "TeamAbbrev": "BBB",
-         "Game Info": "AAA@BBB 01/01/2026 07:00PM ET"},
+        {"ID": "1", "Name + ID": "Alice (1)", "TeamAbbrev": "AAA", "Opponent": "BBB"},
+        {"ID": "2", "Name + ID": "Bob (2)", "TeamAbbrev": "BBB", "Opponent": "AAA"},
     ])
     _attach_game_column(df)
 
