@@ -171,14 +171,14 @@ def test_engine_style_output_has_start_time_and_game_columns(dk_entries_file, pr
 
 
 def test_late_swap_style_output_has_game_column(dk_entries_file):
-    """Late-swap-style load (left + derive_game_key) produces a Game column.
+    """Late-swap-style load (left + _attach_game_column) produces a Game column.
 
-    When projections lack Team/Opponent columns (the old 3-column format),
-    derive_game_key falls back to Game Info to build the canonical game key.
-    Both players here have projections (a missing projection now raises ValueError),
-    but neither has Team/Opponent in the projections file, so the fallback path runs.
+    When projections lack Team/Opponent columns, _attach_game_column falls back
+    to Game Info to build the canonical game key. Both players have projections
+    (missing projection raises ValueError), but neither has Team/Opponent in the
+    projections file, so the Game Info fallback path inside _attach_game_column runs.
     """
-    from nba_optimizer.utils import derive_game_key
+    from nba_optimizer.late_swapper import _attach_game_column
 
     df_players = parse_dk_entries(dk_entries_file)
     df_projs_minimal = pd.read_csv(io.StringIO(textwrap.dedent("""\
@@ -187,19 +187,35 @@ def test_late_swap_style_output_has_game_column(dk_entries_file):
         2,Bob,35.0,18.0
     """)))
     df = merge_player_pool(df_players, df_projs_minimal, how="left")
-
-    n = len(df)
-    team_series = df["Team"] if "Team" in df.columns else pd.Series([None] * n, index=df.index)
-    opp_series = df["Opponent"] if "Opponent" in df.columns else pd.Series([None] * n, index=df.index)
-    gi_series = df["Game Info"] if "Game Info" in df.columns else pd.Series([""] * n, index=df.index)
-    df["Game"] = [derive_game_key(t, o, gi) for t, o, gi in zip(team_series, opp_series, gi_series)]
+    _attach_game_column(df)
 
     assert "Game" in df.columns
-    # Team/Opponent not in projs → derive_game_key extracts "AAA@BBB" from Game Info
+    # Team/Opponent absent from projs → falls back to Game Info → "AAA@BBB"
     alice = df[df["ID"] == "1"].iloc[0]
     assert alice["Game"] == "AAA@BBB"
     bob = df[df["ID"] == "2"].iloc[0]
     assert bob["Game"] == "AAA@BBB"
+
+
+def test_attach_game_column_teamabbrev_fallback():
+    """_attach_game_column uses TeamAbbrev when Team is absent from the merged pool.
+
+    This exercises the Team → TeamAbbrev priority cascade in _attach_game_column
+    that the derive_game_key unit tests don't cover.
+    """
+    from nba_optimizer.late_swapper import _attach_game_column
+
+    df = pd.DataFrame([
+        {"ID": "1", "Name + ID": "Alice (1)", "TeamAbbrev": "AAA",
+         "Game Info": "AAA@BBB 01/01/2026 07:00PM ET"},
+        {"ID": "2", "Name + ID": "Bob (2)", "TeamAbbrev": "BBB",
+         "Game Info": "AAA@BBB 01/01/2026 07:00PM ET"},
+    ])
+    _attach_game_column(df)
+
+    assert "Game" in df.columns
+    assert df.loc[0, "Game"] == "AAA@BBB"
+    assert df.loc[1, "Game"] == "AAA@BBB"
 
 
 def test_parse_dk_entries_parses_real_dkentries_format():
