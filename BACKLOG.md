@@ -204,6 +204,14 @@
   * [x] All hardcoded positional arrays in `engine.py`, `late_swapper.py`, and `ranker.py` are replaced with a reference to this central constant.
 * **LLM Instructions**: Act as a Python Refactoring Expert. Create a centralized constant for the DraftKings NBA roster slots in `config.py` or a new `constants.py` file. Search through `engine.py`, `late_swapper.py`, and `ranker.py`, and replace all hardcoded lists of these slots with the new central reference.
 
+### [Test] Cover `Team + TeamAbbrev` coexistence branch in `_attach_game_column`
+* **Status**: Not Started
+* **Target Files**: `tests/test_utils.py`, `src/nba_optimizer/late_swapper.py`
+* **Context**: `_attach_game_column` has three branches for deriving the team source: (1) both `Team` and `TeamAbbrev` columns present → `df["Team"].where(df["Team"].notna(), df["TeamAbbrev"])`, (2) only `Team`, (3) only `TeamAbbrev`. Branch 1 (the `.where()` per-row fallback) is untested. In production this fires when a player is in DKEntries but missing from projections — their merged `Team` is NaN and `TeamAbbrev` from the pool is the only source. Noted as pre-existing during PR #54 review; won't appear in normal real-world usage but is a regression risk if the `.where()` logic changes.
+* **Acceptance Criteria**:
+  * [ ] Add a test with a DataFrame that has both `Team` and `TeamAbbrev` columns, where `Team` is NaN for at least one row, and assert that `_attach_game_column` fills from `TeamAbbrev` for that row.
+* **LLM Instructions**: Add `test_attach_game_column_team_and_teamabbrev_coexistence` to `tests/test_utils.py`. Build a DataFrame with both columns — one row where `Team` is present, one where it is `NaN` — and verify `_attach_game_column` resolves each row correctly via the `.where(notna())` cascade (`late_swapper.py:34-35`).
+
 ---
 
 ## Completed Tasks
