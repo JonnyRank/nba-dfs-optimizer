@@ -21,4 +21,7 @@ fi
 "$VENV_DIR/bin/pip" install --quiet -e "$REPO_DIR[dev]"
 
 # Export the venv bin dir onto PATH for every startup and resume.
-echo "export PATH=\"$VENV_DIR/bin:\$PATH\"" >> "$CLAUDE_ENV_FILE"
+# Guard against $CLAUDE_ENV_FILE being unset or empty (set -u would otherwise crash).
+if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
+  echo "export PATH=\"$VENV_DIR/bin:\$PATH\"" >> "$CLAUDE_ENV_FILE"
+fi
