@@ -14,7 +14,7 @@ The notes below apply only to Claude Code and supplement (do not replace) `AGENT
 ### Cloud sessions (Claude Code on the web)
 
 This repo ships a `SessionStart` hook at `.claude/hooks/session-start.sh`, wired up in
-`.claude/settings.json` for the `startup` and `resume` matchers. It bootstraps the Python
+`.claude/settings.json` under the `startup|resume` matcher. It bootstraps the Python
 environment so tests and linters work in remote sessions:
 
 - It runs **only** when `CLAUDE_CODE_REMOTE=true`; on a local developer machine it exits
