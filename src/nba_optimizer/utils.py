@@ -1,6 +1,9 @@
+import io
 import os
 import glob
 import re
+from typing import Literal
+
 import pandas as pd
 from datetime import datetime
 from typing import Tuple, List, Optional
@@ -109,3 +112,88 @@ def read_ragged_csv(
         engine="python",
     )
     return df, valid_cols
+
+
+def parse_dk_entries(entries_file: str) -> pd.DataFrame:
+    """Parse the DKEntries CSV player-pool section into a DataFrame.
+
+    Searches for the header row containing "Position,Name + ID,Name,ID"
+    (which may appear after contest metadata rows) and reads everything
+    from that header onward. Works for both the pre-lock (engine) and
+    post-lock (late-swap) variants of the DraftKings export because both
+    use the same player-pool section format.
+
+    Returns a DataFrame with ID normalized to a plain integer string and
+    rows with a missing ID dropped.
+    """
+    with open(entries_file, "r", encoding="utf-8-sig") as f:
+        lines = f.readlines()
+
+    pool_start = -1
+    for i, line in enumerate(lines):
+        if "Position,Name + ID,Name,ID" in line:
+            pool_start = i
+            break
+
+    if pool_start == -1:
+        raise ValueError(f"Could not find player pool section in {entries_file}")
+
+    df_players = pd.read_csv(io.StringIO("".join(lines[pool_start:])))
+    df_players = df_players.dropna(subset=["ID"]).copy()
+    df_players["ID"] = df_players["ID"].astype(str).str.split(".").str[0]
+    return df_players
+
+
+def merge_player_pool(
+    df_players: pd.DataFrame, df_projs: pd.DataFrame, how: Literal["inner", "left"],
+    derive_time_game: bool = False,
+) -> pd.DataFrame:
+    """Merge a parsed player-pool DataFrame with a projections DataFrame.
+
+    Normalizes ``ID`` on the projections side before merging. After the
+    merge, casts ``Salary`` to numeric and raises ``ValueError`` if any
+    player ends up with a missing ``Projection`` (guards against accidental
+    deletion of a player from the projections sheet).
+
+    Args:
+        df_players: Output of ``parse_dk_entries``.
+        df_projs: Raw projections CSV loaded via ``pd.read_csv``.
+        how: ``"inner"`` for engine/ranker (only projected players) or
+            ``"left"`` for late-swap (all pool players; a player missing
+            from projections is a data error and will raise).
+        derive_time_game: When ``True``, add ``StartTime`` and ``Game``
+            columns from ``Game Info`` using the simple pre-lock split
+            (suitable for engine and ranker; not for late-swap, which uses
+            ``derive_game_key`` to handle in-progress games).
+
+    Returns:
+        Merged DataFrame ready for use by the caller.
+    """
+    # Drop DK-owned columns from projs to avoid _x/_y suffix collisions;
+    # df_players (from DKEntries) is authoritative for these values.
+    # .drop() returns a new DataFrame, so no explicit .copy() is needed.
+    df_projs = df_projs.drop(
+        columns=["Name", "Salary", "Position", "Roster Position", "Game Info"],
+        errors="ignore",
+    )
+    # Normalize projs ID the same way as parse_dk_entries: if any ID is NaN,
+    # pandas reads the column as float64 and astype(str) would give "12345.0",
+    # which would silently fail to match the "12345" IDs from parse_dk_entries.
+    df_projs["ID"] = df_projs["ID"].astype(str).str.split(".").str[0]
+    df_merged = pd.merge(df_players, df_projs, on="ID", how=how)
+    df_merged["Salary"] = pd.to_numeric(df_merged["Salary"])
+    if "Projection" in df_merged.columns:
+        df_merged["Projection"] = pd.to_numeric(df_merged["Projection"])
+        missing = df_merged.loc[df_merged["Projection"].isna(), "Name + ID"].tolist()
+        if missing:
+            raise ValueError(
+                f"Missing projections for {len(missing)} player(s): {missing}"
+            )
+    if derive_time_game:
+        if "Game Info" not in df_merged.columns:
+            raise ValueError(
+                "Cannot derive StartTime/Game: 'Game Info' column missing from merged pool"
+            )
+        df_merged["StartTime"] = df_merged["Game Info"].apply(parse_game_time)
+        df_merged["Game"] = df_merged["Game Info"].str.split(" ").str[0]
+    return df_merged

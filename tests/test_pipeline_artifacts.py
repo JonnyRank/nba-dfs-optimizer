@@ -14,6 +14,7 @@ No LP solving or multiprocessing is involved.
 """
 
 import os
+import shutil
 import textwrap
 from dataclasses import replace
 
@@ -21,6 +22,21 @@ import pandas as pd
 import pytest
 
 from nba_optimizer.config import Config, ROSTER_SLOTS
+
+FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "fixtures")
+
+# Eight real players from the unfilled-DKEntries.csv fixture, one per DK slot.
+# Their IDs exist in that file; their Roster Positions make each slot assignment valid.
+_LINEUP = [
+    "Luka Doncic (42398185)",       # PG  — PG/G/UTIL
+    "Anthony Edwards (42398202)",   # SG  — SG/G/UTIL
+    "Jaylen Brown (42398210)",      # SF  — SG/SF/F/G/UTIL
+    "Jalen Johnson (42398193)",     # PF  — PF/F/UTIL
+    "Victor Wembanyama (42398188)", # C   — C/UTIL
+    "Cade Cunningham (42398190)",   # G   — PG/G/UTIL
+    "Julius Randle (42398237)",     # F   — PF/F/UTIL
+    "Joel Embiid (42398208)",       # UTIL — C/UTIL
+]
 
 
 # ---------------------------------------------------------------------------
@@ -40,105 +56,46 @@ def _make_config(tmp_path) -> Config:
 
 
 def _build_projs_csv(path: str) -> None:
-    """Write a minimal projections CSV with the columns ranker/engine expects.
+    """Write a projections CSV for the 8 real players used in lineup pool fixtures.
 
-    Note: do NOT include 'Game Info' here — that column comes from the DKEntries
-    player pool section. Including it would cause pandas to suffix-rename it in
-    the merge (Game Info_x / Game Info_y) and break engine.load_data.
+    Uses IDs that exist in the unfilled-DKEntries.csv fixture. DK-owned columns
+    (Salary, Position, Game Info, etc.) are omitted — merge_player_pool drops
+    those from df_projs and uses the DKEntries values as authoritative.
     """
+    players = [
+        ("42398185", "Luka Doncic",           40.0, 20.0),
+        ("42398202", "Anthony Edwards",        39.0, 18.0),
+        ("42398210", "Jaylen Brown",           38.0, 15.0),
+        ("42398193", "Jalen Johnson",          37.0, 14.0),
+        ("42398188", "Victor Wembanyama",      36.0, 12.0),
+        ("42398190", "Cade Cunningham",        35.0, 10.0),
+        ("42398237", "Julius Randle",          34.0, 8.0),
+        ("42398208", "Joel Embiid",            33.0, 6.0),
+    ]
     df = pd.DataFrame(
-        [
-            {"ID": "1", "Name": "PG1", "Projection": 40.0, "Own_Proj": 20.0},
-            {"ID": "2", "Name": "SG1", "Projection": 39.0, "Own_Proj": 18.0},
-            {"ID": "3", "Name": "SF1", "Projection": 38.0, "Own_Proj": 15.0},
-            {"ID": "4", "Name": "PF1", "Projection": 37.0, "Own_Proj": 14.0},
-            {"ID": "5", "Name": "C1",  "Projection": 36.0, "Own_Proj": 12.0},
-            {"ID": "6", "Name": "G1",  "Projection": 35.0, "Own_Proj": 10.0},
-            {"ID": "7", "Name": "F1",  "Projection": 34.0, "Own_Proj": 8.0},
-            {"ID": "8", "Name": "U1",  "Projection": 33.0, "Own_Proj": 6.0},
-        ]
+        [{"ID": pid, "Name": name, "Projection": proj, "Own_Proj": own}
+         for pid, name, proj, own in players]
     )
     os.makedirs(os.path.dirname(path), exist_ok=True)
     df.to_csv(path, index=False)
 
 
 def _build_dkentries_csv(path: str) -> None:
-    """Write a DKEntries CSV that works for both exporter and ranker (via engine.load_data).
-
-    The real DraftKings DKEntries.csv has two sections:
-    - Row 0: entry header (Entry ID, Contest Name, ..., roster slots)
-    - Rows 1-N: filled entry rows
-    - Rows N+1 through N+7: junk / instruction rows
-    - Row N+8: player-pool header (contains "Position" column)
-    - Rows N+9+: player rows with ID, Salary, etc.
-
-    ``exporter`` uses ``read_ragged_csv`` which reads row 0 as the header and
-    treats everything else as data — so "Entry ID" must be in row 0.
-    ``engine.load_data`` reads with ``skiprows=7`` counting from the top of the
-    file, then looks for a "Position" column.
-
-    To satisfy both callers in tests, we place:
-    - Row 0: entry/roster header
-    - Rows 1-2: entry data rows
-    - Rows 3-9: 7 junk/padding rows (so skiprows=7 lands on row 10 = player header)
-    - Row 10: player-pool header with "Position", "Name + ID", "ID", etc.
-    - Rows 11+: player data rows
-    """
-    slots = list(ROSTER_SLOTS)
-    slot_header = ",".join(slots)
-    empty_slots = ",".join([""] * len(slots))
-
-    # engine.load_data reads with skiprows=7, so the player header must be at
-    # 0-indexed row 7. engine.load_data looks for "Position" column, then slices
-    # from that column onwards and expects "ID", "Name + ID", "Salary",
-    # "Roster Position", "Game Info" all to appear after (or at) that slice.
-    # Column order must be: Position, Name + ID, ID, Roster Position, Salary, Game Info
-    player_rows = "\n".join([
-        f"PG,PG1 (1),1,PG,6200,GAMEA@GAMEB 01/01/2026 07:00PM ET",
-        f"SG,SG1 (2),2,SG,6200,GAMEA@GAMEB 01/01/2026 07:00PM ET",
-        f"SF,SF1 (3),3,SF,6200,GAMEA@GAMEB 01/01/2026 07:00PM ET",
-        f"PF,PF1 (4),4,PF,6200,GAMEA@GAMEB 01/01/2026 07:00PM ET",
-        f"C,C1 (5),5,C,6200,GAMEA@GAMEB 01/01/2026 07:00PM ET",
-        f"PG,G1 (6),6,PG/SG,6200,GAMEC@GAMED 01/01/2026 09:00PM ET",
-        f"SF,F1 (7),7,SF/PF,6200,GAMEC@GAMED 01/01/2026 09:00PM ET",
-        f"C,U1 (8),8,C,6200,GAMEC@GAMED 01/01/2026 09:00PM ET",
-    ])
-
-    # engine.load_data reads with skiprows=7, so the player header must be at
-    # 0-indexed row 7. We place:
-    #   row 0: entry header
-    #   row 1: entry row 1
-    #   row 2: entry row 2
-    #   rows 3-6: 4 junk rows  (rows 0-6 = 7 rows total to skip)
-    #   row 7: player-pool header  ← this is what skiprows=7 exposes as header
-    #   rows 8+: player data rows
-    content = (
-        f"Entry ID,Contest Name,Contest ID,Entry Fee,{slot_header}\n"
-        f"111111,Main Slate,999999,3,{empty_slots}\n"
-        f"222222,Main Slate,999999,3,{empty_slots}\n"
-        + ",,,,\n" * 4  # 4 junk rows (rows 3-6); together with rows 0-2 = 7 skipped
-        + "Position,Name + ID,ID,Roster Position,Salary,Game Info\n"
-        + player_rows + "\n"
-    )
+    """Copy the real unfilled DKEntries fixture to path."""
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w") as fh:
-        fh.write(content)
+    shutil.copy(os.path.join(FIXTURES_DIR, "unfilled-DKEntries.csv"), path)
 
 
 def _build_lineup_pool_csv(path: str) -> None:
-    """Write a two-lineup pool CSV in the format engine produces."""
+    """Write a two-lineup pool CSV using real player IDs from the DKEntries fixture."""
     slots = list(ROSTER_SLOTS)
-    rows = [
-        ["PG1 (1)", "SG1 (2)", "SF1 (3)", "PF1 (4)", "C1 (5)", "G1 (6)", "F1 (7)", "U1 (8)"],
-        ["PG1 (1)", "SG1 (2)", "SF1 (3)", "PF1 (4)", "C1 (5)", "G1 (6)", "F1 (7)", "U1 (8)"],
-    ]
-    df = pd.DataFrame(rows, columns=slots)
+    df = pd.DataFrame([_LINEUP, _LINEUP], columns=slots)
     os.makedirs(os.path.dirname(path), exist_ok=True)
     df.to_csv(path, index=False)
 
 
 def _build_ranked_lineups_csv(path: str) -> None:
-    """Write a minimal ranked-lineups CSV in the format ranker produces."""
+    """Write a minimal ranked-lineups CSV using real player IDs from the DKEntries fixture."""
     slots = list(ROSTER_SLOTS)
     row = {
         "Final_Rank": 1,
@@ -150,8 +107,8 @@ def _build_ranked_lineups_csv(path: str) -> None:
         "Own_Rank": 1.0,
         "Geo_Rank": 1.0,
     }
-    for i, slot in enumerate(slots):
-        row[slot] = f"Player{i + 1} ({i + 1})"
+    for slot, player in zip(slots, _LINEUP):
+        row[slot] = player
     df = pd.DataFrame([row])
     os.makedirs(os.path.dirname(path), exist_ok=True)
     df.to_csv(path, index=False)
@@ -160,10 +117,10 @@ def _build_ranked_lineups_csv(path: str) -> None:
 def _build_export_csv(path: str) -> None:
     """Write a minimal upload-ready export CSV for exposure_report tests."""
     slots = list(ROSTER_SLOTS)
-    players = [f"Player{i + 1} ({i + 1})" for i in range(len(slots))]
-    row = {"Entry ID": "111111", "Contest Name": "Main Slate",
-           "Contest ID": "999999", "Entry Fee": "3"}
-    for slot, player in zip(slots, players):
+    row = {"Entry ID": "5096367541",
+           "Contest Name": "NBA $20K Four Point Play [20 Entry Max]",
+           "Contest ID": "189162278", "Entry Fee": "$4"}
+    for slot, player in zip(slots, _LINEUP):
         row[slot] = player
     df = pd.DataFrame([row])
     os.makedirs(os.path.dirname(path), exist_ok=True)

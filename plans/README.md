@@ -11,7 +11,7 @@ Last reconciled: 2026-06-23 at commit `2b9b262`.
 | 001 | Establish a deterministic verification baseline for core optimizer logic | P1 | M | — | DONE ✓ | https://github.com/JonnyRank/nba-dfs-optimizer/issues/40 |
 | 002 | Separate GUI dependencies from the core installation path | P1 | S-M | — | DONE ✓ | https://github.com/JonnyRank/nba-dfs-optimizer/issues/41 |
 | 003 | Replace latest-file pipeline handoff with explicit stage artifacts | P1 | M | 001 | DONE ✓ | https://github.com/JonnyRank/nba-dfs-optimizer/issues/42 |
-| 004 | Consolidate player-pool loading into a shared utility | P1 | M | 001 | TODO | https://github.com/JonnyRank/nba-dfs-optimizer/issues/43 |
+| 004 | Consolidate player-pool loading into a shared utility | P1 | M | 001 | DONE ✓ | https://github.com/JonnyRank/nba-dfs-optimizer/issues/43 |
 | 005 | Vectorize lineup ranking without changing output semantics | P2 | S-M | 001, 004 | TODO | https://github.com/JonnyRank/nba-dfs-optimizer/issues/44 |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale — finding fixed independently or approach abandoned)

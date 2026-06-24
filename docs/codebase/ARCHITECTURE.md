@@ -49,7 +49,7 @@ DKEntries.csv (with locked players) + NBA-Projs-*.csv
 | Layer or module | Owns | Must not own | Evidence |
 |-----------------|------|--------------|----------|
 | `config.py` | Configuration dataclass, env var loading, directory creation factory function | Any business logic | `src/nba_optimizer/config.py` |
-| `utils.py` | File discovery, ID/time parsing, ragged CSV reading | Optimization or ranking | `src/nba_optimizer/utils.py` |
+| `utils.py` | File discovery, ID/time parsing, ragged CSV reading, shared player-pool loading (`parse_dk_entries`, `merge_player_pool`) | Optimization or ranking | `src/nba_optimizer/utils.py` |
 | `engine.py` | LP model construction, parallel solving, slot optimization | Ranking, export | `src/nba_optimizer/engine.py` |
 | `ranker.py` | Lineup scoring, weighted rank calculation | Lineup generation | `src/nba_optimizer/ranker.py` |
 | `exporter.py` | DK template parsing, lineup-to-entry mapping | Scoring | `src/nba_optimizer/exporter.py` |
@@ -75,7 +75,7 @@ DKEntries.csv (with locked players) + NBA-Projs-*.csv
 
 - **File-system coupling (orchestrated path — mitigated):** When run through the orchestrator, each stage now passes its output path explicitly to the next stage, so stale files from a prior partial run cannot be picked up. The "latest file" heuristic is preserved only for standalone direct-module invocation (`python -m nba_optimizer.ranker`, etc.).
 - **File-system coupling (standalone path — remaining):** Running any stage module directly still relies on the newest matching file in the relevant directory. A stale file from a failed run could still be picked up when a stage is invoked outside the orchestrator.
-- **Data loading duplication:** `engine.py` and `late_swapper.py` each have their own `load_data()` function with subtly different CSV parsing logic. `ranker.py` imports `engine.load_data()` to reuse it but this creates a cross-module dependency.
+- **Data loading (resolved):** `engine.py`, `late_swapper.py`, and `ranker.py` all share `parse_dk_entries` and `merge_player_pool` from `utils.py`. Engine and ranker use `how="inner"` with a simple `"Game Info"` string split for the `Game` column (pre-lock, matchup strings are always valid). Late-swap uses `how="left"` (retaining current-lineup players without projections) and `_attach_game_column` (which calls `derive_game_key`) to recover games marked "In Progress".
 - **DataFrame pickling overhead on Windows:** `ProcessPoolExecutor` pickles the full DataFrame for each worker on Windows (no copy-on-write). For large player pools this adds serialization cost.
 - **Worker function signature complexity:** The `generate_single_lineup()` worker must receive all config values as individual parameters (salary_cap, roster_size, min_games) since it cannot access the Config instance in the multiprocessing context.
 

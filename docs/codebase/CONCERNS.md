@@ -7,7 +7,7 @@
 | Severity | Concern | Evidence | Impact | Suggested action |
 |----------|---------|----------|--------|------------------|
 | Medium | Automated tests cover only a small baseline | `tests/test_utils.py`, `tests/test_engine_constraints.py` cover shared parsing helpers and core `generate_single_lineup` constraints; `ranker.py`, `exporter.py`, `exposure_report.py`, and `late_swapper.py` remain untested | Regressions in ranking, export, and late-swap logic go undetected; manual verification still required for most of the pipeline | Extend the suite with focused characterization tests as those modules are touched (see `docs/codebase/TESTING.md`) |
-| High | Duplicate `load_data()` implementations | `engine.py:load_data()` vs `late_swapper.py:load_data()` have different CSV parsing logic | Bugs fixed in one may not be fixed in the other; subtle data inconsistencies | Consolidate into `utils.py` or a shared data loader |
+| ~~High~~ Resolved | ~~Duplicate `load_data()` implementations~~ | Consolidated into `utils.parse_dk_entries` and `utils.merge_player_pool` (plan 004). Engine/ranker use `how="inner"`; late-swap uses `how="left"` + `derive_game_key`. | — | — |
 | Low | Stale file pickup after failed runs (orchestrated path — mitigated) | `orchestrator.py` now captures each stage's return value and passes it explicitly to the next stage; latest-file lookup is only used as a fallback when stages are run standalone | A failed engine run no longer causes the ranker to silently pick up a stale pool when running through the orchestrator; standalone invocations still rely on the latest-file heuristic | Remaining gap: validate row counts or add a row-count guard when stages are used standalone |
 | Medium | `engine.py` is 400+ lines mixing data loading, LP construction, slotting, and orchestration | `engine.py` (13.9KB, highest churn at 14 commits) | Hard to modify one concern without risking another | Extract `load_data`, `slot_lineup_by_time`, and `generate_single_lineup` into focused modules |
 
@@ -15,7 +15,7 @@
 
 | Debt item | Why it exists | Where | Risk if ignored | Suggested fix |
 |-----------|---------------|-------|-----------------|---------------|
-| `ranker.py` imports `engine.load_data()` for player context | Avoids duplicating merge logic | `ranker.py:load_data()` | Tight coupling between ranker and engine | Extract shared data loading to a common module |
+| ~~`ranker.py` imports `engine.load_data()` for player context~~ | Resolved (plan 004) — `ranker.py` now calls `parse_dk_entries` + `merge_player_pool` from `utils.py` directly | — | — | — |
 | Deprecated code in `deprecated/` folder | Legacy late swapper kept for reference | `deprecated/late_swapper_deprecated.py` (12.6KB) | Confusion about which is canonical | Remove or archive outside repo |
 | Legacy `sys.path.insert` script hack | Replaced by package-based imports and `pyproject.toml` entry points | `pyproject.toml`, `scripts/run_optimizer.py`, `scripts/run_optimizer_gui.py` | Resolved | Keep execution standardized via `pip install -e .` and console scripts |
 

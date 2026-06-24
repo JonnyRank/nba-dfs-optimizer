@@ -3,7 +3,6 @@ import concurrent.futures
 import itertools
 import multiprocessing
 import os
-import re
 import time
 import traceback
 from datetime import datetime
@@ -14,47 +13,19 @@ import pandas as pd
 import pulp
 
 from .config import Config, ROSTER_SLOTS
-from .utils import get_latest_file
+from .utils import get_latest_file, merge_player_pool, parse_dk_entries
 
 
 # --- DATA LOADING ---
 
 
 def load_data(projs_file: str, entries_file: str) -> pd.DataFrame:
-    df_raw = pd.read_csv(entries_file, skiprows=7)
-
-    pos_col_idx = -1
-    for i, col in enumerate(df_raw.columns):
-        if "Position" in str(col):
-            pos_col_idx = i
-            break
-
-    if pos_col_idx == -1:
-        raise ValueError("Could not find 'Position' column in DKEntries.csv")
-
-    df_players = df_raw.iloc[:, pos_col_idx:].dropna(subset=["ID"])
-    df_players["ID"] = df_players["ID"].astype(str).str.split(".").str[0]
-
+    df_players = parse_dk_entries(entries_file)
     df_projs = pd.read_csv(projs_file)
-    df_projs["ID"] = df_projs["ID"].astype(str)
-
-    df = pd.merge(df_players, df_projs, on="ID", how="inner")
-
-    def parse_time(game_info):
-        match = re.search(r"(\d{2}/\d{2}/\d{4} \d{2}:\d{2}[APM]+)", game_info)
-        if match:
-            return datetime.strptime(match.group(1), "%m/%d/%Y %I:%M%p")
-        return datetime.max
-
-    df["StartTime"] = df["Game Info"].apply(parse_time)
-    df["Salary"] = pd.to_numeric(df["Salary"])
-
-    # The pre-lock pipeline always has real matchup strings here (no "In
-    # Progress" games), so the raw split is sufficient. This intentionally
-    # diverges from late_swapper.load_data, which must use derive_game_key to
-    # recover started games from the team/opponent pair.
-    df["Game"] = df["Game Info"].str.split(" ").str[0]
-    return df
+    # derive_time_game=True adds StartTime and Game via the simple pre-lock split.
+    # late_swapper.load_data instead calls _attach_game_column (derive_game_key)
+    # to recover started games whose Game Info has become "In Progress".
+    return merge_player_pool(df_players, df_projs, how="inner", derive_time_game=True)
 
 
 # --- WORKER FUNCTION (MUST BE TOP-LEVEL) ---

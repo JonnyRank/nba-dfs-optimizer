@@ -8,21 +8,16 @@ import numpy as np
 import pandas as pd
 
 from .config import Config, ROSTER_SLOTS
-from .utils import get_latest_file
+from .utils import get_latest_file, merge_player_pool, parse_dk_entries
 
 
 def load_data(lineup_file: str, projs_file: str, cfg: Config) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Loads lineups and player data (projections/ownership)."""
     df_lineups = pd.read_csv(lineup_file)
     df_projs = pd.read_csv(projs_file)
-    df_projs["ID"] = df_projs["ID"].astype(str)
-
-    # Import the engine's merge logic to get full player context
-    from .engine import load_data as engine_load_data
-
-    df_players = engine_load_data(projs_file, cfg.entries_path)
-
-    return df_lineups, df_players
+    df_players = parse_dk_entries(cfg.entries_path)
+    df_merged = merge_player_pool(df_players, df_projs, how="inner", derive_time_game=True)
+    return df_lineups, df_merged
 
 
 def rank_lineups(
