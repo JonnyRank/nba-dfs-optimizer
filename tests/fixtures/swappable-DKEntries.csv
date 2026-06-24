@@ -1,41 +1,294 @@
 Entry ID,Contest Name,Contest ID,Entry Fee,PG,SG,SF,PF,C,G,F,UTIL,,Instructions,,,,,,,,
-5096367541,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,Luka Doncic (42398185) (LOCKED),Aaron Nesmith (42398460) (LOCKED),Ace Bailey (42398312),Evan Mobley (42398225) (LOCKED),Oscar Tshiebwe (42398725),Reed Sheppard (42398354),Blake Hinson (42398845),Julian Reese (42399087),,1. Column A lists all of your contest entries for this draftgroup,,,,,,,,
-5096367542,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,Luka Doncic (42398185) (LOCKED),Dylan Harper (42398506),Ace Bailey (42398312),Dominick Barlow (42398646) (LOCKED),Victor Wembanyama (42398188),Dennis Schroder (42398753) (LOCKED),Blake Hinson (42398845),Oscar Tshiebwe (42398725),,2. Your current lineup is listed next to each entry (blank for reservations),,,,,,,,
-5096367543,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,Luka Doncic (42398185) (LOCKED),Duncan Robinson (42398523) (LOCKED),Ace Bailey (42398312),Tobias Harris (42398402) (LOCKED),Oscar Tshiebwe (42398725),Dennis Schroder (42398753) (LOCKED),Pascal Siakam (42398278) (LOCKED),Dylan Harper (42398506),,3. You can change the lineup for an entry by entering the IDs of the players in the row next to that entry,,,,,,,,
+5096367541,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,Luka Doncic (42398185) (LOCKED),Aaron Nesmith (42398460) (LOCKED),Ace Bailey (42398312),Evan Mobley (42398225),Oscar Tshiebwe (42398725),Reed Sheppard (42398354),Blake Hinson (42398845),Julian Reese (42399087),,1. Column A lists all of your contest entries for this draftgroup,,,,,,,,
+5096367542,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,Luka Doncic (42398185) (LOCKED),Dylan Harper (42398506),Ace Bailey (42398312),Dominick Barlow (42398646) (LOCKED),Victor Wembanyama (42398188),Dennis Schroder (42398753),Blake Hinson (42398845),Oscar Tshiebwe (42398725),,2. Your current lineup is listed next to each entry (blank for reservations),,,,,,,,
+5096367543,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,Luka Doncic (42398185) (LOCKED),Duncan Robinson (42398523) (LOCKED),Ace Bailey (42398312),Tobias Harris (42398402) (LOCKED),Oscar Tshiebwe (42398725),Dennis Schroder (42398753),Pascal Siakam (42398278) (LOCKED),Dylan Harper (42398506),,3. You can change the lineup for an entry by entering the IDs of the players in the row next to that entry,,,,,,,,
 5096367544,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,Luka Doncic (42398185) (LOCKED),Stephon Castle (42398296),Ace Bailey (42398312),Taylor Hendricks (42398535),Julian Reese (42399087),Amen Thompson (42398248),Blake Hinson (42398845),Oscar Tshiebwe (42398725),,4. Use data from the Name+ID column or the ID column; you cannot use just the player's name,,,,,,,,
 5096367545,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,T.J. McConnell (42398650) (LOCKED),Dylan Harper (42398506),Ace Bailey (42398312),Blake Hinson (42398845),Oscar Tshiebwe (42398725),Luka Doncic (42398185) (LOCKED),Naz Reid (42398431),Alperen Sengun (42398221),,5. For faster processing only include entries you are changing in the file you upload,,,,,,,,
-5096367546,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,Luka Doncic (42398185) (LOCKED),CJ McCollum (42398347) (LOCKED),Ace Bailey (42398312),Nae'Qwan Tomlin (42398864) (LOCKED),Bam Adebayo (42398223) (LOCKED),Kennedy Chandler (42398500),Blake Hinson (42398845),Oscar Tshiebwe (42398725),,,,,,,,,,
-5096367547,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,Luka Doncic (42398185) (LOCKED),Donovan Mitchell (42398215) (LOCKED),John Konchar (42398675),Alex Caruso (42398756) (LOCKED),Oscar Tshiebwe (42398725),Dylan Harper (42398506),Ace Bailey (42398312),Kennedy Chandler (42398500),,Position,Name + ID,Name,ID,Roster Position,Salary,Game Info,TeamAbbrev,AvgPointsPerGame
+5096367546,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,Luka Doncic (42398185) (LOCKED),CJ McCollum (42398347) (LOCKED),Ace Bailey (42398312),Nae'Qwan Tomlin (42398864),Bam Adebayo (42398223),Kennedy Chandler (42398500),Blake Hinson (42398845),Oscar Tshiebwe (42398725),,,,,,,,,,
+5096367547,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,Luka Doncic (42398185) (LOCKED),Donovan Mitchell (42398215),John Konchar (42398675),Alex Caruso (42398756),Oscar Tshiebwe (42398725),Dylan Harper (42398506),Ace Bailey (42398312),Kennedy Chandler (42398500),,Position,Name + ID,Name,ID,Roster Position,Salary,Game Info,TeamAbbrev,AvgPointsPerGame
 5096367548,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,Luka Doncic (42398185) (LOCKED),Dylan Harper (42398506),Keldon Johnson (42398633),Blake Hinson (42398845),Jalen Duren (42398240) (LOCKED),Kennedy Chandler (42398500),Ace Bailey (42398312),Jalen Smith (42398458) (LOCKED),,PG,Luka Doncic (42398185) (LOCKED),Luka Doncic,42398185,PG/G/UTIL,12200,In Progress,LAL,60.43
-5096367549,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,Luka Doncic (42398185) (LOCKED),Dylan Harper (42398506),Norman Powell (42398358) (LOCKED),Ace Bailey (42398312),Jaxson Hayes (42398803) (LOCKED),James Harden (42398218) (LOCKED),Blake Hinson (42398845),Oscar Tshiebwe (42398725),,C,Victor Wembanyama (42398188),Victor Wembanyama,42398188,C/UTIL,11300,SAS@MEM 03/25/2026 08:00PM ET,SAS,50.36
+5096367549,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,Luka Doncic (42398185) (LOCKED),Dylan Harper (42398506),Norman Powell (42398358),Ace Bailey (42398312),Jaxson Hayes (42398803) (LOCKED),James Harden (42398218),Blake Hinson (42398845),Oscar Tshiebwe (42398725),,C,Victor Wembanyama (42398188),Victor Wembanyama,42398188,C/UTIL,11300,SAS@MEM 03/25/2026 08:00PM ET,SAS,50.36
 5096367550,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,Andrew Nembhard (42398376) (LOCKED),Dylan Harper (42398506),Bilal Coulibaly (42398410),Ace Bailey (42398312),Julian Reese (42399087),Luka Doncic (42398185) (LOCKED),Cody Williams (42398371),Oscar Tshiebwe (42398725),,PG,Cade Cunningham (42398190) (LOCKED),Cade Cunningham,42398190,PG/G/UTIL,10900,In Progress,DET,50.2
 5096367551,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,Luka Doncic (42398185) (LOCKED),Dylan Harper (42398506),Keldon Johnson (42398633),Blake Hinson (42398845),Jalen Duren (42398240) (LOCKED),Kennedy Chandler (42398500),Julius Randle (42398237),Oscar Tshiebwe (42398725),,PF,Jalen Johnson (42398193) (LOCKED),Jalen Johnson,42398193,PF/F/UTIL,10700,In Progress,ATL,50.75
-5096367552,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,Luka Doncic (42398185) (LOCKED),Donovan Mitchell (42398215) (LOCKED),Keldon Johnson (42398633),Blake Hinson (42398845),Oscar Tshiebwe (42398725),Dylan Harper (42398506),Ace Bailey (42398312),EJ Harkless (42398445),,PG,Shai Gilgeous-Alexander (42398196) (LOCKED),Shai Gilgeous-Alexander,42398196,PG/G/UTIL,10500,OKC@BOS 03/25/2026 07:30PM ET,OKC,51.33
-5096367553,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,Luka Doncic (42398185) (LOCKED),Dylan Harper (42398506),Jaylen Brown (42398210) (LOCKED),LeBron James (42398242) (LOCKED),Julian Reese (42399087),EJ Harkless (42398445),Blake Hinson (42398845),Oscar Tshiebwe (42398725),,PG,Tyrese Maxey (42398199) (LOCKED),Tyrese Maxey,42398199,PG/G/UTIL,10000,In Progress,PHI,49.06
-5096367554,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,Luka Doncic (42398185) (LOCKED),Donovan Mitchell (42398215) (LOCKED),Ace Bailey (42398312),Gregory Jackson (42398455),Julian Reese (42399087),Dylan Harper (42398506),Blake Hinson (42398845),Kennedy Chandler (42398500),,PG,Josh Giddey (42398205) (LOCKED),Josh Giddey,42398205,PG/G/UTIL,9600,In Progress,CHI,45.24
-5096367555,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,Luka Doncic (42398185) (LOCKED),Donovan Mitchell (42398215) (LOCKED),Keldon Johnson (42398633),Blake Hinson (42398845),Jalen Smith (42398458) (LOCKED),Kennedy Chandler (42398500),Ace Bailey (42398312),Oscar Tshiebwe (42398725),,SG,Anthony Edwards (42398202),Anthony Edwards,42398202,SG/G/UTIL,9600,HOU@MIN 03/25/2026 09:30PM ET,MIN,45.3
-5096367556,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,Luka Doncic (42398185) (LOCKED),Dylan Harper (42398506),Jake LaRavia (42398687) (LOCKED),Tobias Harris (42398402) (LOCKED),Victor Wembanyama (42398188),Kennedy Chandler (42398500),Blake Hinson (42398845),Oscar Tshiebwe (42398725),,C,Joel Embiid (42398208) (LOCKED),Joel Embiid,42398208,C/UTIL,9500,In Progress,PHI,44.95
-5096367557,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,Luka Doncic (42398185) (LOCKED),Dylan Harper (42398506),John Konchar (42398675),Jayson Tatum (42398234) (LOCKED),Jalen Duren (42398240) (LOCKED),Kennedy Chandler (42398500),Blake Hinson (42398845),Oscar Tshiebwe (42398725),,SG/SF,Jaylen Brown (42398210) (LOCKED),Jaylen Brown,42398210,SG/SF/F/G/UTIL,9300,OKC@BOS 03/25/2026 07:30PM ET,BOS,46.37
-5096367558,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,Luka Doncic (42398185) (LOCKED),Dylan Harper (42398506),Keon Ellis (42398617) (LOCKED),Jalen Johnson (42398193) (LOCKED),Oscar Tshiebwe (42398725),Daniss Jenkins (42398382) (LOCKED),Blake Hinson (42398845),Kennedy Chandler (42398500),,SG,Donovan Mitchell (42398215) (LOCKED),Donovan Mitchell,42398215,SG/G/UTIL,9200,MIA@CLE 03/25/2026 07:30PM ET,CLE,45.26
-5096367559,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,Luka Doncic (42398185) (LOCKED),EJ Harkless (42398445),Keldon Johnson (42398633),Pascal Siakam (42398278) (LOCKED),Jalen Duren (42398240) (LOCKED),Kennedy Chandler (42398500),Blake Hinson (42398845),Oscar Tshiebwe (42398725),,PG,James Harden (42398218) (LOCKED),James Harden,42398218,PG/G/UTIL,9100,MIA@CLE 03/25/2026 07:30PM ET,CLE,45.77
-5096367560,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,Luka Doncic (42398185) (LOCKED),Dylan Harper (42398506),Cam Spencer (42398597),Evan Mobley (42398225) (LOCKED),Oscar Tshiebwe (42398725),Dennis Schroder (42398753) (LOCKED),Ace Bailey (42398312),Kennedy Chandler (42398500),,C,Alperen Sengun (42398221),Alperen Sengun,42398221,C/UTIL,9100,HOU@MIN 03/25/2026 09:30PM ET,HOU,43.77
-5096367612,NBA $12K And-One [20 Entry Max],189162279,$1 ,Josh Giddey (42398205) (LOCKED),Dylan Harper (42398506),Ace Bailey (42398312),Blake Hinson (42398845),Bam Adebayo (42398223) (LOCKED),Kennedy Chandler (42398500),Bilal Coulibaly (42398410),EJ Harkless (42398445),,C,Bam Adebayo (42398223) (LOCKED),Bam Adebayo,42398223,C/UTIL,9000,MIA@CLE 03/25/2026 07:30PM ET,MIA,41.27
-5096367613,NBA $12K And-One [20 Entry Max],189162279,$1 ,Josh Giddey (42398205) (LOCKED),Donovan Mitchell (42398215) (LOCKED),Jake LaRavia (42398687) (LOCKED),Blake Hinson (42398845),Oscar Tshiebwe (42398725),Dylan Harper (42398506),Ace Bailey (42398312),Amen Thompson (42398248),,PF/C,Evan Mobley (42398225) (LOCKED),Evan Mobley,42398225,PF/C/F/UTIL,9000,MIA@CLE 03/25/2026 07:30PM ET,CLE,40.35
-5096367614,NBA $12K And-One [20 Entry Max],189162279,$1 ,Luka Doncic (42398185) (LOCKED),Bub Carrington (42398422),Matas Buzelis (42398323) (LOCKED),Ace Bailey (42398312),Oscar Tshiebwe (42398725),Kennedy Chandler (42398500),Bilal Coulibaly (42398410),Julian Reese (42399087),,SG/SF,Kevin Durant (42398229),Kevin Durant,42398229,SG/SF/F/G/UTIL,8900,HOU@MIN 03/25/2026 09:30PM ET,HOU,41.73
-5096367615,NBA $12K And-One [20 Entry Max],189162279,$1 ,James Harden (42398218) (LOCKED),Dylan Harper (42398506),Jaylen Brown (42398210) (LOCKED),Pascal Siakam (42398278) (LOCKED),Oscar Tshiebwe (42398725),Kennedy Chandler (42398500),Blake Hinson (42398845),Ace Bailey (42398312),,PF,Jayson Tatum (42398234) (LOCKED),Jayson Tatum,42398234,PF/F/UTIL,8800,OKC@BOS 03/25/2026 07:30PM ET,BOS,38.53
-5096367616,NBA $12K And-One [20 Entry Max],189162279,$1 ,Luka Doncic (42398185) (LOCKED),Dylan Harper (42398506),Keldon Johnson (42398633),LeBron James (42398242) (LOCKED),Julian Reese (42399087),Kennedy Chandler (42398500),Jayson Tatum (42398234) (LOCKED),Oscar Tshiebwe (42398725),,PF,Julius Randle (42398237),Julius Randle,42398237,PF/F/UTIL,8600,HOU@MIN 03/25/2026 09:30PM ET,MIN,39.72
-5096367617,NBA $12K And-One [20 Entry Max],189162279,$1 ,Dylan Harper (42398506),Donovan Mitchell (42398215) (LOCKED),Ace Bailey (42398312),Jayson Tatum (42398234) (LOCKED),Oscar Tshiebwe (42398725),EJ Harkless (42398445),Bilal Coulibaly (42398410),Kennedy Chandler (42398500),,SF,Lauri Markkanen (42398245),Lauri Markkanen,42398245,SF/F/UTIL,8500,WAS@UTA 03/25/2026 09:00PM ET,UTA,42.32
-5096367618,NBA $12K And-One [20 Entry Max],189162279,$1 ,Luka Doncic (42398185) (LOCKED),Bez Mbeng (42398519),Devin Vassell (42398477),Ace Bailey (42398312),Jaxson Hayes (42398803) (LOCKED),Kennedy Chandler (42398500),Kevin Durant (42398229),Oscar Tshiebwe (42398725),,C,Jalen Duren (42398240) (LOCKED),Jalen Duren,42398240,C/UTIL,8500,In Progress,DET,37.45
-5096367619,NBA $12K And-One [20 Entry Max],189162279,$1 ,Dylan Harper (42398506),Donovan Mitchell (42398215) (LOCKED),Ace Bailey (42398312),Blake Hinson (42398845),Bam Adebayo (42398223) (LOCKED),Reed Sheppard (42398354),Cody Williams (42398371),Oscar Tshiebwe (42398725),,PF,LeBron James (42398242) (LOCKED),LeBron James,42398242,PF/F/UTIL,8500,In Progress,LAL,40.69
+5096367552,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,Luka Doncic (42398185) (LOCKED),Donovan Mitchell (42398215),Keldon Johnson (42398633),Blake Hinson (42398845),Oscar Tshiebwe (42398725),Dylan Harper (42398506),Ace Bailey (42398312),EJ Harkless (42398445),,PG/SG,Shai Gilgeous-Alexander (42398196),Shai Gilgeous-Alexander,42398196,PG/G/UTIL,10500,OKC@BOS 03/25/2026 07:30PM ET,OKC,51.33
+5096367553,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,Luka Doncic (42398185) (LOCKED),Dylan Harper (42398506),Jaylen Brown (42398210),LeBron James (42398242) (LOCKED),Julian Reese (42399087),EJ Harkless (42398445),Blake Hinson (42398845),Oscar Tshiebwe (42398725),,C,Tyrese Maxey (42398199) (LOCKED),Tyrese Maxey,42398199,PG/G/UTIL,10000,In Progress,PHI,49.06
+5096367554,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,Luka Doncic (42398185) (LOCKED),Donovan Mitchell (42398215),Ace Bailey (42398312),Gregory Jackson (42398455),Julian Reese (42399087),Dylan Harper (42398506),Blake Hinson (42398845),Kennedy Chandler (42398500),,PG/SG,Josh Giddey (42398205) (LOCKED),Josh Giddey,42398205,PG/G/UTIL,9600,In Progress,CHI,45.24
+5096367555,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,Luka Doncic (42398185) (LOCKED),Donovan Mitchell (42398215),Keldon Johnson (42398633),Blake Hinson (42398845),Jalen Smith (42398458) (LOCKED),Kennedy Chandler (42398500),Ace Bailey (42398312),Oscar Tshiebwe (42398725),,PG,Anthony Edwards (42398202),Anthony Edwards,42398202,SG/G/UTIL,9600,HOU@MIN 03/25/2026 09:30PM ET,MIN,45.3
+5096367556,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,Luka Doncic (42398185) (LOCKED),Dylan Harper (42398506),Jake LaRavia (42398687) (LOCKED),Tobias Harris (42398402) (LOCKED),Victor Wembanyama (42398188),Kennedy Chandler (42398500),Blake Hinson (42398845),Oscar Tshiebwe (42398725),,SF,Joel Embiid (42398208) (LOCKED),Joel Embiid,42398208,C/UTIL,9500,In Progress,PHI,44.95
+5096367557,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,Luka Doncic (42398185) (LOCKED),Dylan Harper (42398506),John Konchar (42398675),Jayson Tatum (42398234),Jalen Duren (42398240) (LOCKED),Kennedy Chandler (42398500),Blake Hinson (42398845),Oscar Tshiebwe (42398725),,PF,Jaylen Brown (42398210),Jaylen Brown,42398210,SG/SF/F/G/UTIL,9300,OKC@BOS 03/25/2026 07:30PM ET,BOS,46.37
+5096367558,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,Luka Doncic (42398185) (LOCKED),Dylan Harper (42398506),Keon Ellis (42398617),Jalen Johnson (42398193) (LOCKED),Oscar Tshiebwe (42398725),Daniss Jenkins (42398382) (LOCKED),Blake Hinson (42398845),Kennedy Chandler (42398500),,SF/PF,Donovan Mitchell (42398215),Donovan Mitchell,42398215,SG/G/UTIL,9200,MIA@CLE 03/25/2026 07:30PM ET,CLE,45.26
+5096367559,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,Luka Doncic (42398185) (LOCKED),EJ Harkless (42398445),Keldon Johnson (42398633),Pascal Siakam (42398278) (LOCKED),Jalen Duren (42398240) (LOCKED),Kennedy Chandler (42398500),Blake Hinson (42398845),Oscar Tshiebwe (42398725),,PG/SG,Alperen Sengun (42398221),Alperen Sengun,42398221,C/UTIL,9100,HOU@MIN 03/25/2026 09:30PM ET,HOU,43.77
+5096367560,NBA $20K Four Point Play [20 Entry Max],189162278,$4 ,Luka Doncic (42398185) (LOCKED),Dylan Harper (42398506),Cam Spencer (42398597),Evan Mobley (42398225),Oscar Tshiebwe (42398725),Dennis Schroder (42398753),Ace Bailey (42398312),Kennedy Chandler (42398500),,SG,James Harden (42398218),James Harden,42398218,PG/G/UTIL,9100,MIA@CLE 03/25/2026 07:30PM ET,CLE,45.77
+5096367612,NBA $12K And-One [20 Entry Max],189162279,$1 ,Josh Giddey (42398205) (LOCKED),Dylan Harper (42398506),Ace Bailey (42398312),Blake Hinson (42398845),Bam Adebayo (42398223),Kennedy Chandler (42398500),Bilal Coulibaly (42398410),EJ Harkless (42398445),,PF/C,Bam Adebayo (42398223),Bam Adebayo,42398223,C/UTIL,9000,MIA@CLE 03/25/2026 07:30PM ET,MIA,41.27
+5096367613,NBA $12K And-One [20 Entry Max],189162279,$1 ,Josh Giddey (42398205) (LOCKED),Donovan Mitchell (42398215),Jake LaRavia (42398687) (LOCKED),Blake Hinson (42398845),Oscar Tshiebwe (42398725),Dylan Harper (42398506),Ace Bailey (42398312),Amen Thompson (42398248),,PG/SG,Evan Mobley (42398225),Evan Mobley,42398225,PF/C/F/UTIL,9000,MIA@CLE 03/25/2026 07:30PM ET,CLE,40.35
+5096367614,NBA $12K And-One [20 Entry Max],189162279,$1 ,Luka Doncic (42398185) (LOCKED),Bub Carrington (42398422),Matas Buzelis (42398323) (LOCKED),Ace Bailey (42398312),Oscar Tshiebwe (42398725),Kennedy Chandler (42398500),Bilal Coulibaly (42398410),Julian Reese (42399087),,C,Kevin Durant (42398229),Kevin Durant,42398229,SG/SF/F/G/UTIL,8900,HOU@MIN 03/25/2026 09:30PM ET,HOU,41.73
+5096367615,NBA $12K And-One [20 Entry Max],189162279,$1 ,James Harden (42398218),Dylan Harper (42398506),Jaylen Brown (42398210),Pascal Siakam (42398278) (LOCKED),Oscar Tshiebwe (42398725),Kennedy Chandler (42398500),Blake Hinson (42398845),Ace Bailey (42398312),,PF/C,Jayson Tatum (42398234),Jayson Tatum,42398234,PF/F/UTIL,8800,OKC@BOS 03/25/2026 07:30PM ET,BOS,38.53
+5096367616,NBA $12K And-One [20 Entry Max],189162279,$1 ,Luka Doncic (42398185) (LOCKED),Dylan Harper (42398506),Keldon Johnson (42398633),LeBron James (42398242) (LOCKED),Julian Reese (42399087),Kennedy Chandler (42398500),Jayson Tatum (42398234),Oscar Tshiebwe (42398725),,PF,Julius Randle (42398237),Julius Randle,42398237,PF/F/UTIL,8600,HOU@MIN 03/25/2026 09:30PM ET,MIN,39.72
+5096367617,NBA $12K And-One [20 Entry Max],189162279,$1 ,Dylan Harper (42398506),Donovan Mitchell (42398215),Ace Bailey (42398312),Jayson Tatum (42398234),Oscar Tshiebwe (42398725),EJ Harkless (42398445),Bilal Coulibaly (42398410),Kennedy Chandler (42398500),,C,Jalen Duren (42398240) (LOCKED),Jalen Duren,42398240,C/UTIL,8500,In Progress,DET,37.45
+5096367618,NBA $12K And-One [20 Entry Max],189162279,$1 ,Luka Doncic (42398185) (LOCKED),Bez Mbeng (42398519),Devin Vassell (42398477),Ace Bailey (42398312),Jaxson Hayes (42398803) (LOCKED),Kennedy Chandler (42398500),Kevin Durant (42398229),Oscar Tshiebwe (42398725),,SF,LeBron James (42398242) (LOCKED),LeBron James,42398242,PF/F/UTIL,8500,In Progress,LAL,40.69
+5096367619,NBA $12K And-One [20 Entry Max],189162279,$1 ,Dylan Harper (42398506),Donovan Mitchell (42398215),Ace Bailey (42398312),Blake Hinson (42398845),Bam Adebayo (42398223),Reed Sheppard (42398354),Cody Williams (42398371),Oscar Tshiebwe (42398725),,SF/PF,Lauri Markkanen (42398245),Lauri Markkanen,42398245,SF/F/UTIL,8500,WAS@UTA 03/25/2026 09:00PM ET,UTA,42.32
 5096367620,NBA $12K And-One [20 Entry Max],189162279,$1 ,Dylan Harper (42398506),Bez Mbeng (42398519),Ace Bailey (42398312),Jalen Johnson (42398193) (LOCKED),Victor Wembanyama (42398188),Kennedy Chandler (42398500),Blake Hinson (42398845),Julian Reese (42399087),,PG,Amen Thompson (42398248),Amen Thompson,42398248,PG/G/UTIL,8400,HOU@MIN 03/25/2026 09:30PM ET,HOU,39.08
-5096367621,NBA $12K And-One [20 Entry Max],189162279,$1 ,Luka Doncic (42398185) (LOCKED),Dylan Harper (42398506),Devin Vassell (42398477),Gregory Jackson (42398455),Jalen Duren (42398240) (LOCKED),Stephon Castle (42398296),Blake Hinson (42398845),Oscar Tshiebwe (42398725),,PG/SG,VJ Edgecombe (42398251) (LOCKED),VJ Edgecombe,42398251,PG/SG/G/UTIL,8300,In Progress,PHI,33.35
+5096367621,NBA $12K And-One [20 Entry Max],189162279,$1 ,Luka Doncic (42398185) (LOCKED),Dylan Harper (42398506),Devin Vassell (42398477),Gregory Jackson (42398455),Jalen Duren (42398240) (LOCKED),Stephon Castle (42398296),Blake Hinson (42398845),Oscar Tshiebwe (42398725),,SG/SF,VJ Edgecombe (42398251) (LOCKED),VJ Edgecombe,42398251,PG/SG/G/UTIL,8300,In Progress,PHI,33.35
 5096367622,NBA $12K And-One [20 Entry Max],189162279,$1 ,Luka Doncic (42398185) (LOCKED),Dylan Harper (42398506),Ace Bailey (42398312),Gregory Jackson (42398455),Jalen Duren (42398240) (LOCKED),Bub Carrington (42398422),Blake Hinson (42398845),Julian Reese (42399087),,PG,Ja Morant (42398255),Ja Morant,42398255,PG/G/UTIL,8300,SAS@MEM 03/25/2026 08:00PM ET,MEM,37.51
 5096367623,NBA $12K And-One [20 Entry Max],189162279,$1 ,Daniss Jenkins (42398382) (LOCKED),EJ Harkless (42398445),Ausar Thompson (42398387) (LOCKED),Tobias Harris (42398402) (LOCKED),Oscar Tshiebwe (42398725),Luka Doncic (42398185) (LOCKED),Ace Bailey (42398312),Julian Reese (42399087),,PG/SG,Austin Reaves (42398258) (LOCKED),Austin Reaves,42398258,PG/SG/G/UTIL,8200,In Progress,LAL,40.64
-5096367624,NBA $12K And-One [20 Entry Max],189162279,$1 ,Luka Doncic (42398185) (LOCKED),Bez Mbeng (42398519),Paul George (42398299) (LOCKED),Ace Bailey (42398312),Jaxson Hayes (42398803) (LOCKED),Kennedy Chandler (42398500),Cody Williams (42398371),Oscar Tshiebwe (42398725),,PF,Chet Holmgren (42398266) (LOCKED),Chet Holmgren,42398266,PF/F/UTIL,8000,OKC@BOS 03/25/2026 07:30PM ET,OKC,35.33
-5096367625,NBA $12K And-One [20 Entry Max],189162279,$1 ,Luka Doncic (42398185) (LOCKED),Dylan Harper (42398506),Jake LaRavia (42398687) (LOCKED),Naz Reid (42398431),Jalen Duren (42398240) (LOCKED),Kennedy Chandler (42398500),Norman Powell (42398358) (LOCKED),Oscar Tshiebwe (42398725),,C,Anthony Davis (42398273),Anthony Davis,42398273,C/UTIL,8000,WAS@UTA 03/25/2026 09:00PM ET,WAS,44.06
-5096367626,NBA $12K And-One [20 Entry Max],189162279,$1 ,Luka Doncic (42398185) (LOCKED),Bez Mbeng (42398519),Norman Powell (42398358) (LOCKED),Ace Bailey (42398312),Jaxson Hayes (42398803) (LOCKED),James Harden (42398218) (LOCKED),Blake Hinson (42398845),Oscar Tshiebwe (42398725),,PG/SG,Tyler Herro (42398269) (LOCKED),Tyler Herro,42398269,PG/SG/G/UTIL,8000,MIA@CLE 03/25/2026 07:30PM ET,MIA,35.7
-5096367627,NBA $12K And-One [20 Entry Max],189162279,$1 ,Luka Doncic (42398185) (LOCKED),EJ Harkless (42398445),Bilal Coulibaly (42398410),Blake Hinson (42398845),Oscar Tshiebwe (42398725),Kennedy Chandler (42398500),Cody Williams (42398371),Amen Thompson (42398248),,PG/SG,Quentin Grimes (42398262) (LOCKED),Quentin Grimes,42398262,PG/SG/G/UTIL,8000,In Progress,PHI,26.12
-5096367628,NBA $12K And-One [20 Entry Max],189162279,$1 ,Luka Doncic (42398185) (LOCKED),EJ Harkless (42398445),Ace Bailey (42398312),Gregory Jackson (42398455),Oscar Tshiebwe (42398725),Daniss Jenkins (42398382) (LOCKED),Taylor Hendricks (42398535),Kennedy Chandler (42398500),,PG,Isaiah Collier (42398275),Isaiah Collier,42398275,PG/G/UTIL,7900,WAS@UTA 03/25/2026 09:00PM ET,UTA,27.74
-5096367629,NBA $12K And-One [20 Entry Max],189162279,$1 ,EJ Harkless (42398445),Cody Williams (42398371),Ace Bailey (42398312),Pascal Siakam (42398278) (LOCKED),Victor Wembanyama (42398188),Kennedy Chandler (42398500),Blake Hinson (42398845),Oscar Tshiebwe (42398725),,PF/C,Pascal Siakam (42398278) (LOCKED),Pascal Siakam,42398278,PF/C/F/UTIL,7800,In Progress,IND,40.05
-5096367630,NBA $12K And-One [20 Entry Max],189162279,$1 ,Kennedy Chandler (42398500),Dylan Harper (42398506),Jamir Watkins (42398547),LeBron James (42398242) (LOCKED),Victor Wembanyama (42398188),Bez Mbeng (42398519),Ace Bailey (42398312),Oscar Tshiebwe (42398725),,SF,Jalen Williams (42398285) (LOCKED),Jalen Williams,42398285,SF/F/UTIL,7700,OKC@BOS 03/25/2026 07:30PM ET,OKC,34.05
+5096367624,NBA $12K And-One [20 Entry Max],189162279,$1 ,Luka Doncic (42398185) (LOCKED),Bez Mbeng (42398519),Paul George (42398299) (LOCKED),Ace Bailey (42398312),Jaxson Hayes (42398803) (LOCKED),Kennedy Chandler (42398500),Cody Williams (42398371),Oscar Tshiebwe (42398725),,PG,Quentin Grimes (42398262) (LOCKED),Quentin Grimes,42398262,PG/SG/G/UTIL,8000,In Progress,PHI,26.12
+5096367625,NBA $12K And-One [20 Entry Max],189162279,$1 ,Luka Doncic (42398185) (LOCKED),Dylan Harper (42398506),Jake LaRavia (42398687) (LOCKED),Naz Reid (42398431),Jalen Duren (42398240) (LOCKED),Kennedy Chandler (42398500),Norman Powell (42398358),Oscar Tshiebwe (42398725),,PF/C,Tyler Herro (42398269),Tyler Herro,42398269,PG/SG/G/UTIL,8000,MIA@CLE 03/25/2026 07:30PM ET,MIA,35.7
+5096367626,NBA $12K And-One [20 Entry Max],189162279,$1 ,Luka Doncic (42398185) (LOCKED),Bez Mbeng (42398519),Norman Powell (42398358),Ace Bailey (42398312),Jaxson Hayes (42398803) (LOCKED),James Harden (42398218),Blake Hinson (42398845),Oscar Tshiebwe (42398725),,SF,Chet Holmgren (42398266),Chet Holmgren,42398266,PF/F/UTIL,8000,OKC@BOS 03/25/2026 07:30PM ET,OKC,35.33
+5096367627,NBA $12K And-One [20 Entry Max],189162279,$1 ,Luka Doncic (42398185) (LOCKED),EJ Harkless (42398445),Bilal Coulibaly (42398410),Blake Hinson (42398845),Oscar Tshiebwe (42398725),Kennedy Chandler (42398500),Cody Williams (42398371),Amen Thompson (42398248),,C,Anthony Davis (42398273),Anthony Davis,42398273,C/UTIL,8000,WAS@UTA 03/25/2026 09:00PM ET,WAS,44.06
+5096367628,NBA $12K And-One [20 Entry Max],189162279,$1 ,Luka Doncic (42398185) (LOCKED),EJ Harkless (42398445),Ace Bailey (42398312),Gregory Jackson (42398455),Oscar Tshiebwe (42398725),Daniss Jenkins (42398382) (LOCKED),Taylor Hendricks (42398535),Kennedy Chandler (42398500),,SF/PF,Isaiah Collier (42398275),Isaiah Collier,42398275,PG/G/UTIL,7900,WAS@UTA 03/25/2026 09:00PM ET,UTA,27.74
+5096367629,NBA $12K And-One [20 Entry Max],189162279,$1 ,EJ Harkless (42398445),Cody Williams (42398371),Ace Bailey (42398312),Pascal Siakam (42398278) (LOCKED),Victor Wembanyama (42398188),Kennedy Chandler (42398500),Blake Hinson (42398845),Oscar Tshiebwe (42398725),,PG/SG,Pascal Siakam (42398278) (LOCKED),Pascal Siakam,42398278,PF/C/F/UTIL,7800,In Progress,IND,40.05
+5096367630,NBA $12K And-One [20 Entry Max],189162279,$1 ,Kennedy Chandler (42398500),Dylan Harper (42398506),Jamir Watkins (42398547),LeBron James (42398242) (LOCKED),Victor Wembanyama (42398188),Bez Mbeng (42398519),Ace Bailey (42398312),Oscar Tshiebwe (42398725),,PF,Jalen Williams (42398285),Jalen Williams,42398285,SF/F/UTIL,7700,OKC@BOS 03/25/2026 07:30PM ET,OKC,34.05
 5096367631,NBA $12K And-One [20 Entry Max],189162279,$1 ,Luka Doncic (42398185) (LOCKED),Dylan Harper (42398506),Matas Buzelis (42398323) (LOCKED),Blake Hinson (42398845),Jalen Duren (42398240) (LOCKED),Jaden Hardy (42398653),Cody Williams (42398371),Oscar Tshiebwe (42398725),,PG,Keyonte George (42398282),Keyonte George,42398282,PG/G/UTIL,7700,WAS@UTA 03/25/2026 09:00PM ET,UTA,39.92
+,,,,,,,,,,,,,SF,Trae Young (42398288),Trae Young,42398288,PG/G/UTIL,7600,WAS@UTA 03/25/2026 09:00PM ET,WAS,34.33
+,,,,,,,,,,,,,PF/C,Dyson Daniels (42398291) (LOCKED),Dyson Daniels,42398291,SG/SF/F/G/UTIL,7500,In Progress,ATL,33.12
+,,,,,,,,,,,,,PG,Paul George (42398299) (LOCKED),Paul George,42398299,SF/PF/F/UTIL,7500,In Progress,PHI,32.34
+,,,,,,,,,,,,,PG,Stephon Castle (42398296),Stephon Castle,42398296,SG/G/UTIL,7500,SAS@MEM 03/25/2026 08:00PM ET,SAS,36.18
+,,,,,,,,,,,,,PG,Rudy Gobert (42398303),Rudy Gobert,42398303,C/UTIL,7400,HOU@MIN 03/25/2026 09:30PM ET,MIN,32.68
+,,,,,,,,,,,,,C,Derrick White (42398305),Derrick White,42398305,PG/G/UTIL,7400,OKC@BOS 03/25/2026 07:30PM ET,BOS,36.98
+,,,,,,,,,,,,,PG/SG,Nickeil Alexander-Walker (42398308) (LOCKED),Nickeil Alexander-Walker,42398308,PG/SG/G/UTIL,7300,In Progress,ATL,34.37
+,,,,,,,,,,,,,PG/SG,Ace Bailey (42398312),Ace Bailey,42398312,SF/PF/F/UTIL,7300,WAS@UTA 03/25/2026 09:00PM ET,UTA,24.44
+,,,,,,,,,,,,,SF/PF,Ty Jerome (42398320),Ty Jerome,42398320,PG/G/UTIL,7200,SAS@MEM 03/25/2026 08:00PM ET,MEM,34.83
+,,,,,,,,,,,,,SF/PF,Kyle Filipowski (42398316),Kyle Filipowski,42398316,PF/C/F/UTIL,7200,WAS@UTA 03/25/2026 09:00PM ET,UTA,25.6
+,,,,,,,,,,,,,SG,Onyeka Okongwu (42398327) (LOCKED),Onyeka Okongwu,42398327,C/UTIL,7100,In Progress,ATL,34.86
+,,,,,,,,,,,,,PG/SG,Matas Buzelis (42398323) (LOCKED),Matas Buzelis,42398323,SF/PF/F/UTIL,7100,In Progress,CHI,30.91
+,,,,,,,,,,,,,SG,Kelly Oubre Jr. (42398331) (LOCKED),Kelly Oubre Jr.,42398331,SG/G/UTIL,7100,In Progress,PHI,27.38
+,,,,,,,,,,,,,C,Jarrett Allen (42398329),Jarrett Allen,42398329,C/UTIL,7100,MIA@CLE 03/25/2026 07:30PM ET,CLE,32.26
+,,,,,,,,,,,,,SG/SF,De'Aaron Fox (42398334),De'Aaron Fox,42398334,PG/G/UTIL,7000,SAS@MEM 03/25/2026 08:00PM ET,SAS,34.86
+,,,,,,,,,,,,,SG/SF,Ayo Dosunmu (42398337),Ayo Dosunmu,42398337,SG/SF/F/G/UTIL,6900,HOU@MIN 03/25/2026 09:30PM ET,MIN,26.19
+,,,,,,,,,,,,,PF/C,CJ McCollum (42398347) (LOCKED),CJ McCollum,42398347,PG/SG/G/UTIL,6800,In Progress,ATL,31.2
+,,,,,,,,,,,,,SF,Brice Sensabaugh (42398342),Brice Sensabaugh,42398342,SG/SF/F/G/UTIL,6800,WAS@UTA 03/25/2026 09:00PM ET,UTA,22.32
+,,,,,,,,,,,,,C,Kyshawn George (42398351),Kyshawn George,42398351,SG/G/UTIL,6600,WAS@UTA 03/25/2026 09:00PM ET,WAS,31.47
+,,,,,,,,,,,,,PG/SG,Reed Sheppard (42398354),Reed Sheppard,42398354,PG/SG/G/UTIL,6500,HOU@MIN 03/25/2026 09:30PM ET,HOU,27.05
+,,,,,,,,,,,,,SF/PF,Norman Powell (42398358),Norman Powell,42398358,SG/SF/F/G/UTIL,6500,MIA@CLE 03/25/2026 07:30PM ET,MIA,32.81
+,,,,,,,,,,,,,C,Jabari Smith Jr. (42398367),Jabari Smith Jr.,42398367,PF/C/F/UTIL,6400,HOU@MIN 03/25/2026 09:30PM ET,HOU,30.82
+,,,,,,,,,,,,,C,Andrew Nembhard (42398376) (LOCKED),Andrew Nembhard,42398376,PG/G/UTIL,6400,In Progress,IND,33.84
+,,,,,,,,,,,,,PF,Payton Pritchard (42398363),Payton Pritchard,42398363,PG/SG/G/UTIL,6400,OKC@BOS 03/25/2026 07:30PM ET,BOS,32.07
+,,,,,,,,,,,,,PF/C,Cody Williams (42398371),Cody Williams,42398371,SG/SF/F/G/UTIL,6400,WAS@UTA 03/25/2026 09:00PM ET,UTA,15.22
+,,,,,,,,,,,,,SG/SF,Daniss Jenkins (42398382) (LOCKED),Daniss Jenkins,42398382,PG/G/UTIL,6300,In Progress,DET,17.8
+,,,,,,,,,,,,,PG/SG,Jaden McDaniels (42398379),Jaden McDaniels,42398379,SF/F/UTIL,6300,HOU@MIN 03/25/2026 09:30PM ET,MIN,28.1
+,,,,,,,,,,,,,SG/SF,Alexandre Sarr (42398385),Alexandre Sarr,42398385,C/UTIL,6300,WAS@UTA 03/25/2026 09:00PM ET,WAS,35.45
+,,,,,,,,,,,,,PF,Ausar Thompson (42398387) (LOCKED),Ausar Thompson,42398387,SF/F/UTIL,6200,In Progress,DET,26.52
+,,,,,,,,,,,,,SG/SF,Isaiah Hartenstein (42398390),Isaiah Hartenstein,42398390,C/UTIL,6100,OKC@BOS 03/25/2026 07:30PM ET,OKC,30.44
+,,,,,,,,,,,,,SF/PF,Tre Jones (42398395) (LOCKED),Tre Jones,42398395,PG/SG/G/UTIL,6000,In Progress,CHI,27.38
+,,,,,,,,,,,,,PG/SG,Jarace Walker (42398392) (LOCKED),Jarace Walker,42398392,SF/F/UTIL,6000,In Progress,IND,23.98
+,,,,,,,,,,,,,C,Tobias Harris (42398402) (LOCKED),Tobias Harris,42398402,PF/F/UTIL,5900,In Progress,DET,26.05
+,,,,,,,,,,,,,PG,Jaime Jaquez Jr. (42398399),Jaime Jaquez Jr.,42398399,SF/F/UTIL,5900,MIA@CLE 03/25/2026 07:30PM ET,MIA,29.92
+,,,,,,,,,,,,,C,Donte DiVincenzo (42398405),Donte DiVincenzo,42398405,PG/G/UTIL,5800,HOU@MIN 03/25/2026 09:30PM ET,MIN,27.96
+,,,,,,,,,,,,,PG,Nikola Vucevic (42398408),Nikola Vucevic,42398408,C/UTIL,5800,OKC@BOS 03/25/2026 07:30PM ET,BOS,34.7
+,,,,,,,,,,,,,C,Bilal Coulibaly (42398410),Bilal Coulibaly,42398410,SF/F/UTIL,5800,WAS@UTA 03/25/2026 09:00PM ET,WAS,25.33
+,,,,,,,,,,,,,PG/SG,Andrew Wiggins (42398419),Andrew Wiggins,42398419,PF/F/UTIL,5700,MIA@CLE 03/25/2026 07:30PM ET,MIA,30.83
+,,,,,,,,,,,,,SF,Neemias Queta (42398413),Neemias Queta,42398413,C/UTIL,5700,OKC@BOS 03/25/2026 07:30PM ET,BOS,26.54
+,,,,,,,,,,,,,SG,Will Riley (42398415),Will Riley,42398415,SF/PF/F/UTIL,5700,WAS@UTA 03/25/2026 09:00PM ET,WAS,16.03
+,,,,,,,,,,,,,C,Anfernee Simons (42398428) (LOCKED),Anfernee Simons,42398428,SG/G/UTIL,5600,In Progress,CHI,22.98
+,,,,,,,,,,,,,SG/SF,Kel'el Ware (42398426),Kel'el Ware,42398426,C/UTIL,5600,MIA@CLE 03/25/2026 07:30PM ET,MIA,27.9
+,,,,,,,,,,,,,PF,Bub Carrington (42398422),Bub Carrington,42398422,PG/SG/G/UTIL,5600,WAS@UTA 03/25/2026 09:00PM ET,WAS,23.03
+,,,,,,,,,,,,,PG,Naz Reid (42398431),Naz Reid,42398431,PF/C/F/UTIL,5500,HOU@MIN 03/25/2026 09:30PM ET,MIN,29.17
+,,,,,,,,,,,,,C,Deandre Ayton (42398435) (LOCKED),Deandre Ayton,42398435,C/UTIL,5500,In Progress,LAL,26.91
+,,,,,,,,,,,,,SG/SF,Jonathan Kuminga (42398437) (LOCKED),Jonathan Kuminga,42398437,SF/PF/F/UTIL,5400,In Progress,ATL,25.01
+,,,,,,,,,,,,,PG/SG,Marcus Sasser (42398441) (LOCKED),Marcus Sasser,42398441,PG/SG/G/UTIL,5400,In Progress,DET,11.75
+,,,,,,,,,,,,,PF/C,EJ Harkless (42398445),EJ Harkless,42398445,PG/SG/G/UTIL,5400,WAS@UTA 03/25/2026 09:00PM ET,UTA,15.58
+,,,,,,,,,,,,,SF,Javon Small (42398449),Javon Small,42398449,PG/SG/G/UTIL,5300,SAS@MEM 03/25/2026 08:00PM ET,MEM,20.74
+,,,,,,,,,,,,,PG,Jay Huff (42398453) (LOCKED),Jay Huff,42398453,C/UTIL,5200,In Progress,IND,21.21
+,,,,,,,,,,,,,PF/C,Gregory Jackson (42398455),Gregory Jackson,42398455,PF/F/UTIL,5200,SAS@MEM 03/25/2026 08:00PM ET,MEM,21.7
+,,,,,,,,,,,,,PG/SG,Jalen Smith (42398458) (LOCKED),Jalen Smith,42398458,C/UTIL,5100,In Progress,CHI,23.83
+,,,,,,,,,,,,,SG/SF,Aaron Nesmith (42398460) (LOCKED),Aaron Nesmith,42398460,SG/G/UTIL,5100,In Progress,IND,24.25
+,,,,,,,,,,,,,PF/C,Jaden Ivey (42398485) (LOCKED),Jaden Ivey,42398485,SG/SF/F/G/UTIL,5000,In Progress,CHI,16.49
+,,,,,,,,,,,,,PG,Bones Hyland (42398463),Bones Hyland,42398463,PG/SG/G/UTIL,5000,HOU@MIN 03/25/2026 09:30PM ET,MIN,15.69
+,,,,,,,,,,,,,C,Marcus Smart (42398472) (LOCKED),Marcus Smart,42398472,SG/SF/F/G/UTIL,5000,In Progress,LAL,20.71
+,,,,,,,,,,,,,SG/SF,Pelle Larsson (42398467),Pelle Larsson,42398467,SG/SF/F/G/UTIL,5000,MIA@CLE 03/25/2026 07:30PM ET,MIA,21.74
+,,,,,,,,,,,,,PF,Devin Vassell (42398477),Devin Vassell,42398477,SF/F/UTIL,5000,SAS@MEM 03/25/2026 08:00PM ET,SAS,25.75
+,,,,,,,,,,,,,SG/SF,Cedric Coward (42398480),Cedric Coward,42398480,SG/G/UTIL,5000,SAS@MEM 03/25/2026 08:00PM ET,MEM,27.34
+,,,,,,,,,,,,,SG/SF,Tristan Vukcevic (42398483),Tristan Vukcevic,42398483,C/UTIL,5000,WAS@UTA 03/25/2026 09:00PM ET,WAS,16.14
+,,,,,,,,,,,,,PG,Collin Sexton (42398490) (LOCKED),Collin Sexton,42398490,SG/SF/F/G/UTIL,4900,In Progress,CHI,24.26
+,,,,,,,,,,,,,SF/PF,Tari Eason (42398495),Tari Eason,42398495,SG/SF/F/G/UTIL,4900,HOU@MIN 03/25/2026 09:30PM ET,HOU,24.32
+,,,,,,,,,,,,,SF/PF,Kennedy Chandler (42398500),Kennedy Chandler,42398500,PG/G/UTIL,4900,WAS@UTA 03/25/2026 09:00PM ET,UTA,36.25
+,,,,,,,,,,,,,C,Guerschon Yabusele (42398510) (LOCKED),Guerschon Yabusele,42398510,PF/C/F/UTIL,4800,In Progress,CHI,11.89
+,,,,,,,,,,,,,C,Justin Edwards (42398516) (LOCKED),Justin Edwards,42398516,SF/F/UTIL,4800,In Progress,PHI,12.67
+,,,,,,,,,,,,,PF/C,Jaylin Williams (42398514),Jaylin Williams,42398514,C/UTIL,4800,OKC@BOS 03/25/2026 07:30PM ET,OKC,20.82
+,,,,,,,,,,,,,SG/SF,Dylan Harper (42398506),Dylan Harper,42398506,PG/SG/G/UTIL,4800,SAS@MEM 03/25/2026 08:00PM ET,SAS,23.58
+,,,,,,,,,,,,,PG,Justin Champagnie (42398503),Justin Champagnie,42398503,PF/F/UTIL,4800,WAS@UTA 03/25/2026 09:00PM ET,WAS,19.96
+,,,,,,,,,,,,,SF/PF,Bez Mbeng (42398519),Bez Mbeng,42398519,PG/SG/G/UTIL,4800,WAS@UTA 03/25/2026 09:00PM ET,UTA,18.12
+,,,,,,,,,,,,,C,Duncan Robinson (42398523) (LOCKED),Duncan Robinson,42398523,SG/G/UTIL,4700,In Progress,DET,21.08
+,,,,,,,,,,,,,PF/C,Isaiah Stewart (42398529) (LOCKED),Isaiah Stewart,42398529,PF/C/F/UTIL,4700,In Progress,DET,21.88
+,,,,,,,,,,,,,PG,Andre Drummond (42398533) (LOCKED),Andre Drummond,42398533,C/UTIL,4700,In Progress,PHI,22.08
+,,,,,,,,,,,,,PG,Davion Mitchell (42398526),Davion Mitchell,42398526,PG/G/UTIL,4700,MIA@CLE 03/25/2026 07:30PM ET,MIA,24.61
+,,,,,,,,,,,,,PG,Ajay Mitchell (42398539),Ajay Mitchell,42398539,PG/G/UTIL,4700,OKC@BOS 03/25/2026 07:30PM ET,OKC,27.04
+,,,,,,,,,,,,,PG,Taylor Hendricks (42398535),Taylor Hendricks,42398535,PF/C/F/UTIL,4700,SAS@MEM 03/25/2026 08:00PM ET,MEM,16.18
+,,,,,,,,,,,,,PF,Cameron Payne (42398552) (LOCKED),Cameron Payne,42398552,PG/SG/G/UTIL,4600,In Progress,PHI,18.53
+,,,,,,,,,,,,,PG/SG,Sam Merrill (42398544),Sam Merrill,42398544,SG/G/UTIL,4600,MIA@CLE 03/25/2026 07:30PM ET,CLE,22.29
+,,,,,,,,,,,,,PF/C,Olivier-Maxence Prosper (42398542),Olivier-Maxence Prosper,42398542,C/UTIL,4600,SAS@MEM 03/25/2026 08:00PM ET,MEM,16.6
+,,,,,,,,,,,,,PG,Jamir Watkins (42398547),Jamir Watkins,42398547,SG/SF/F/G/UTIL,4600,WAS@UTA 03/25/2026 09:00PM ET,WAS,15.95
+,,,,,,,,,,,,,SF,Max Strus (42398568),Max Strus,42398568,SG/SF/F/G/UTIL,4500,MIA@CLE 03/25/2026 07:30PM ET,CLE,22.25
+,,,,,,,,,,,,,C,Isaiah Joe (42398560),Isaiah Joe,42398560,SG/G/UTIL,4500,OKC@BOS 03/25/2026 07:30PM ET,OKC,19.13
+,,,,,,,,,,,,,C,Julian Champagnie (42398556),Julian Champagnie,42398556,SF/PF/F/UTIL,4500,SAS@MEM 03/25/2026 08:00PM ET,SAS,23.65
+,,,,,,,,,,,,,SG,Jahmai Mashack (42398563),Jahmai Mashack,42398563,SG/SF/F/G/UTIL,4500,SAS@MEM 03/25/2026 08:00PM ET,MEM,12.9
+,,,,,,,,,,,,,SG/SF,Caris LeVert (42398581) (LOCKED),Caris LeVert,42398581,PG/SG/G/UTIL,4400,In Progress,DET,16.61
+,,,,,,,,,,,,,SF/PF,Leonard Miller (42398585) (LOCKED),Leonard Miller,42398585,SF/PF/F/UTIL,4400,In Progress,CHI,11.09
+,,,,,,,,,,,,,PG/SG,Jaylon Tyson (42398573),Jaylon Tyson,42398573,SF/PF/F/UTIL,4400,MIA@CLE 03/25/2026 07:30PM ET,CLE,25.64
+,,,,,,,,,,,,,PG,Rayan Rupert (42398577),Rayan Rupert,42398577,SF/PF/F/UTIL,4400,SAS@MEM 03/25/2026 08:00PM ET,MEM,10.06
+,,,,,,,,,,,,,PF/C,Nick Richards (42398613) (LOCKED),Nick Richards,42398613,C/UTIL,4300,In Progress,CHI,14.34
+,,,,,,,,,,,,,SG/SF,Rui Hachimura (42398605) (LOCKED),Rui Hachimura,42398605,SF/PF/F/UTIL,4300,In Progress,LAL,18.65
+,,,,,,,,,,,,,SF,Cason Wallace (42398592),Cason Wallace,42398592,SG/SF/F/G/UTIL,4300,OKC@BOS 03/25/2026 07:30PM ET,OKC,21.38
+,,,,,,,,,,,,,SG/SF,Jaylen Wells (42398589),Jaylen Wells,42398589,SF/F/UTIL,4300,SAS@MEM 03/25/2026 08:00PM ET,MEM,21.36
+,,,,,,,,,,,,,PF/C,Cam Spencer (42398597),Cam Spencer,42398597,SG/SF/F/G/UTIL,4300,SAS@MEM 03/25/2026 08:00PM ET,MEM,24.74
+,,,,,,,,,,,,,PG/SG,Walter Clayton Jr. (42398602),Walter Clayton Jr.,42398602,PG/G/UTIL,4300,SAS@MEM 03/25/2026 08:00PM ET,MEM,17.24
+,,,,,,,,,,,,,C,Tre Johnson (42398609),Tre Johnson,42398609,PG/SG/G/UTIL,4300,WAS@UTA 03/25/2026 09:00PM ET,WAS,20.8
+,,,,,,,,,,,,,SF/PF,Paul Reed (42398621) (LOCKED),Paul Reed,42398621,C/UTIL,4200,In Progress,DET,17.46
+,,,,,,,,,,,,,PG/SG,Adem Bona (42398615) (LOCKED),Adem Bona,42398615,C/UTIL,4200,In Progress,PHI,14.16
+,,,,,,,,,,,,,PF,Trendon Watford (42398623) (LOCKED),Trendon Watford,42398623,PF/F/UTIL,4200,In Progress,PHI,16.17
+,,,,,,,,,,,,,SG/SF,Keon Ellis (42398617),Keon Ellis,42398617,SF/PF/F/UTIL,4200,MIA@CLE 03/25/2026 07:30PM ET,CLE,13.89
+,,,,,,,,,,,,,C,DeJon Jarreau (42398629),DeJon Jarreau,42398629,PG/SG/G/UTIL,4200,SAS@MEM 03/25/2026 08:00PM ET,MEM,19.71
+,,,,,,,,,,,,,PF/C,Sharife Cooper (42398626),Sharife Cooper,42398626,PG/G/UTIL,4200,WAS@UTA 03/25/2026 09:00PM ET,WAS,13.87
+,,,,,,,,,,,,,SG,Mouhamed Gueye (42398642) (LOCKED),Mouhamed Gueye,42398642,PF/C/F/UTIL,4100,In Progress,ATL,13.31
+,,,,,,,,,,,,,PG/SG,Dominick Barlow (42398646) (LOCKED),Dominick Barlow,42398646,PF/C/F/UTIL,4100,In Progress,PHI,18.88
+,,,,,,,,,,,,,SG/SF,Luke Kennard (42398638) (LOCKED),Luke Kennard,42398638,PG/SG/G/UTIL,4100,In Progress,LAL,15.68
+,,,,,,,,,,,,,PG/SG,T.J. McConnell (42398650) (LOCKED),T.J. McConnell,42398650,PG/G/UTIL,4100,In Progress,IND,21.66
+,,,,,,,,,,,,,PG/SG,Keldon Johnson (42398633),Keldon Johnson,42398633,SG/SF/F/G/UTIL,4100,SAS@MEM 03/25/2026 08:00PM ET,SAS,23.16
+,,,,,,,,,,,,,PF/C,Tyler Burton (42398656),Tyler Burton,42398656,PF/F/UTIL,4100,SAS@MEM 03/25/2026 08:00PM ET,MEM,20.29
+,,,,,,,,,,,,,SF/PF,Jaden Hardy (42398653),Jaden Hardy,42398653,SG/G/UTIL,4100,WAS@UTA 03/25/2026 09:00PM ET,WAS,13.06
+,,,,,,,,,,,,,PG,Isaac Okoro (42398670) (LOCKED),Isaac Okoro,42398670,SG/SF/F/G/UTIL,4000,In Progress,CHI,17.21
+,,,,,,,,,,,,,SF,Kyle Anderson (42398683),Kyle Anderson,42398683,PF/C/F/UTIL,4000,HOU@MIN 03/25/2026 09:30PM ET,MIN,17.38
+,,,,,,,,,,,,,PG,Micah Potter (42398679) (LOCKED),Micah Potter,42398679,PF/C/F/UTIL,4000,In Progress,IND,18.67
+,,,,,,,,,,,,,SG,Simone Fontecchio (42398663),Simone Fontecchio,42398663,PF/F/UTIL,4000,MIA@CLE 03/25/2026 07:30PM ET,MIA,16.41
+,,,,,,,,,,,,,PG,Sam Hauser (42398659),Sam Hauser,42398659,SF/PF/F/UTIL,4000,OKC@BOS 03/25/2026 07:30PM ET,BOS,18.68
+,,,,,,,,,,,,,C,Aaron Wiggins (42398666),Aaron Wiggins,42398666,SF/PF/F/UTIL,4000,OKC@BOS 03/25/2026 07:30PM ET,OKC,19.36
+,,,,,,,,,,,,,PF/C,John Konchar (42398675),John Konchar,42398675,SF/PF/F/UTIL,4000,WAS@UTA 03/25/2026 09:00PM ET,UTA,13.88
+,,,,,,,,,,,,,PG/SG,Kevin Huerter (42398692) (LOCKED),Kevin Huerter,42398692,SG/SF/F/G/UTIL,3900,In Progress,DET,20.79
+,,,,,,,,,,,,,C,Rob Dillingham (42398701) (LOCKED),Rob Dillingham,42398701,PG/SG/G/UTIL,3900,In Progress,CHI,12.05
+,,,,,,,,,,,,,SG/SF,Jake LaRavia (42398687) (LOCKED),Jake LaRavia,42398687,SG/SF/F/G/UTIL,3900,In Progress,LAL,19.14
+,,,,,,,,,,,,,SF,Jalen Slawson (42398705) (LOCKED),Jalen Slawson,42398705,SF/F/UTIL,3900,In Progress,IND,24.35
+,,,,,,,,,,,,,PF,Jared McCain (42398697),Jared McCain,42398697,PG/SG/G/UTIL,3900,OKC@BOS 03/25/2026 07:30PM ET,OKC,15.07
+,,,,,,,,,,,,,C,Ronald Holland II (42398708) (LOCKED),Ronald Holland II,42398708,PF/F/UTIL,3800,In Progress,DET,18.16
+,,,,,,,,,,,,,SG/SF,Marjon Beauchamp (42398717) (LOCKED),Marjon Beauchamp,42398717,SG/SF/F/G/UTIL,3800,In Progress,PHI,17.18
+,,,,,,,,,,,,,PG,Aaron Holiday (42398714),Aaron Holiday,42398714,PG/G/UTIL,3800,HOU@MIN 03/25/2026 09:30PM ET,HOU,9.48
+,,,,,,,,,,,,,SG,Dean Wade (42398711),Dean Wade,42398711,SF/F/UTIL,3800,MIA@CLE 03/25/2026 07:30PM ET,CLE,16.1
+,,,,,,,,,,,,,SG/SF,Zaccharie Risacher (42398722) (LOCKED),Zaccharie Risacher,42398722,SF/F/UTIL,3700,In Progress,ATL,20.18
+,,,,,,,,,,,,,SF/PF,Oscar Tshiebwe (42398725),Oscar Tshiebwe,42398725,C/UTIL,3700,WAS@UTA 03/25/2026 09:00PM ET,UTA,14.04
+,,,,,,,,,,,,,SF/PF,Leaky Black (42398727),Leaky Black,42398727,SF/PF/F/UTIL,3700,WAS@UTA 03/25/2026 09:00PM ET,WAS,19.75
+,,,,,,,,,,,,,PF,Javonte Green (42398731) (LOCKED),Javonte Green,42398731,SF/PF/F/UTIL,3600,In Progress,DET,14.56
+,,,,,,,,,,,,,SF,Ben Sheppard (42398738) (LOCKED),Ben Sheppard,42398738,SG/SF/F/G/UTIL,3600,In Progress,IND,15.05
+,,,,,,,,,,,,,PG,Obi Toppin (42398746) (LOCKED),Obi Toppin,42398746,PF/C/F/UTIL,3600,In Progress,IND,18.2
+,,,,,,,,,,,,,SG/SF,Luguentz Dort (42398743),Luguentz Dort,42398743,SG/G/UTIL,3600,OKC@BOS 03/25/2026 07:30PM ET,OKC,17.91
+,,,,,,,,,,,,,C,Harrison Barnes (42398735),Harrison Barnes,42398735,PF/F/UTIL,3600,SAS@MEM 03/25/2026 08:00PM ET,SAS,19.14
+,,,,,,,,,,,,,PG,Quenton Jackson (42398764) (LOCKED),Quenton Jackson,42398764,PG/SG/G/UTIL,3500,In Progress,IND,16.33
+,,,,,,,,,,,,,C,Dennis Schroder (42398753),Dennis Schroder,42398753,PG/G/UTIL,3500,MIA@CLE 03/25/2026 07:30PM ET,CLE,23.47
+,,,,,,,,,,,,,PG,Baylor Scheierman (42398750),Baylor Scheierman,42398750,SG/G/UTIL,3500,OKC@BOS 03/25/2026 07:30PM ET,BOS,12.9
+,,,,,,,,,,,,,PG,Alex Caruso (42398756),Alex Caruso,42398756,SF/PF/F/UTIL,3500,OKC@BOS 03/25/2026 07:30PM ET,OKC,16.26
+,,,,,,,,,,,,,PF,Anthony Gill (42398760),Anthony Gill,42398760,PF/C/F/UTIL,3500,WAS@UTA 03/25/2026 09:00PM ET,WAS,10.61
+,,,,,,,,,,,,,PF/C,Patrick Williams (42398772) (LOCKED),Patrick Williams,42398772,PF/F/UTIL,3400,In Progress,CHI,14.41
+,,,,,,,,,,,,,PG/SG,Dalen Terry (42398775) (LOCKED),Dalen Terry,42398775,SG/SF/F/G/UTIL,3400,In Progress,PHI,9.85
+,,,,,,,,,,,,,PF/C,Clint Capela (42398768),Clint Capela,42398768,C/UTIL,3400,HOU@MIN 03/25/2026 09:30PM ET,HOU,12.69
+,,,,,,,,,,,,,PG,Myron Gardner (42398780),Myron Gardner,42398780,SG/SF/F/G/UTIL,3400,MIA@CLE 03/25/2026 07:30PM ET,MIA,10.69
+,,,,,,,,,,,,,SF,Luka Garza (42398770),Luka Garza,42398770,C/UTIL,3400,OKC@BOS 03/25/2026 07:30PM ET,BOS,15.58
+,,,,,,,,,,,,,C,Jock Landale (42398785) (LOCKED),Jock Landale,42398785,C/UTIL,3300,In Progress,ATL,22.44
+,,,,,,,,,,,,,SF,Jabari Walker (42398789) (LOCKED),Jabari Walker,42398789,SF/PF/F/UTIL,3300,In Progress,PHI,10.56
+,,,,,,,,,,,,,SG/SF,Terrence Shannon Jr. (42398795),Terrence Shannon Jr.,42398795,SG/SF/F/G/UTIL,3300,HOU@MIN 03/25/2026 09:30PM ET,MIN,7.05
+,,,,,,,,,,,,,C,Thomas Bryant (42398793),Thomas Bryant,42398793,C/UTIL,3300,MIA@CLE 03/25/2026 07:30PM ET,CLE,12.44
+,,,,,,,,,,,,,PG,Luke Kornet (42398787),Luke Kornet,42398787,C/UTIL,3300,SAS@MEM 03/25/2026 08:00PM ET,SAS,20.04
+,,,,,,,,,,,,,SG/SF,Corey Kispert (42398809) (LOCKED),Corey Kispert,42398809,SG/SF/F/G/UTIL,3200,In Progress,ATL,16.1
+,,,,,,,,,,,,,PF,Dorian Finney-Smith (42398821),Dorian Finney-Smith,42398821,PF/F/UTIL,3200,HOU@MIN 03/25/2026 09:30PM ET,HOU,9.18
+,,,,,,,,,,,,,PF,Jaxson Hayes (42398803) (LOCKED),Jaxson Hayes,42398803,C/UTIL,3200,In Progress,LAL,15.15
+,,,,,,,,,,,,,SF,Kobe Brown (42398805) (LOCKED),Kobe Brown,42398805,SF/PF/F/UTIL,3200,In Progress,IND,10.64
+,,,,,,,,,,,,,PG,Kam Jones (42398824) (LOCKED),Kam Jones,42398824,PG/SG/G/UTIL,3200,In Progress,IND,10.71
+,,,,,,,,,,,,,PG/SG,Kasparas Jakucionis (42398818),Kasparas Jakucionis,42398818,PG/G/UTIL,3200,MIA@CLE 03/25/2026 07:30PM ET,MIA,14.84
+,,,,,,,,,,,,,C,Kenrich Williams (42398814),Kenrich Williams,42398814,PF/C/F/UTIL,3200,OKC@BOS 03/25/2026 07:30PM ET,OKC,14.13
+,,,,,,,,,,,,,C,Carter Bryant (42398800),Carter Bryant,42398800,SF/F/UTIL,3200,SAS@MEM 03/25/2026 08:00PM ET,SAS,8.96
+,,,,,,,,,,,,,C,Taj Gibson (42398828),Taj Gibson,42398828,C/UTIL,3200,SAS@MEM 03/25/2026 08:00PM ET,MEM,7.15
+,,,,,,,,,,,,,C,Jaylen Clark (42398835),Jaylen Clark,42398835,SG/SF/F/G/UTIL,3100,HOU@MIN 03/25/2026 09:30PM ET,MIN,8.41
+,,,,,,,,,,,,,PG,Jarred Vanderbilt (42398840) (LOCKED),Jarred Vanderbilt,42398840,PF/F/UTIL,3100,In Progress,LAL,14.16
+,,,,,,,,,,,,,SG,Keshad Johnson (42398843),Keshad Johnson,42398843,C/UTIL,3100,MIA@CLE 03/25/2026 07:30PM ET,MIA,7.85
+,,,,,,,,,,,,,SG/SF,Hugo Gonzalez (42398830),Hugo Gonzalez,42398830,SG/SF/F/G/UTIL,3100,OKC@BOS 03/25/2026 07:30PM ET,BOS,11.05
+,,,,,,,,,,,,,SF/PF,Blake Hinson (42398845),Blake Hinson,42398845,PF/C/F/UTIL,3100,WAS@UTA 03/25/2026 09:00PM ET,UTA,15.35
+,,,,,,,,,,,,,SF/PF,Keaton Wallace (42398875) (LOCKED),Keaton Wallace,42398875,PG/G/UTIL,3000,In Progress,ATL,8.64
+,,,,,,,,,,,,,PG/SG,Buddy Hield (42398878) (LOCKED),Buddy Hield,42398878,SG/SF/F/G/UTIL,3000,In Progress,ATL,14.41
+,,,,,,,,,,,,,SG,Gabe Vincent (42398903) (LOCKED),Gabe Vincent,42398903,PG/G/UTIL,3000,In Progress,ATL,9.12
+,,,,,,,,,,,,,SG,Asa Newell (42398918) (LOCKED),Asa Newell,42398918,PF/C/F/UTIL,3000,In Progress,ATL,9.82
+,,,,,,,,,,,,,SF/PF,Chaz Lanier (42398972) (LOCKED),Chaz Lanier,42398972,SF/F/UTIL,3000,In Progress,DET,5.03
+,,,,,,,,,,,,,C,Christian Koloko (42399000) (LOCKED),Christian Koloko,42399000,C/UTIL,3000,In Progress,ATL,9.94
+,,,,,,,,,,,,,PF/C,Caleb Houstan (42399019) (LOCKED),Caleb Houstan,42399019,SF/PF/F/UTIL,3000,In Progress,ATL,3.27
+,,,,,,,,,,,,,SG/SF,RayJ Dennis (42399023) (LOCKED),RayJ Dennis,42399023,PG/G/UTIL,3000,In Progress,ATL,9.52
+,,,,,,,,,,,,,SF/PF,Bobi Klintman (42399040) (LOCKED),Bobi Klintman,42399040,PF/F/UTIL,3000,In Progress,DET,5.14
+,,,,,,,,,,,,,SF/PF,Tolu Smith (42399057) (LOCKED),Tolu Smith,42399057,C/UTIL,3000,In Progress,DET,11.42
+,,,,,,,,,,,,,C,Wendell Moore Jr. (42399080) (LOCKED),Wendell Moore Jr.,42399080,SF/F/UTIL,3000,In Progress,DET,5.9
+,,,,,,,,,,,,,SF/PF,Isaac Jones (42399083) (LOCKED),Isaac Jones,42399083,PF/C/F/UTIL,3000,In Progress,DET,2.7
+,,,,,,,,,,,,,C,Keshon Gilbert (42399112) (LOCKED),Keshon Gilbert,42399112,PG/G/UTIL,3000,In Progress,ATL,8.58
+,,,,,,,,,,,,,PG,Tyrese Martin (42398899) (LOCKED),Tyrese Martin,42398899,PG/SG/G/UTIL,3000,In Progress,PHI,13.79
+,,,,,,,,,,,,,C,Lachlan Olbrich (42398978) (LOCKED),Lachlan Olbrich,42398978,C/UTIL,3000,In Progress,CHI,5.1
+,,,,,,,,,,,,,SF,Kyle Lowry (42399026) (LOCKED),Kyle Lowry,42399026,PG/G/UTIL,3000,In Progress,PHI,4.1
+,,,,,,,,,,,,,PG,Johni Broome (42399036) (LOCKED),Johni Broome,42399036,C/UTIL,3000,In Progress,PHI,4.04
+,,,,,,,,,,,,,PF,Yuki Kawamura (42399043) (LOCKED),Yuki Kawamura,42399043,PG/G/UTIL,3000,In Progress,CHI,10.57
+,,,,,,,,,,,,,C,Zach Collins (42399055) (LOCKED),Zach Collins,42399055,C/UTIL,3000,In Progress,CHI,20.25
+,,,,,,,,,,,,,C,Mac McClung (42399100) (LOCKED),Mac McClung,42399100,PG/SG/G/UTIL,3000,In Progress,CHI,11.44
+,,,,,,,,,,,,,PG,Noa Essengue (42399109) (LOCKED),Noa Essengue,42399109,SF/F/UTIL,3000,In Progress,CHI,1
+,,,,,,,,,,,,,SG,Josh Okogie (42398849),Josh Okogie,42398849,SG/SF/F/G/UTIL,3000,HOU@MIN 03/25/2026 09:30PM ET,HOU,11.53
+,,,,,,,,,,,,,PG,Mike Conley (42398892),Mike Conley,42398892,PG/G/UTIL,3000,HOU@MIN 03/25/2026 09:30PM ET,MIN,12.33
+,,,,,,,,,,,,,PG,Julian Phillips (42398908),Julian Phillips,42398908,SF/PF/F/UTIL,3000,HOU@MIN 03/25/2026 09:30PM ET,MIN,5.72
+,,,,,,,,,,,,,PG/SG,Jae'Sean Tate (42398940),Jae'Sean Tate,42398940,SF/PF/F/UTIL,3000,HOU@MIN 03/25/2026 09:30PM ET,HOU,5.56
+,,,,,,,,,,,,,PF,Joan Beringer (42398955),Joan Beringer,42398955,C/UTIL,3000,HOU@MIN 03/25/2026 09:30PM ET,MIN,6.58
+,,,,,,,,,,,,,SF,Steven Adams (42398957),Steven Adams,42398957,C/UTIL,3000,HOU@MIN 03/25/2026 09:30PM ET,HOU,21.09
+,,,,,,,,,,,,,SG,Jeff Green (42398968),Jeff Green,42398968,PF/C/F/UTIL,3000,HOU@MIN 03/25/2026 09:30PM ET,HOU,3.84
+,,,,,,,,,,,,,PG/SG,Joe Ingles (42398984),Joe Ingles,42398984,SG/SF/F/G/UTIL,3000,HOU@MIN 03/25/2026 09:30PM ET,MIN,3.05
+,,,,,,,,,,,,,PF/C,JD Davison (42398989),JD Davison,42398989,PG/G/UTIL,3000,HOU@MIN 03/25/2026 09:30PM ET,HOU,5.77
+,,,,,,,,,,,,,C,Isaiah Crawford (42399029),Isaiah Crawford,42399029,SF/PF/F/UTIL,3000,HOU@MIN 03/25/2026 09:30PM ET,HOU,3.79
+,,,,,,,,,,,,,SF/PF,Rocco Zikarsky (42399098),Rocco Zikarsky,42399098,C/UTIL,3000,HOU@MIN 03/25/2026 09:30PM ET,MIN,4.56
+,,,,,,,,,,,,,SG/SF,Enrique Freeman (42399117),Enrique Freeman,42399117,PF/C/F/UTIL,3000,HOU@MIN 03/25/2026 09:30PM ET,MIN,2.88
+,,,,,,,,,,,,,SF/PF,Zyon Pullin (42399121),Zyon Pullin,42399121,PG/G/UTIL,3000,HOU@MIN 03/25/2026 09:30PM ET,MIN,4.75
+,,,,,,,,,,,,,SF,Fred VanVleet (42399134),Fred VanVleet,42399134,PG/G/UTIL,3000,HOU@MIN 03/25/2026 09:30PM ET,HOU,0
+,,,,,,,,,,,,,SG/SF,Tristen Newton (42399137),Tristen Newton,42399137,PG/G/UTIL,3000,HOU@MIN 03/25/2026 09:30PM ET,HOU,0
+,,,,,,,,,,,,,PG,Dalton Knecht (42398870) (LOCKED),Dalton Knecht,42398870,SG/SF/F/G/UTIL,3000,In Progress,LAL,7.41
+,,,,,,,,,,,,,PG/SG,Ivica Zubac (42398890) (LOCKED),Ivica Zubac,42398890,C/UTIL,3000,In Progress,IND,32.91
+,,,,,,,,,,,,,SG/SF,Maxi Kleber (42398944) (LOCKED),Maxi Kleber,42398944,PF/C/F/UTIL,3000,In Progress,LAL,6.72
+,,,,,,,,,,,,,PF,Johnny Furphy (42398948) (LOCKED),Johnny Furphy,42398948,SG/G/UTIL,3000,In Progress,IND,13.86
+,,,,,,,,,,,,,PF,Bronny James (42398951) (LOCKED),Bronny James,42398951,PG/SG/G/UTIL,3000,In Progress,LAL,5.21
+,,,,,,,,,,,,,C,Taelon Peter (42398959) (LOCKED),Taelon Peter,42398959,SG/SF/F/G/UTIL,3000,In Progress,IND,8.71
+,,,,,,,,,,,,,SF,Nick Smith Jr. (42398980) (LOCKED),Nick Smith Jr.,42398980,PG/SG/G/UTIL,3000,In Progress,LAL,9.56
+,,,,,,,,,,,,,C,Ethan Thompson (42398996) (LOCKED),Ethan Thompson,42398996,PG/SG/G/UTIL,3000,In Progress,IND,11.5
+,,,,,,,,,,,,,SG,Drew Timme (42399004) (LOCKED),Drew Timme,42399004,PF/C/F/UTIL,3000,In Progress,LAL,6.68
+,,,,,,,,,,,,,C,Adou Thiero (42399011) (LOCKED),Adou Thiero,42399011,SF/PF/F/UTIL,3000,In Progress,LAL,3.72
+,,,,,,,,,,,,,PF/C,Kobe Bufkin (42399049) (LOCKED),Kobe Bufkin,42399049,PG/G/UTIL,3000,In Progress,LAL,5.57
+,,,,,,,,,,,,,PG,Chris Manon (42399059) (LOCKED),Chris Manon,42399059,SF/F/UTIL,3000,In Progress,LAL,3.42
+,,,,,,,,,,,,,SG,Tyrese Haliburton (42399129) (LOCKED),Tyrese Haliburton,42399129,PG/G/UTIL,3000,In Progress,IND,0
+,,,,,,,,,,,,,C,Dru Smith (42398854),Dru Smith,42398854,PG/G/UTIL,3000,MIA@CLE 03/25/2026 07:30PM ET,MIA,16.41
+,,,,,,,,,,,,,C,Craig Porter Jr. (42398861),Craig Porter Jr.,42398861,PG/G/UTIL,3000,MIA@CLE 03/25/2026 07:30PM ET,CLE,16.24
+,,,,,,,,,,,,,C,Nae'Qwan Tomlin (42398864),Nae'Qwan Tomlin,42398864,PF/F/UTIL,3000,MIA@CLE 03/25/2026 07:30PM ET,CLE,12.51
+,,,,,,,,,,,,,PG,Nikola Jovic (42398895),Nikola Jovic,42398895,PF/C/F/UTIL,3000,MIA@CLE 03/25/2026 07:30PM ET,MIA,16.43
+,,,,,,,,,,,,,PG,Tyrese Proctor (42398912),Tyrese Proctor,42398912,PG/SG/G/UTIL,3000,MIA@CLE 03/25/2026 07:30PM ET,CLE,8.95
+,,,,,,,,,,,,,SF,Larry Nance Jr. (42398964),Larry Nance Jr.,42398964,PF/C/F/UTIL,3000,MIA@CLE 03/25/2026 07:30PM ET,CLE,9.3
+,,,,,,,,,,,,,SF,Jahmir Young (42399033),Jahmir Young,42399033,PG/G/UTIL,3000,MIA@CLE 03/25/2026 07:30PM ET,MIA,3.23
+,,,,,,,,,,,,,C,Tristan Enaruna (42399062),Tristan Enaruna,42399062,SF/F/UTIL,3000,MIA@CLE 03/25/2026 07:30PM ET,CLE,5.04
+,,,,,,,,,,,,,SF,Vladislav Goldin (42399068),Vladislav Goldin,42399068,C/UTIL,3000,MIA@CLE 03/25/2026 07:30PM ET,MIA,2.7
+,,,,,,,,,,,,,C,Riley Minix (42399077),Riley Minix,42399077,SF/F/UTIL,3000,MIA@CLE 03/25/2026 07:30PM ET,CLE,5.15
+,,,,,,,,,,,,,PG,Trevor Keels (42399104),Trevor Keels,42399104,SG/SF/F/G/UTIL,3000,MIA@CLE 03/25/2026 07:30PM ET,MIA,0.62
+,,,,,,,,,,,,,PG,Olivier Sarr (42399127),Olivier Sarr,42399127,C/UTIL,3000,MIA@CLE 03/25/2026 07:30PM ET,CLE,0
+,,,,,,,,,,,,,PG,Jordan Walsh (42398857),Jordan Walsh,42398857,SF/PF/F/UTIL,3000,OKC@BOS 03/25/2026 07:30PM ET,BOS,13.89
+,,,,,,,,,,,,,SF/PF,Brooks Barnhizer (42398934),Brooks Barnhizer,42398934,SF/PF/F/UTIL,3000,OKC@BOS 03/25/2026 07:30PM ET,OKC,4.76
+,,,,,,,,,,,,,PF/C,Branden Carlson (42398938),Branden Carlson,42398938,C/UTIL,3000,OKC@BOS 03/25/2026 07:30PM ET,OKC,10.31
+,,,,,,,,,,,,,SG/SF,Ron Harper Jr. (42398992),Ron Harper Jr.,42398992,SF/PF/F/UTIL,3000,OKC@BOS 03/25/2026 07:30PM ET,BOS,7.62
+,,,,,,,,,,,,,SG,Amari Williams (42399015),Amari Williams,42399015,C/UTIL,3000,OKC@BOS 03/25/2026 07:30PM ET,BOS,4.88
+,,,,,,,,,,,,,SG/SF,Max Shulga (42399065),Max Shulga,42399065,PG/G/UTIL,3000,OKC@BOS 03/25/2026 07:30PM ET,BOS,1.29
+,,,,,,,,,,,,,C,Charles Bassey (42399072),Charles Bassey,42399072,C/UTIL,3000,OKC@BOS 03/25/2026 07:30PM ET,BOS,8.95
+,,,,,,,,,,,,,SF,John Tonje (42399074),John Tonje,42399074,SF/F/UTIL,3000,OKC@BOS 03/25/2026 07:30PM ET,BOS,2
+,,,,,,,,,,,,,SF/PF,Nikola Topic (42399095),Nikola Topic,42399095,PG/G/UTIL,3000,OKC@BOS 03/25/2026 07:30PM ET,OKC,7.3
+,,,,,,,,,,,,,PG/SG,Payton Sandfort (42399124),Payton Sandfort,42399124,PF/F/UTIL,3000,OKC@BOS 03/25/2026 07:30PM ET,OKC,4.25
+,,,,,,,,,,,,,PG/SG,Thomas Sorber (42399132),Thomas Sorber,42399132,C/UTIL,3000,OKC@BOS 03/25/2026 07:30PM ET,OKC,0
+,,,,,,,,,,,,,C,Kentavious Caldwell-Pope (42398867),Kentavious Caldwell-Pope,42398867,SG/G/UTIL,3000,SAS@MEM 03/25/2026 08:00PM ET,MEM,17.48
+,,,,,,,,,,,,,PG,Santi Aldama (42398906),Santi Aldama,42398906,C/UTIL,3000,SAS@MEM 03/25/2026 08:00PM ET,MEM,30.25
+,,,,,,,,,,,,,PF,Kelly Olynyk (42398922),Kelly Olynyk,42398922,PF/C/F/UTIL,3000,SAS@MEM 03/25/2026 08:00PM ET,SAS,8.05
+,,,,,,,,,,,,,PG/SG,Jordan McLaughlin (42398926),Jordan McLaughlin,42398926,PG/G/UTIL,3000,SAS@MEM 03/25/2026 08:00PM ET,SAS,5.26
+,,,,,,,,,,,,,SG/SF,Lindy Waters III (42398931),Lindy Waters III,42398931,SG/G/UTIL,3000,SAS@MEM 03/25/2026 08:00PM ET,SAS,4.6
+,,,,,,,,,,,,,PG/SG,Bismack Biyombo (42399002),Bismack Biyombo,42399002,C/UTIL,3000,SAS@MEM 03/25/2026 08:00PM ET,SAS,2.73
+,,,,,,,,,,,,,PG,Mason Plumlee (42399017),Mason Plumlee,42399017,C/UTIL,3000,SAS@MEM 03/25/2026 08:00PM ET,SAS,7.15
+,,,,,,,,,,,,,SG,Zach Edey (42399038),Zach Edey,42399038,C/UTIL,3000,SAS@MEM 03/25/2026 08:00PM ET,MEM,33.77
+,,,,,,,,,,,,,SF/PF,David Jones-Garcia (42399046),David Jones-Garcia,42399046,PG/G/UTIL,3000,SAS@MEM 03/25/2026 08:00PM ET,SAS,8.02
+,,,,,,,,,,,,,C,Scotty Pippen Jr. (42399052),Scotty Pippen Jr.,42399052,PG/G/UTIL,3000,SAS@MEM 03/25/2026 08:00PM ET,MEM,24.95
+,,,,,,,,,,,,,SF/PF,Harrison Ingram (42399089),Harrison Ingram,42399089,SF/F/UTIL,3000,SAS@MEM 03/25/2026 08:00PM ET,SAS,2.95
+,,,,,,,,,,,,,PF/C,Emanuel Miller (42399092),Emanuel Miller,42399092,SF/F/UTIL,3000,SAS@MEM 03/25/2026 08:00PM ET,SAS,5.95
+,,,,,,,,,,,,,PF/C,Brandon Clarke (42399115),Brandon Clarke,42399115,C/UTIL,3000,SAS@MEM 03/25/2026 08:00PM ET,MEM,10.5
+,,,,,,,,,,,,,C,Jaren Jackson Jr. (42398883),Jaren Jackson Jr.,42398883,C/UTIL,3000,WAS@UTA 03/25/2026 09:00PM ET,UTA,34.35
+,,,,,,,,,,,,,SG/SF,Svi Mykhailiuk (42398885),Svi Mykhailiuk,42398885,SG/SF/F/G/UTIL,3000,WAS@UTA 03/25/2026 09:00PM ET,UTA,16.69
+,,,,,,,,,,,,,C,Jusuf Nurkic (42398916),Jusuf Nurkic,42398916,C/UTIL,3000,WAS@UTA 03/25/2026 09:00PM ET,UTA,34.52
+,,,,,,,,,,,,,C,Kevin Love (42398929),Kevin Love,42398929,C/UTIL,3000,WAS@UTA 03/25/2026 09:00PM ET,UTA,18.32
+,,,,,,,,,,,,,PG,D'Angelo Russell (42398975),D'Angelo Russell,42398975,PG/G/UTIL,3000,WAS@UTA 03/25/2026 09:00PM ET,WAS,19.91
+,,,,,,,,,,,,,SF,Cam Whitmore (42399008),Cam Whitmore,42399008,SF/F/UTIL,3000,WAS@UTA 03/25/2026 09:00PM ET,WAS,15.86
+,,,,,,,,,,,,,C,Walker Kessler (42399070),Walker Kessler,42399070,C/UTIL,3000,WAS@UTA 03/25/2026 09:00PM ET,UTA,38.4
+,,,,,,,,,,,,,C,Julian Reese (42399087),Julian Reese,42399087,C/UTIL,3000,WAS@UTA 03/25/2026 09:00PM ET,WAS,25.55
