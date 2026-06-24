@@ -14,6 +14,11 @@ def main():
         help="Run late swap re-optimization instead of full generation.",
     )
     parser.add_argument(
+        "--simulate",
+        action="store_true",
+        help="Run Monte Carlo lineup simulation after ranking (writes sim-lineup-metrics-*.csv).",
+    )
+    parser.add_argument(
         "-n",
         "--num_lineups",
         type=int,

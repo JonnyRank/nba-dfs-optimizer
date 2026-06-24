@@ -18,6 +18,7 @@ def main():
     parser = GooeyParser(description="NBA DFS Optimizer - Main Orchestrator")
 
     parser.add_argument("--late_swap", action="store_true", help="Run late swap re-optimization instead of full generation.")
+    parser.add_argument("--simulate", action="store_true", help="Run Monte Carlo lineup simulation after ranking.")
     parser.add_argument("-n", "--num_lineups", type=int, default=2500, help="Number of lineups to generate (Default: 2500)")
     parser.add_argument("-r", "--randomness", type=float, default=0.25, help="Randomness factor 0.0-1.0 (Default: 0.25)")
     parser.add_argument("-u", "--min_unique", type=int, default=1, help="Min unique players between lineups (Default: 1)")
