@@ -30,8 +30,8 @@ UNFILLED_ENTRIES = FIXTURES / "unfilled-DKEntries.csv"
 PROJS_SAMPLE = FIXTURES / "NBA-Projs-sample.csv"
 
 # IDs drawn from the fixtures (03-25 slate).
-LUKA = "42398185"          # locked, "In Progress" (LAL vs IND)
-BAM = "42398223"           # locked, matchup intact (MIA vs CLE)
+LUKA = "42398185"          # locked, "In Progress" (LAL game underway)
+BAM = "42398223"           # not locked, matchup intact (MIA@CLE not yet started)
 WEMBY = "42398188"         # not locked, future game (SAS vs MEM)
 
 
@@ -75,17 +75,16 @@ def test_load_data_detects_locks_in_pool_and_resolves_in_progress_games():
 
     # (LOCKED) is carried in the pool's own "Name + ID", not only the entries.
     assert is_player_locked(by_id.loc[LUKA, "Name + ID"])
-    assert is_player_locked(by_id.loc[BAM, "Name + ID"])
+    assert not is_player_locked(by_id.loc[BAM, "Name + ID"])
     assert not is_player_locked(by_id.loc[WEMBY, "Name + ID"])
 
-    # The previously-collapsing "In Progress" player now resolves to its real,
-    # distinct game via the projections team/opponent pair -- the whole point.
+    # "In Progress" players resolve to their real game via projections team/opponent.
     assert by_id.loc[LUKA, "Game Info"] == "In Progress"
     assert by_id.loc[LUKA, "Game"] == "IND@LAL"
     assert by_id.loc[BAM, "Game"] == "CLE@MIA"
     assert by_id.loc[WEMBY, "Game"] == "MEM@SAS"
-    # Two in-progress locked players from different real games stay distinct
-    # (the old Game-Info split bucketed both as "In").
+    # An in-progress game and an upcoming game resolve to distinct keys
+    # (the old Game-Info split would bucket both "In Progress" games identically).
     assert by_id.loc[LUKA, "Game"] != by_id.loc[BAM, "Game"]
 
 
