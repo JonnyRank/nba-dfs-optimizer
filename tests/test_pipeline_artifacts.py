@@ -42,9 +42,9 @@ def _make_config(tmp_path) -> Config:
 def _build_projs_csv(path: str) -> None:
     """Write a minimal projections CSV with the columns ranker/engine expects.
 
-    Note: do NOT include 'Game Info' here — that column comes from the DKEntries
-    player pool section. Including it would cause pandas to suffix-rename it in
-    the merge (Game Info_x / Game Info_y) and break engine.load_data.
+    DK-owned columns (Salary, Position, Game Info, etc.) are intentionally
+    omitted — merge_player_pool drops those from df_projs before merging and
+    uses the DKEntries values as authoritative.
     """
     df = pd.DataFrame(
         [

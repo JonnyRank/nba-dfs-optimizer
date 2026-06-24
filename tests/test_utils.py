@@ -98,7 +98,7 @@ _PROJS_CONTENT = textwrap.dedent("""\
 @pytest.fixture()
 def dk_entries_file(tmp_path):
     p = tmp_path / "DKEntries.csv"
-    p.write_text(_DKENTRIES_CONTENT)
+    p.write_text(_DKENTRIES_CONTENT, encoding="utf-8")
     return str(p)
 
 
@@ -196,6 +196,10 @@ def test_late_swap_style_output_has_game_column(dk_entries_file, projs_df):
     # Alice has Team=AAA, Opponent=BBB from projs → canonical key is "AAA@BBB"
     alice = df[df["ID"] == "1"].iloc[0]
     assert alice["Game"] == "AAA@BBB"
+    # Bob has no projection match → Team/Opponent are NaN; derive_game_key falls
+    # back to the Game Info regex to extract "AAA@BBB"
+    bob = df[df["ID"] == "2"].iloc[0]
+    assert bob["Game"] == "AAA@BBB"
 
 
 def test_merge_player_pool_normalizes_float_projs_ids(dk_entries_file):
