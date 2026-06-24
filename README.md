@@ -128,3 +128,18 @@ Run a focused subset:
 ```bash
 python -m pytest tests/test_engine_constraints.py tests/test_utils.py -q
 ```
+
+The suite also covers late-swap lock handling and enforced minimum games
+(`tests/test_late_swap.py`) and explicit artifact handoff between pipeline stages
+(`tests/test_pipeline_artifacts.py`).
+
+## Development Notes
+
+- **Shared data loading.** DKEntries and projection parsing is consolidated in
+  `src/nba_optimizer/utils.py` (`parse_dk_entries`, `merge_player_pool`) and shared by the
+  engine, ranker, and late swapper. The engine and ranker merge the player pool with an inner
+  join; the late swapper uses a left join and derives the matchup `Game` column itself.
+- **Claude Code on the web.** A `SessionStart` hook (`.claude/hooks/session-start.sh`, wired in
+  `.claude/settings.json`) bootstraps a `.venv` and installs `pip install -e .[dev]` for remote
+  cloud sessions. It runs only when `CLAUDE_CODE_REMOTE=true` and is a no-op on local machines,
+  so local development is unaffected.
