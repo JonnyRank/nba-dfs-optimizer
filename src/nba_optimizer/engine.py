@@ -13,7 +13,7 @@ import pandas as pd
 import pulp
 
 from .config import Config, ROSTER_SLOTS
-from .utils import get_latest_file, merge_player_pool, parse_dk_entries, parse_game_time
+from .utils import get_latest_file, merge_player_pool, parse_dk_entries
 
 
 # --- DATA LOADING ---
@@ -22,14 +22,10 @@ from .utils import get_latest_file, merge_player_pool, parse_dk_entries, parse_g
 def load_data(projs_file: str, entries_file: str) -> pd.DataFrame:
     df_players = parse_dk_entries(entries_file)
     df_projs = pd.read_csv(projs_file)
-    df_pool = merge_player_pool(df_players, df_projs, how="inner")
-    df_pool["StartTime"] = df_pool["Game Info"].apply(parse_game_time)
-    # The pre-lock pipeline always has real matchup strings here (no "In
-    # Progress" games), so the raw split is sufficient. This intentionally
-    # diverges from late_swapper.load_data, which must use derive_game_key to
-    # recover started games from the team/opponent pair.
-    df_pool["Game"] = df_pool["Game Info"].str.split(" ").str[0]
-    return df_pool
+    # derive_time_game=True adds StartTime and Game via the simple pre-lock split.
+    # late_swapper.load_data instead calls _attach_game_column (derive_game_key)
+    # to recover started games whose Game Info has become "In Progress".
+    return merge_player_pool(df_players, df_projs, how="inner", derive_time_game=True)
 
 
 # --- WORKER FUNCTION (MUST BE TOP-LEVEL) ---

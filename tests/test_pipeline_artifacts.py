@@ -14,6 +14,7 @@ No LP solving or multiprocessing is involved.
 """
 
 import os
+import shutil
 import textwrap
 from dataclasses import replace
 
@@ -21,6 +22,21 @@ import pandas as pd
 import pytest
 
 from nba_optimizer.config import Config, ROSTER_SLOTS
+
+FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "fixtures")
+
+# Eight real players from the unfilled-DKEntries.csv fixture, one per DK slot.
+# Their IDs exist in that file; their Roster Positions make each slot assignment valid.
+_LINEUP = [
+    "Luka Doncic (42398185)",       # PG  — PG/G/UTIL
+    "Anthony Edwards (42398202)",   # SG  — SG/G/UTIL
+    "Jaylen Brown (42398210)",      # SF  — SG/SF/F/G/UTIL
+    "Jalen Johnson (42398193)",     # PF  — PF/F/UTIL
+    "Victor Wembanyama (42398188)", # C   — C/UTIL
+    "Cade Cunningham (42398190)",   # G   — PG/G/UTIL
+    "Julius Randle (42398237)",     # F   — PF/F/UTIL
+    "Joel Embiid (42398208)",       # UTIL — C/UTIL
+]
 
 
 # ---------------------------------------------------------------------------
@@ -40,85 +56,46 @@ def _make_config(tmp_path) -> Config:
 
 
 def _build_projs_csv(path: str) -> None:
-    """Write a minimal projections CSV with the columns ranker/engine expects.
+    """Write a projections CSV for the 8 real players used in lineup pool fixtures.
 
-    DK-owned columns (Salary, Position, Game Info, etc.) are intentionally
-    omitted — merge_player_pool drops those from df_projs before merging and
-    uses the DKEntries values as authoritative.
+    Uses IDs that exist in the unfilled-DKEntries.csv fixture. DK-owned columns
+    (Salary, Position, Game Info, etc.) are omitted — merge_player_pool drops
+    those from df_projs and uses the DKEntries values as authoritative.
     """
+    players = [
+        ("42398185", "Luka Doncic",           40.0, 20.0),
+        ("42398202", "Anthony Edwards",        39.0, 18.0),
+        ("42398210", "Jaylen Brown",           38.0, 15.0),
+        ("42398193", "Jalen Johnson",          37.0, 14.0),
+        ("42398188", "Victor Wembanyama",      36.0, 12.0),
+        ("42398190", "Cade Cunningham",        35.0, 10.0),
+        ("42398237", "Julius Randle",          34.0, 8.0),
+        ("42398208", "Joel Embiid",            33.0, 6.0),
+    ]
     df = pd.DataFrame(
-        [
-            {"ID": "1", "Name": "PG1", "Projection": 40.0, "Own_Proj": 20.0},
-            {"ID": "2", "Name": "SG1", "Projection": 39.0, "Own_Proj": 18.0},
-            {"ID": "3", "Name": "SF1", "Projection": 38.0, "Own_Proj": 15.0},
-            {"ID": "4", "Name": "PF1", "Projection": 37.0, "Own_Proj": 14.0},
-            {"ID": "5", "Name": "C1",  "Projection": 36.0, "Own_Proj": 12.0},
-            {"ID": "6", "Name": "G1",  "Projection": 35.0, "Own_Proj": 10.0},
-            {"ID": "7", "Name": "F1",  "Projection": 34.0, "Own_Proj": 8.0},
-            {"ID": "8", "Name": "U1",  "Projection": 33.0, "Own_Proj": 6.0},
-        ]
+        [{"ID": pid, "Name": name, "Projection": proj, "Own_Proj": own}
+         for pid, name, proj, own in players]
     )
     os.makedirs(os.path.dirname(path), exist_ok=True)
     df.to_csv(path, index=False)
 
 
 def _build_dkentries_csv(path: str) -> None:
-    """Write a DKEntries CSV that works for both exporter and the shared loader.
-
-    The real DraftKings DKEntries.csv has two sections:
-    - Row 0: entry header (Entry ID, Contest Name, ..., roster slots)
-    - Rows 1-N: filled entry rows
-    - Rows N+1+: player-pool section beginning with a header that contains
-      "Position,Name + ID,Name,ID" (the sentinel ``parse_dk_entries`` searches for)
-
-    ``exporter`` uses ``read_ragged_csv`` which reads row 0 as the header.
-    ``parse_dk_entries`` (used by engine, late_swapper, and ranker) scans for
-    the sentinel line and reads from there onward.
-    """
-    slots = list(ROSTER_SLOTS)
-    slot_header = ",".join(slots)
-    empty_slots = ",".join([""] * len(slots))
-
-    # Player pool header must contain "Position,Name + ID,Name,ID" exactly so
-    # that parse_dk_entries can locate the section.  The real DK format is:
-    # Position, Name + ID, Name, ID, Roster Position, Salary, Game Info, ...
-    player_rows = "\n".join([
-        "PG,PG1 (1),PG1,1,PG,6200,GAMEA@GAMEB 01/01/2026 07:00PM ET",
-        "SG,SG1 (2),SG1,2,SG,6200,GAMEA@GAMEB 01/01/2026 07:00PM ET",
-        "SF,SF1 (3),SF1,3,SF,6200,GAMEA@GAMEB 01/01/2026 07:00PM ET",
-        "PF,PF1 (4),PF1,4,PF,6200,GAMEA@GAMEB 01/01/2026 07:00PM ET",
-        "C,C1 (5),C1,5,C,6200,GAMEA@GAMEB 01/01/2026 07:00PM ET",
-        "PG,G1 (6),G1,6,PG/SG,6200,GAMEC@GAMED 01/01/2026 09:00PM ET",
-        "SF,F1 (7),F1,7,SF/PF,6200,GAMEC@GAMED 01/01/2026 09:00PM ET",
-        "C,U1 (8),U1,8,C,6200,GAMEC@GAMED 01/01/2026 09:00PM ET",
-    ])
-
-    content = (
-        f"Entry ID,Contest Name,Contest ID,Entry Fee,{slot_header}\n"
-        f"111111,Main Slate,999999,3,{empty_slots}\n"
-        f"222222,Main Slate,999999,3,{empty_slots}\n"
-        + "Position,Name + ID,Name,ID,Roster Position,Salary,Game Info\n"
-        + player_rows + "\n"
-    )
+    """Copy the real unfilled DKEntries fixture to path."""
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w", encoding="utf-8") as fh:
-        fh.write(content)
+    shutil.copy(os.path.join(FIXTURES_DIR, "unfilled-DKEntries.csv"), path)
 
 
 def _build_lineup_pool_csv(path: str) -> None:
-    """Write a two-lineup pool CSV in the format engine produces."""
+    """Write a two-lineup pool CSV using real player IDs from the DKEntries fixture."""
     slots = list(ROSTER_SLOTS)
-    rows = [
-        ["PG1 (1)", "SG1 (2)", "SF1 (3)", "PF1 (4)", "C1 (5)", "G1 (6)", "F1 (7)", "U1 (8)"],
-        ["PG1 (1)", "SG1 (2)", "SF1 (3)", "PF1 (4)", "C1 (5)", "G1 (6)", "F1 (7)", "U1 (8)"],
-    ]
-    df = pd.DataFrame(rows, columns=slots)
+    df = pd.DataFrame([_LINEUP, _LINEUP], columns=slots)
     os.makedirs(os.path.dirname(path), exist_ok=True)
     df.to_csv(path, index=False)
 
 
 def _build_ranked_lineups_csv(path: str) -> None:
-    """Write a minimal ranked-lineups CSV in the format ranker produces."""
+    """Write a minimal ranked-lineups CSV using real player IDs from the DKEntries fixture."""
     slots = list(ROSTER_SLOTS)
     row = {
         "Final_Rank": 1,
@@ -130,8 +107,8 @@ def _build_ranked_lineups_csv(path: str) -> None:
         "Own_Rank": 1.0,
         "Geo_Rank": 1.0,
     }
-    for i, slot in enumerate(slots):
-        row[slot] = f"Player{i + 1} ({i + 1})"
+    for slot, player in zip(slots, _LINEUP):
+        row[slot] = player
     df = pd.DataFrame([row])
     os.makedirs(os.path.dirname(path), exist_ok=True)
     df.to_csv(path, index=False)
@@ -140,10 +117,10 @@ def _build_ranked_lineups_csv(path: str) -> None:
 def _build_export_csv(path: str) -> None:
     """Write a minimal upload-ready export CSV for exposure_report tests."""
     slots = list(ROSTER_SLOTS)
-    players = [f"Player{i + 1} ({i + 1})" for i in range(len(slots))]
-    row = {"Entry ID": "111111", "Contest Name": "Main Slate",
-           "Contest ID": "999999", "Entry Fee": "3"}
-    for slot, player in zip(slots, players):
+    row = {"Entry ID": "5096367541",
+           "Contest Name": "NBA $20K Four Point Play [20 Entry Max]",
+           "Contest ID": "189162278", "Entry Fee": "$4"}
+    for slot, player in zip(slots, _LINEUP):
         row[slot] = player
     df = pd.DataFrame([row])
     os.makedirs(os.path.dirname(path), exist_ok=True)

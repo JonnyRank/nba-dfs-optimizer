@@ -145,23 +145,29 @@ def parse_dk_entries(entries_file: str) -> pd.DataFrame:
 
 
 def merge_player_pool(
-    df_players: pd.DataFrame, df_projs: pd.DataFrame, how: Literal["inner", "left"]
+    df_players: pd.DataFrame, df_projs: pd.DataFrame, how: Literal["inner", "left"],
+    derive_time_game: bool = False,
 ) -> pd.DataFrame:
     """Merge a parsed player-pool DataFrame with a projections DataFrame.
 
     Normalizes ``ID`` on the projections side before merging. After the
-    merge, casts ``Salary`` to numeric and, for ``how="left"`` merges,
-    fills any missing ``Projection`` values with 0 (retaining current-
-    lineup players who have no projection entry).
+    merge, casts ``Salary`` to numeric and raises ``ValueError`` if any
+    player ends up with a missing ``Projection`` (guards against accidental
+    deletion of a player from the projections sheet).
 
     Args:
         df_players: Output of ``parse_dk_entries``.
         df_projs: Raw projections CSV loaded via ``pd.read_csv``.
-        how: ``"inner"`` for engine (only projected players) or
-            ``"left"`` for late-swap (retain all pool players).
+        how: ``"inner"`` for engine/ranker (only projected players) or
+            ``"left"`` for late-swap (all pool players; a player missing
+            from projections is a data error and will raise).
+        derive_time_game: When ``True``, add ``StartTime`` and ``Game``
+            columns from ``Game Info`` using the simple pre-lock split
+            (suitable for engine and ranker; not for late-swap, which uses
+            ``derive_game_key`` to handle in-progress games).
 
     Returns:
-        Merged DataFrame ready for column-level additions (StartTime, Game).
+        Merged DataFrame ready for use by the caller.
     """
     # Drop DK-owned columns from projs to avoid _x/_y suffix collisions;
     # df_players (from DKEntries) is authoritative for these values.
@@ -178,6 +184,16 @@ def merge_player_pool(
     df_merged["Salary"] = pd.to_numeric(df_merged["Salary"])
     if "Projection" in df_merged.columns:
         df_merged["Projection"] = pd.to_numeric(df_merged["Projection"])
-        if how == "left":
-            df_merged["Projection"] = df_merged["Projection"].fillna(0)
+        missing = df_merged.loc[df_merged["Projection"].isna(), "Name + ID"].tolist()
+        if missing:
+            raise ValueError(
+                f"Missing projections for {len(missing)} player(s): {missing}"
+            )
+    if derive_time_game:
+        if "Game Info" not in df_merged.columns:
+            raise ValueError(
+                "Cannot derive StartTime/Game: 'Game Info' column missing from merged pool"
+            )
+        df_merged["StartTime"] = df_merged["Game Info"].apply(parse_game_time)
+        df_merged["Game"] = df_merged["Game Info"].str.split(" ").str[0]
     return df_merged

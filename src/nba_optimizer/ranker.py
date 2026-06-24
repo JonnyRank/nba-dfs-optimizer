@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 from .config import Config, ROSTER_SLOTS
-from .utils import get_latest_file, merge_player_pool, parse_dk_entries, parse_game_time
+from .utils import get_latest_file, merge_player_pool, parse_dk_entries
 
 
 def load_data(lineup_file: str, projs_file: str, cfg: Config) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -16,9 +16,7 @@ def load_data(lineup_file: str, projs_file: str, cfg: Config) -> tuple[pd.DataFr
     df_lineups = pd.read_csv(lineup_file)
     df_projs = pd.read_csv(projs_file)
     df_players = parse_dk_entries(cfg.entries_path)
-    df_merged = merge_player_pool(df_players, df_projs, how="inner")
-    df_merged["StartTime"] = df_merged["Game Info"].apply(parse_game_time)
-    df_merged["Game"] = df_merged["Game Info"].str.split(" ").str[0]
+    df_merged = merge_player_pool(df_players, df_projs, how="inner", derive_time_game=True)
     return df_lineups, df_merged
 
 

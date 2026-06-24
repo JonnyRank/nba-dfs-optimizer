@@ -137,21 +137,16 @@ def test_merge_player_pool_inner_drops_unmatched_players(projs_df):
     assert df.iloc[0]["Projection"] == 42.0
 
 
-def test_merge_player_pool_left_retains_unmatched_with_zero_projection(projs_df):
-    """left merge keeps pool players missing from projections; Projection becomes 0."""
+def test_merge_player_pool_left_raises_for_unmatched_player(projs_df):
+    """left merge raises ValueError when a pool player has no projection entry."""
     df_players = pd.DataFrame([
         {"ID": "1", "Name + ID": "Alice (1)", "Roster Position": "PG",
          "Salary": "6200", "Game Info": "AAA@BBB 01/01/2026 07:00PM ET"},
         {"ID": "2", "Name + ID": "Bob (2)", "Roster Position": "SG",
          "Salary": "5800", "Game Info": "AAA@BBB 01/01/2026 07:00PM ET"},
     ])
-    df = merge_player_pool(df_players, projs_df, how="left")
-    # Both players retained
-    assert len(df) == 2
-    alice = df[df["ID"] == "1"].iloc[0]
-    bob = df[df["ID"] == "2"].iloc[0]
-    assert alice["Projection"] == 42.0
-    assert bob["Projection"] == 0.0
+    with pytest.raises(ValueError, match="Missing projections"):
+        merge_player_pool(df_players, projs_df, how="left")
 
 
 def test_merge_player_pool_salary_is_numeric(projs_df):
@@ -165,13 +160,9 @@ def test_merge_player_pool_salary_is_numeric(projs_df):
 
 
 def test_engine_style_output_has_start_time_and_game_columns(dk_entries_file, projs_df):
-    """Engine-style load (inner + simple split) produces StartTime and Game columns."""
-    from nba_optimizer.utils import parse_game_time
-
+    """Engine-style load (inner + derive_time_game=True) produces StartTime and Game columns."""
     df_players = parse_dk_entries(dk_entries_file)
-    df = merge_player_pool(df_players, projs_df, how="inner")
-    df["StartTime"] = df["Game Info"].apply(parse_game_time)
-    df["Game"] = df["Game Info"].str.split(" ").str[0]
+    df = merge_player_pool(df_players, projs_df, how="inner", derive_time_game=True)
 
     assert "StartTime" in df.columns
     assert "Game" in df.columns
@@ -179,12 +170,23 @@ def test_engine_style_output_has_start_time_and_game_columns(dk_entries_file, pr
     assert df.iloc[0]["StartTime"] == datetime(2026, 1, 1, 19, 0)
 
 
-def test_late_swap_style_output_has_game_column(dk_entries_file, projs_df):
-    """Late-swap-style load (left + derive_game_key) produces a Game column."""
+def test_late_swap_style_output_has_game_column(dk_entries_file):
+    """Late-swap-style load (left + derive_game_key) produces a Game column.
+
+    When projections lack Team/Opponent columns (the old 3-column format),
+    derive_game_key falls back to Game Info to build the canonical game key.
+    Both players here have projections (a missing projection now raises ValueError),
+    but neither has Team/Opponent in the projections file, so the fallback path runs.
+    """
     from nba_optimizer.utils import derive_game_key
 
     df_players = parse_dk_entries(dk_entries_file)
-    df = merge_player_pool(df_players, projs_df, how="left")
+    df_projs_minimal = pd.read_csv(io.StringIO(textwrap.dedent("""\
+        ID,Name,Projection,Own_Proj
+        1,Alice,42.0,25.0
+        2,Bob,35.0,18.0
+    """)))
+    df = merge_player_pool(df_players, df_projs_minimal, how="left")
 
     n = len(df)
     team_series = df["Team"] if "Team" in df.columns else pd.Series([None] * n, index=df.index)
@@ -193,13 +195,31 @@ def test_late_swap_style_output_has_game_column(dk_entries_file, projs_df):
     df["Game"] = [derive_game_key(t, o, gi) for t, o, gi in zip(team_series, opp_series, gi_series)]
 
     assert "Game" in df.columns
-    # Alice has Team=AAA, Opponent=BBB from projs → canonical key is "AAA@BBB"
+    # Team/Opponent not in projs → derive_game_key extracts "AAA@BBB" from Game Info
     alice = df[df["ID"] == "1"].iloc[0]
     assert alice["Game"] == "AAA@BBB"
-    # Bob has no projection match → Team/Opponent are NaN; derive_game_key falls
-    # back to the Game Info regex to extract "AAA@BBB"
     bob = df[df["ID"] == "2"].iloc[0]
     assert bob["Game"] == "AAA@BBB"
+
+
+def test_parse_dk_entries_parses_real_dkentries_format():
+    """parse_dk_entries correctly parses the real side-by-side DKEntries format.
+
+    The real DK file has entry rows and player-pool columns side-by-side in the
+    same rows (different column ranges), not stacked vertically. The sentinel scan
+    must find the player-pool header wherever it appears within a line, not just
+    at the start of a line.
+    """
+    real_path = os.path.join(FIXTURES_DIR, "unfilled-DKEntries.csv")
+    df = parse_dk_entries(real_path)
+    assert len(df) > 100
+    assert "Name + ID" in df.columns
+    assert "ID" in df.columns
+    assert "Roster Position" in df.columns
+    assert "Salary" in df.columns
+    assert "Game Info" in df.columns
+    assert df["ID"].notna().all()
+    assert df["ID"].str.match(r"^\d+$").all()
 
 
 def test_merge_player_pool_normalizes_float_projs_ids(dk_entries_file):
