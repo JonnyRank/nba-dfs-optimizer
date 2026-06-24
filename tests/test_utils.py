@@ -98,7 +98,7 @@ _PROJS_CONTENT = textwrap.dedent("""\
 @pytest.fixture()
 def dk_entries_file(tmp_path):
     p = tmp_path / "DKEntries.csv"
-    p.write_text(_DKENTRIES_CONTENT, encoding="utf-8")
+    p.write_text(_DKENTRIES_CONTENT, encoding="utf-8-sig")
     return str(p)
 
 
