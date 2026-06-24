@@ -163,17 +163,17 @@ def merge_player_pool(
     Returns:
         Merged DataFrame ready for column-level additions (StartTime, Game).
     """
-    df_projs = df_projs.copy()
-    # Normalize projs ID the same way as parse_dk_entries: if any ID is NaN,
-    # pandas reads the column as float64 and astype(str) would give "12345.0",
-    # which would silently fail to match the "12345" IDs from parse_dk_entries.
-    df_projs["ID"] = df_projs["ID"].astype(str).str.split(".").str[0]
-    # Drop DK-owned columns from projs to avoid _x/_y suffix collisions.
+    # Drop DK-owned columns from projs to avoid _x/_y suffix collisions;
     # df_players (from DKEntries) is authoritative for these values.
+    # .drop() returns a new DataFrame, so no explicit .copy() is needed.
     df_projs = df_projs.drop(
         columns=["Name", "Salary", "Position", "Roster Position", "Game Info"],
         errors="ignore",
     )
+    # Normalize projs ID the same way as parse_dk_entries: if any ID is NaN,
+    # pandas reads the column as float64 and astype(str) would give "12345.0",
+    # which would silently fail to match the "12345" IDs from parse_dk_entries.
+    df_projs["ID"] = df_projs["ID"].astype(str).str.split(".").str[0]
     df_merged = pd.merge(df_players, df_projs, on="ID", how=how)
     df_merged["Salary"] = pd.to_numeric(df_merged["Salary"])
     if "Projection" in df_merged.columns:
