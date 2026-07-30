@@ -37,6 +37,11 @@ class Config:
     ranked_lineup_dir: str = field(default="")
     output_dir: str = "exports"
 
+    # --- SIMULATION SETTINGS (Phase 1) ---
+    sim_iterations: int = 10000
+    sim_stddev_factor: float = 0.25
+    sim_seed: int | None = None
+
     def __post_init__(self):
         """Derive computed paths after initialization."""
         # Only override if not explicitly set

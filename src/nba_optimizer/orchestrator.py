@@ -1,6 +1,6 @@
 from dataclasses import replace
 
-from . import engine, exporter, exposure_report, late_swapper, ranker
+from . import engine, exporter, exposure_report, late_swapper, ranker, simulator
 from .config import load_config_from_env
 
 
@@ -46,6 +46,14 @@ def run_pipeline(args):
     if not ranked_file:
         print("Error: Lineup ranking failed. Aborting pipeline.")
         return
+
+    if args.simulate:
+        print("\n--- Phase 2.5: Simulating Lineups (Monte Carlo) ---")
+        simulator.run(
+            config,
+            iterations=config.sim_iterations,
+            seed=config.sim_seed,
+        )
 
     print("\n--- Phase 3: Exporting to DraftKings CSV ---")
     export_file = exporter.run(

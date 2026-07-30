@@ -16,8 +16,9 @@ The project follows a modular pipeline orchestrated by the `nba-dfs-optimizer` c
 
 1.  **Engine (`engine.py`):** Generates a pool of candidate lineups in parallel using randomness to explore the solution space while ensuring uniqueness.
 2.  **Ranker (`ranker.py`):** Scores the generated pool based on user-defined weights for projections and ownership.
-3.  **Exporter (`exporter.py`):** Maps the top-ranked lineups into a DraftKings-compatible template and saves it to your folder of choice.
-4.  **Exposure Report (`exposure_report.py`):** Analyzes the exported lineups to calculate player exposures, projected ownership, and leverage.
+3.  **Simulator (`simulator.py`, optional):** Runs Monte Carlo simulation on the ranked lineup pool to estimate mean/ceiling and within-pool top-1%/top-10% rates under uncertainty.
+4.  **Exporter (`exporter.py`):** Maps the top-ranked lineups into a DraftKings-compatible template and saves it to your folder of choice.
+5.  **Exposure Report (`exposure_report.py`):** Analyzes the exported lineups to calculate player exposures, projected ownership, and leverage.
 
 ## Installation
 
@@ -68,7 +69,19 @@ nba-dfs-optimizer -n 2000 -mp 12 -r 0.25 -pw 0.8 -gw 0.2 -t 25
 | `--own_weight` | `-ow` | 0.0 | Weight for the Total Ownership Rank. |
 | `--geo_weight` | `-gw` | 0.2 | Weight for the Geomean Ownership Rank. |
 | `--top_x` | `-t` | 25 | Display only top X exposed players in report (Use 0 to display all players used in export). |
+| `--simulate` | | False | Run Monte Carlo lineup simulation after ranking (writes `sim-lineup-metrics-*.csv`). |
 | `--late_swap` | | False | Run late swap re-optimization instead of full generation. |
+
+### Simulator (`simulator.py`)
+Runs a Monte Carlo simulation on a lineup pool (ranked or unranked) and writes `sim-lineup-metrics-*.csv` to your `NBA_OUTPUT_DIR` (defaults to `exports/`).
+
+```bash
+# Run as part of the full pipeline
+nba-dfs-optimizer --simulate
+
+# Run standalone against the latest ranked/lineup pool file
+python -m nba_optimizer.simulator
+```
 
 ### Exposure Report (`exposure_report.py`)
 Generates a detailed breakdown of player exposures from your latest export, comparing your exposure to projected ownership to identify leverage points. This report is automatically generated at the end of an `nba-dfs-optimizer` run, but can also be run standalone:
