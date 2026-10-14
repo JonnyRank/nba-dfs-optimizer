@@ -470,9 +470,14 @@ block (current lines 256–345) with logic of this shape. Keep every existing
 
 Then keep the timer/"Total candidates" print, and change the
 uniqueness filter to iterate the new tuple shape, storing already-slotted
-lineups directly:
+lineups directly. Declare `final_lineups = []` alongside
+`selected_indices_list` and `duplicates_removed` **before** the loop (today it
+is declared after the filter, at line 332):
 
 ```python
+        final_lineups = []
+        selected_indices_list = []
+        duplicates_removed = 0
         for positions, slotted in candidates:
             if len(final_lineups) >= target_lineups:
                 break
