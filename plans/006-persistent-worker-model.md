@@ -7,7 +7,7 @@
 > in `plans/README.md` — unless a reviewer dispatched you and told you they
 > maintain the index.
 >
-> **Drift check (run first)**: `git diff --stat 29809ed..HEAD -- src/nba_optimizer/engine.py tests/test_engine_constraints.py docs/codebase/ARCHITECTURE.md docs/codebase/CONCERNS.md AGENTS.md`
+> **Drift check (run first)**: `git diff --stat 29809ed..HEAD -- src/nba_optimizer/engine.py tests/test_engine_constraints.py docs/codebase/ARCHITECTURE.md docs/codebase/CONCERNS.md docs/codebase/TESTING.md AGENTS.md src/nba_optimizer/gui.py`
 > If any in-scope file changed since this plan was written, compare the
 > "Current state" excerpts against the live code before proceeding; on a
 > mismatch, treat it as a STOP condition.
@@ -20,6 +20,7 @@
 - **Depends on**: none (plans 001 and 004 are already DONE; this builds on their tests and loader)
 - **Category**: perf
 - **Planned at**: commit `29809ed`, 2026-10-14
+- **Reviewed at**: commit `4784083`, 2026-10-14 — the plan's Step 1/3/4 code was applied to a scratch copy of `engine.py` and run: all 5 new test scenarios pass and the benchmark below was reproduced (see "Why this matters")
 - **Issue**: https://github.com/JonnyRank/nba-dfs-optimizer/issues/58
 
 ## Why this matters
@@ -45,8 +46,21 @@ MIP **once per worker** and re-solves it by swapping only the objective
 (prototype measured 162 ms → 82 ms per lineup with an identical optimal
 objective), (3) slots lineups inside the worker so the second pool
 disappears, (4) sends tasks as a small integer batch size and returns
-tuples of ints + 8 strings, and (5) caps OpenBLAS threads in workers. Baseline
-for the benchmark below: **500 lineups, wall 18.09 s** on that machine.
+tuples of ints + 8 strings, and (5) caps OpenBLAS threads in workers.
+
+End-to-end measurements of exactly the code in this plan (same machine,
+benchmark script from Step 0):
+
+| Lineups | Current `engine.run` wall | This plan wall | Ratio |
+|---|---|---|---|
+| 500 | 15.4 s / 17.9 s (two runs; noisy) | 10.9 s / 10.8 s | ≈ 0.70 (best vs best) |
+| 2500 | 76.0 s | 50.5 s | ≈ 0.66 |
+
+Per-lineup solve time in-process, single thread: ~170 ms (PuLP path) vs
+~141 ms (persistent model). The end-to-end gain is larger than that; the
+remainder is attributed (not individually measured) to `threads=1` per
+worker avoiding solver-thread oversubscription, the removed second pool,
+and the one-time data transfer.
 
 ## Current state
 
@@ -56,6 +70,7 @@ Files:
 - `tests/test_engine_constraints.py` — deterministic LP-constraint tests calling `generate_single_lineup` directly with `randomness=0.0` on hand-built pools (`_build_pool`, `_build_single_game_dominant_pool`, `_is_slot_eligible`).
 - `tests/fixtures/NBA-Projs-sample.csv`, `tests/fixtures/unfilled-DKEntries.csv` — real-shaped fixture slate (138 players with Projection ≥ 10).
 - `src/nba_optimizer/orchestrator.py:28` — only production caller of `engine.run`; its signature must not change.
+- `src/nba_optimizer/gui.py:11` — the GUI parses progress with `progress_regex=r"Lineups generated: (\d+)%"`. The `Lineups generated: N%` print text must stay byte-identical.
 
 Excerpt — the per-task DataFrame pickling (`engine.py:265-273`). The comment is wrong: on Windows `df` is pickled for **each** submit, not once:
 
@@ -126,7 +141,7 @@ domain-relevant, no mocking — see the docstrings in
 
 ## Commands you will need
 
-Run from the repo root in PowerShell. If `python` is not the repo venv, use `.\venv\Scripts\python.exe` in place of `python`.
+Run from the repo root in PowerShell. If `python` is not the repo venv, use `.\venv\Scripts\python.exe` in place of `python`. `grep` is not available in Windows PowerShell — every search in this plan is written with `Select-String`.
 
 | Purpose | Command | Expected on success |
 |---|---|---|
@@ -142,7 +157,8 @@ Run from the repo root in PowerShell. If `python` is not the repo venv, use `.\v
 - `src/nba_optimizer/engine.py`
 - `tests/test_engine_constraints.py`
 - `docs/codebase/ARCHITECTURE.md` (lines 41–42 and 79–80 only)
-- `docs/codebase/CONCERNS.md` (the "DataFrame pickled per worker on Windows" row only)
+- `docs/codebase/CONCERNS.md` (the "DataFrame pickled per worker on Windows" row only, line 35)
+- `docs/codebase/TESTING.md` (the `generate_single_lineup` row of the test-coverage table only, line 33)
 - `AGENTS.md` (the `tests/test_engine_constraints.py` bullet only)
 - `$env:TEMP\bench_engine.py` (create; outside the repo, never commit)
 
@@ -190,9 +206,11 @@ if __name__ == "__main__":
     print(f"BENCH rows={len(df_out)} bad_rows={bad} wall={wall:.2f}s")
 ```
 
-Run it twice and write down the **lower** `wall` value as `BASELINE_WALL`.
+Run it **three** times and write down the **lowest** `wall` value as
+`BASELINE_WALL` (run-to-run noise on the maintainer's machine was ~15%).
+Close other CPU-heavy programs while benchmarking.
 
-**Verify**: `python $env:TEMP\bench_engine.py (Get-Location).Path 500` → last line `BENCH rows=500 bad_rows=0 wall=...` (≈18 s on the maintainer's machine; your number may differ — only the ratio matters). `python -m pytest -q` → `37 passed`.
+**Verify**: `python $env:TEMP\bench_engine.py (Get-Location).Path 500` → last line `BENCH rows=500 bad_rows=0 wall=...` (15–18 s on the maintainer's machine; your number may differ — only the ratio matters). `rows` may occasionally be 499 on the *baseline* (a `min_unique` duplicate was dropped); that is pre-existing behavior, not a failure. `python -m pytest -q` → `37 passed`.
 
 ### Step 1: Add `LineupModel` (persistent HiGHS MIP) to `engine.py`
 
@@ -322,9 +340,12 @@ Write exactly these four tests, each with a docstring in the file's style:
    `df_pool = load_data(<fixtures>/NBA-Projs-sample.csv, <fixtures>/unfilled-DKEntries.csv)`,
    filter `Projection >= 10.0`, `reset_index(drop=True)`. Solve with
    `LineupModel(df_pool, cfg.min_salary, cfg.salary_cap, cfg.roster_size, cfg.min_games).solve(df_pool["Projection"])`
-   and with `generate_single_lineup(df_pool, 0.0, ...)`. Assert both return 8
-   players and that the summed `Projection` values `a` (LineupModel) and `b`
-   (PuLP) satisfy `abs(a - b) <= 1e-4 * max(a, b)`. The docstring must say why:
+   and with `generate_single_lineup(df_pool, randomness=0.0, min_salary=cfg.min_salary, salary_cap=cfg.salary_cap, roster_size=cfg.roster_size, min_games=cfg.min_games)`
+   (keyword style, as the existing tests do; `cfg = Config()`). Assert both return 8
+   players, then compute `a = df_pool.loc[positions, "Projection"].sum()`
+   (LineupModel) and `b = df_pool.loc[list(selected_indices), "Projection"].sum()`
+   (PuLP) and assert `abs(a - b) <= 1e-4 * max(a, b)`. (Measured: identical
+   objective, 301.92006…, on the fixture slate.) The docstring must say why:
    both solvers use HiGHS's default `mip_rel_gap = 1e-4`, and the two models
    are structured differently, so each may legally stop at a slightly
    different near-optimal lineup. (Compare objectives, not player sets — ties
@@ -336,8 +357,11 @@ Write exactly these four tests, each with a docstring in the file's style:
 3. `test_persistent_model_enforces_min_games_against_single_game_optimum` — on
    `_build_single_game_dominant_pool()`, the returned positions have length 8
    and `df_pool.loc[positions, "Game"].nunique() >= 2`.
-4. `test_persistent_model_resolve_replaces_objective` — on the fixture slate,
-   solve once, take the first selected position `p`, copy the projections,
+4. `test_persistent_model_resolve_replaces_objective` — on the fixture slate
+   (build `df_pool` the same way as test 1; a small module-level helper
+   `_load_fixture_pool()` shared by tests 1, 4 and 5 is fine), solve once,
+   take the first selected position `p`, build
+   `proj = df_pool["Projection"].to_numpy(dtype=float).copy()`,
    set `proj[p] = -1000.0`, solve again **on the same model instance**, assert
    `p` is not in the second result and the second result has 8 players. This
    proves the second solve uses the new objective rather than a stale one.
@@ -397,7 +421,8 @@ def _generate_batch(batch_size: int) -> List[Tuple[Tuple[int, ...], List[str]]]:
 Then add a test (5th new test) in `tests/test_engine_constraints.py`:
 
 5. `test_worker_batch_returns_slotted_lineups` — build the fixture `df_pool`
-   as in test 1, but select `engine.WORKER_COLUMNS` before `reset_index`.
+   as in test 1, then narrow it: `df_pool = df_pool[engine.WORKER_COLUMNS].reset_index(drop=True)`
+   (this mirrors what `run()` ships to workers in Step 4).
    Call `engine._init_worker(df_pool, 0.25, cfg.min_salary, cfg.salary_cap, cfg.roster_size, cfg.min_games)`
    in-process, then `batch = engine._generate_batch(3)`. Assert `len(batch) == 3`;
    for each `(positions, slotted)`: `len(positions) == 8`,
@@ -414,13 +439,23 @@ Commit: `perf: add one-time worker initializer and batched lineup task (plan 006
 
 ### Step 4: Rewire `run()` to one pool with the initializer
 
-In `run()`, replace everything from the `print(f"Spinning up pool ...")`
-call through the end of the second `with concurrent.futures.ProcessPoolExecutor()`
-block (current lines 256–345) with logic of this shape. Keep every existing
-`print` message text that still applies ("Spinning up pool...",
-"Lineups generated: N%", "Total candidates generated: ...; Total generation time: ..." (rename "solver" to "generation": the timed section now covers solving and slotting),
-"Filtering candidates for uniqueness, then slotting by start time...",
-"Duplicates removed ...", "Final valid lineups slotted and selected: ...").
+In `run()`, replace **lines 256–343 inclusive** of the current file — from
+the `print(` that starts the "Spinning up pool with ..." message through the
+last line of the second `with concurrent.futures.ProcessPoolExecutor()` block
+(`final_lineups.append(slotted)`) — with the block below, verbatim. This also
+removes the `# DEPRECATED` comments at lines 323–331. **Keep** line 345
+(`print(f"Final valid lineups slotted and selected: {len(final_lineups)}")`)
+and everything after it unchanged.
+
+Before deleting, confirm line 256 is `        print(` followed by the
+`Spinning up pool` f-string, and line 343 is
+`                final_lineups.append(slotted)`. If not, STOP (drift).
+
+Print-text notes: `Lineups generated: N%` must stay byte-identical (the GUI's
+progress regex at `gui.py:11` parses it). "Total solver time" becomes "Total
+generation time" because the timed section now includes slotting. The
+filtering message drops "then slotting by start time" because slotting
+already happened in the workers.
 
 ```python
         # Windows caps ProcessPoolExecutor at 61 workers.
@@ -445,6 +480,8 @@ block (current lines 256–345) with logic of this shape. Keep every existing
             batch_sizes.append(target_lineups % batch_size)
 
         candidates = []
+
+        # Start the timer
         start_time = time.perf_counter()
 
         with concurrent.futures.ProcessPoolExecutor(
@@ -466,39 +503,56 @@ block (current lines 256–345) with logic of this shape. Keep every existing
                 if bucket > last_bucket:
                     print(f"Lineups generated: {bucket * 20}%")
                     last_bucket = bucket
-```
 
-Then keep the timer/"Total candidates" print, and change the
-uniqueness filter to iterate the new tuple shape, storing already-slotted
-lineups directly. Declare `final_lineups = []` alongside
-`selected_indices_list` and `duplicates_removed` **before** the loop (today it
-is declared after the filter, at line 332):
+        # Stop the timer and calculate the duration
+        end_time = time.perf_counter()
+        execution_time = end_time - start_time
 
-```python
+        print(
+            f"Total candidates generated: {len(candidates)}; Total generation time: {execution_time:.2f} seconds"
+        )
+
+        # Filter for Uniqueness / Min Unique (lineups arrive already slotted)
         final_lineups = []
         selected_indices_list = []
         duplicates_removed = 0
+
+        print("Filtering candidates for uniqueness...")
         for positions, slotted in candidates:
             if len(final_lineups) >= target_lineups:
                 break
+
             indices = set(positions)
-            # ... identical overlap check against selected_indices_list ...
+            is_valid = True
+            for prev_indices in selected_indices_list:
+                overlap = len(indices.intersection(prev_indices))
+                if overlap > (cfg.roster_size - min_unique):
+                    is_valid = False
+                    duplicates_removed += 1
+                    break
+
             if is_valid:
                 final_lineups.append(slotted)
                 selected_indices_list.append(indices)
+
+        print(f"Duplicates removed (min_unique constraint): {duplicates_removed}")
 ```
 
-Delete the second `ProcessPoolExecutor` block entirely, delete the now-unused
-`valid_raw_names` list, add `import math`, and remove `import itertools` if
-nothing else uses it (`grep -n itertools src/nba_optimizer/engine.py`).
-`multiprocessing` stays (used by `cpu_count` and `freeze_support`).
-Leave the "Save" section and everything after it unchanged.
+Leave one blank line between this block and the kept
+`print(f"Final valid lineups slotted and selected: ...")` line.
+
+Then fix imports at the top of `engine.py`:
+- Replace the line `import itertools` with `import math` (it sits in the
+  same alphabetical position; after this step nothing uses `itertools`).
+  Confirm: `Select-String -Path src\nba_optimizer\engine.py -Pattern 'itertools'` → no output.
+- `multiprocessing` stays (used by `cpu_count` and `freeze_support`); `os`
+  stays.
 
 **Verify**:
 - `python -c "from nba_optimizer import engine, ranker, exporter"` → exit 0
 - `python -m pytest -q` → `42 passed`
-- `python $env:TEMP\bench_engine.py (Get-Location).Path 500` → `BENCH rows=500 bad_rows=0 wall=W`; the output contains `Lineups generated: 100%` exactly once, and **no** second "Spinning up" / pool startup pause after "Filtering candidates...".
-- Run the benchmark twice; take the lower `W`. Expect `W <= 0.75 * BASELINE_WALL` (an end-to-end prototype of exactly this design measured 10.6 s vs 18.1 s, i.e. 0.59×).
+- `python $env:TEMP\bench_engine.py (Get-Location).Path 500` → last line `BENCH rows=500 bad_rows=0 wall=W`; the output contains `Lineups generated: 100%` exactly once, `Total generation time`, and no second "Spinning up" line.
+- Run the benchmark three times; take the lowest `W`. Expect `W <= 0.80 * BASELINE_WALL`. (Measured with exactly this code: 10.8 s vs a 15.4 s best baseline at 500 lineups, ≈0.70×; ≈0.66× at 2500. The 0.80 bound leaves room for machine noise.)
 
 Commit: `perf: single initializer-backed worker pool for engine generation (plan 006)`.
 
@@ -515,10 +569,14 @@ Commit: `perf: single initializer-backed worker pool for engine generation (plan
 - `docs/codebase/CONCERNS.md`: mark the "DataFrame pickled per worker on
   Windows" row resolved by plan 006 (or remove it, matching how other
   resolved rows in that file are handled).
+- `docs/codebase/TESTING.md` line 33: extend the "Target" cell to also name
+  `nba_optimizer.engine.LineupModel` and the `_init_worker` / `_generate_batch`
+  worker path, and the "Notes" cell to mention the fixture-slate objective
+  equivalence check against `generate_single_lineup`.
 - `AGENTS.md`: extend the `tests/test_engine_constraints.py` bullet to
   mention the persistent `LineupModel` and worker batch path.
 
-**Verify**: `git diff --stat` lists only the in-scope files. `grep -n "pickles the full DataFrame" docs/codebase/ARCHITECTURE.md` → no matches.
+**Verify**: `git diff --stat` lists only in-scope files. `Select-String -Path docs\codebase\ARCHITECTURE.md -Pattern 'pickles the full DataFrame'` → no output.
 
 Commit: `docs: describe initializer-backed engine pool (plan 006)`.
 
@@ -531,18 +589,21 @@ Commit: `docs: describe initializer-backed engine pool (plan 006)`.
   slate; unique-solution pool; `min_games` enforcement; objective swap on a
   reused model; worker initializer + batch plumbing including slotting.
 - Existing 4 `generate_single_lineup` tests must keep passing unchanged.
+- After Step 2: `tests/test_engine_constraints.py` has 8 tests; after Step 3: 9.
 - Final: `python -m pytest -q` → `42 passed`.
 
 ## Done criteria
 
 - [ ] `python -c "from nba_optimizer import engine, ranker, exporter"` exits 0
 - [ ] `python -m pytest -q` → `42 passed`
-- [ ] Benchmark: `BENCH rows=500 bad_rows=0` and best-of-2 `wall <= 0.75 * BASELINE_WALL`
-- [ ] `grep -c "ProcessPoolExecutor(" src/nba_optimizer/engine.py` → `1`
-- [ ] `grep -n "initializer=_init_worker" src/nba_optimizer/engine.py` → 1 match
-- [ ] `grep -n "OPENBLAS_NUM_THREADS" src/nba_optimizer/engine.py` → 1 match
-- [ ] `grep -n "itertools.repeat(df" src/nba_optimizer/engine.py` → no matches
-- [ ] `git diff 29809ed -- src/nba_optimizer/engine.py` shows no changes inside `generate_single_lineup` or `slot_lineup_by_time`
+- [ ] Benchmark: `bad_rows=0`, `rows` equals 500 minus the printed `Duplicates removed` count (normally `rows=500`), and best-of-3 `wall <= 0.80 * BASELINE_WALL`
+- [ ] `(Select-String -Path src\nba_optimizer\engine.py -Pattern 'ProcessPoolExecutor(' -SimpleMatch).Count` → `1`
+- [ ] `(Select-String -Path src\nba_optimizer\engine.py -Pattern 'initializer=_init_worker' -SimpleMatch).Count` → `1`
+- [ ] `(Select-String -Path src\nba_optimizer\engine.py -Pattern 'OPENBLAS_NUM_THREADS' -SimpleMatch).Count` → `1`
+- [ ] `(Select-String -Path src\nba_optimizer\engine.py -Pattern 'itertools' -SimpleMatch).Count` → `0`
+- [ ] `generate_single_lineup` and `slot_lineup_by_time` are byte-for-byte unchanged (AST comparison against the planned-at commit) — run
+  `python -c "import ast,subprocess; old=subprocess.run(['git','show','29809ed:src/nba_optimizer/engine.py'],capture_output=True,text=True,check=True).stdout; new=open('src/nba_optimizer/engine.py',encoding='utf-8').read(); f=lambda s:{n.name:ast.dump(n) for n in ast.parse(s).body if isinstance(n,ast.FunctionDef)}; o,n=f(old),f(new); print(all(o[k]==n[k] for k in ('generate_single_lineup','slot_lineup_by_time')))"`
+  → `True`
 - [ ] `git status` shows no modified files outside the in-scope list (the bench script lives in `$env:TEMP`)
 - [ ] `plans/README.md` status row updated
 
@@ -553,8 +614,8 @@ Stop and report back (do not improvise) if:
 - The code at the locations in "Current state" doesn't match the excerpts.
 - Test 1 (objective equivalence) fails, i.e. the objectives differ by more than the `1e-4` relative MIP gap — the persistent model is not the same MIP; do not "fix" it by loosening the tolerance further.
 - Any `highspy` call in Step 1 raises `AttributeError`/`TypeError` (API differs from 1.12.0) — report the installed `highspy` version (`python -c "import highspy, importlib.metadata as m; print(m.version('highspy'))"`).
-- The benchmark shows `bad_rows > 0`, fewer than 500 rows, or `wall > 0.75 * BASELINE_WALL` after Step 4. Report both numbers; do not tune batch sizes, worker counts, or solver options beyond what this plan specifies.
-- The run hangs or reports `BrokenProcessPool` (likely an exception inside `_init_worker`; workers print its traceback).
+- The benchmark shows `bad_rows > 0`, `rows` lower than 500 minus the printed `Duplicates removed` count, or best-of-3 `wall > 0.80 * BASELINE_WALL` after Step 4. Report both numbers; do not tune batch sizes, worker counts, or solver options beyond what this plan specifies.
+- The run hangs, or prints `Worker generated exception:` / `BrokenProcessPool`, or `Exception in initializer:` (an exception inside `_init_worker`; the traceback is printed above it). A broken pool does not hang — it prints one exception line per batch and then writes a near-empty CSV, so check the output, not just the exit code.
 - The change appears to require editing `generate_single_lineup`, `slot_lineup_by_time`, `orchestrator.py`, or `late_swapper.py`.
 
 ## Maintenance notes
