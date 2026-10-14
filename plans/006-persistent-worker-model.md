@@ -149,7 +149,7 @@ Run from the repo root in PowerShell. If `python` is not the repo venv, use `.\v
 | Import check | `python -c "from nba_optimizer import engine, ranker, exporter"` | exit 0, no output |
 | Tests | `python -m pytest -q` | `37 passed` before this plan; `42 passed` after |
 | Engine tests only | `python -m pytest -q tests/test_engine_constraints.py` | all pass |
-| Benchmark | `python $env:TEMP\bench_engine.py (Get-Location).Path 500` | last line `BENCH rows=500 bad_rows=0 wall=<s>s` |
+| Benchmark | `python $env:TEMP\plan006\bench_engine.py (Get-Location).Path 500` | last line `BENCH rows=R bad_rows=0 wall=<s>s` (R normally 500; see Step 4) |
 
 ## Scope
 
@@ -159,8 +159,9 @@ Run from the repo root in PowerShell. If `python` is not the repo venv, use `.\v
 - `docs/codebase/ARCHITECTURE.md` (lines 41–42 and 79–80 only)
 - `docs/codebase/CONCERNS.md` (the "DataFrame pickled per worker on Windows" row only, line 35)
 - `docs/codebase/TESTING.md` (the `generate_single_lineup` row of the test-coverage table only, line 33)
-- `AGENTS.md` (the `tests/test_engine_constraints.py` bullet only)
-- `$env:TEMP\bench_engine.py` (create; outside the repo, never commit)
+- `AGENTS.md` (the `tests/test_engine_constraints.py` bullet and the "riskiest files" pitfall sentence about engine's data/slotting plumbing only)
+- `$env:TEMP\plan006\bench_engine.py` (create; outside the repo, never commit)
+- `plans/README.md` (the plan 006 status row only; skip if a reviewer said they maintain the index)
 
 **Out of scope** (do NOT touch):
 - The bodies and signatures of `generate_single_lineup` and `slot_lineup_by_time`. `generate_single_lineup` stays as the reference implementation the existing tests and the new equivalence test compare against; `slot_lineup_by_time` is reused unchanged inside the worker.
@@ -181,7 +182,7 @@ Run from the repo root in PowerShell. If `python` is not the repo venv, use `.\v
 
 ### Step 0: Record the baseline
 
-Create `$env:TEMP\bench_engine.py` (outside the repo) with exactly:
+Create the folder `$env:TEMP\plan006` (`New-Item -ItemType Directory -Force $env:TEMP\plan006`) and, in it, `bench_engine.py` with exactly the content below. Use this dedicated folder, not `$env:TEMP` itself: Python puts the script's folder first on `sys.path`, so a stray `numpy.py`-style file in `$env:TEMP` would shadow real packages.
 
 ```python
 import sys, tempfile, time
@@ -210,7 +211,7 @@ Run it **three** times and write down the **lowest** `wall` value as
 `BASELINE_WALL` (run-to-run noise on the maintainer's machine was ~15%).
 Close other CPU-heavy programs while benchmarking.
 
-**Verify**: `python $env:TEMP\bench_engine.py (Get-Location).Path 500` → last line `BENCH rows=500 bad_rows=0 wall=...` (15–18 s on the maintainer's machine; your number may differ — only the ratio matters). `rows` may occasionally be 499 on the *baseline* (a `min_unique` duplicate was dropped); that is pre-existing behavior, not a failure. `python -m pytest -q` → `37 passed`.
+**Verify**: `python $env:TEMP\plan006\bench_engine.py (Get-Location).Path 500` → last line `BENCH rows=500 bad_rows=0 wall=...` (15–18 s on the maintainer's machine; your number may differ — only the ratio matters). `rows` may occasionally be below 500 (a `min_unique` duplicate dropped, or a solve that returned no lineup); that is pre-existing behavior, not a failure, as long as `bad_rows=0`. `python -m pytest -q` → `37 passed`.
 
 ### Step 1: Add `LineupModel` (persistent HiGHS MIP) to `engine.py`
 
@@ -356,7 +357,14 @@ Write exactly these four tests, each with a docstring in the file's style:
    module docstring explains this pool has exactly one feasible lineup).
 3. `test_persistent_model_enforces_min_games_against_single_game_optimum` — on
    `_build_single_game_dominant_pool()`, the returned positions have length 8
-   and `df_pool.loc[positions, "Game"].nunique() >= 2`.
+   and `df_pool.loc[positions, "Game"].nunique() >= 2`. Then, in the same
+   test, append the NaN-game row exactly as
+   `test_min_games_ignores_players_with_unknown_game` does
+   (`("Ghost (99)", 3000, "PG/SG", 5, float("nan"))`, `pd.concat(..., ignore_index=True)`),
+   build a fresh `LineupModel` on that pool, solve, and assert the result has
+   length 8 and `df_pool.loc[positions, "Game"].dropna().nunique() >= 2`.
+   This guards the NaN-`Game` regression for the new model (it filters NaN
+   games with `pd.notna`, unlike the reference model's `groupby` path).
 4. `test_persistent_model_resolve_replaces_objective` — on the fixture slate
    (build `df_pool` the same way as test 1; a small module-level helper
    `_load_fixture_pool()` shared by tests 1, 4 and 5 is fine), solve once,
@@ -432,6 +440,18 @@ Then add a test (5th new test) in `tests/test_engine_constraints.py`:
    module-global worker state (including a live `Highs` instance) does not
    leak into later tests in the same pytest process.
    (Import `from nba_optimizer import engine` for the private names.)
+   Its docstring must say why `randomness=0.25` is used: it exercises the
+   `rng.normal` branch of `_generate_batch`, and every assertion holds for
+   any noise draw, so the test is not flaky.
+
+Also update the module docstring at the top of
+`tests/test_engine_constraints.py`: it currently says the file holds
+"Deterministic tests for the core LP constraints in
+nba_optimizer.engine.generate_single_lineup". Extend it to say the file also
+covers the persistent `LineupModel` and the `_init_worker` /
+`_generate_batch` worker path, and that the worker-path test uses noise but
+asserts only draw-invariant properties. Keep the existing sentences about the
+synthetic pool unchanged.
 
 **Verify**: `python -m pytest -q` → `42 passed`.
 
@@ -439,17 +459,25 @@ Commit: `perf: add one-time worker initializer and batched lineup task (plan 006
 
 ### Step 4: Rewire `run()` to one pool with the initializer
 
-In `run()`, replace **lines 256–343 inclusive** of the current file — from
-the `print(` that starts the "Spinning up pool with ..." message through the
-last line of the second `with concurrent.futures.ProcessPoolExecutor()` block
-(`final_lineups.append(slotted)`) — with the block below, verbatim. This also
-removes the `# DEPRECATED` comments at lines 323–331. **Keep** line 345
-(`print(f"Final valid lineups slotted and selected: {len(final_lineups)}")`)
+Do **not** use line numbers in this step: Steps 1 and 3 inserted roughly
+145 lines above `run()`, so every `run()` line has moved down. Anchor on
+content instead.
+
+In `run()`, replace the block that **starts** at the `print(` line whose next
+line is the `Spinning up pool with ...` f-string, and **ends** at the
+`final_lineups.append(slotted)` line inside the second
+`with concurrent.futures.ProcessPoolExecutor()` block, with the block below,
+verbatim. (For reference only: at `29809ed` these were lines 256–343.) This
+also removes the `# DEPRECATED` comments and the commented-out
+"Parallelize the slotting process" lines between the two pools. **Keep**
+`print(f"Final valid lineups slotted and selected: {len(final_lineups)}")`
 and everything after it unchanged.
 
-Before deleting, confirm line 256 is `        print(` followed by the
-`Spinning up pool` f-string, and line 343 is
-`                final_lineups.append(slotted)`. If not, STOP (drift).
+Before deleting, confirm both anchors are unique:
+`Select-String -Path src\nba_optimizer\engine.py -Pattern 'Spinning up pool','final_lineups.append(slotted)' -SimpleMatch`
+→ exactly 2 matches, the first inside a `print(` call, the second directly
+under `for slotted in results:`. Also confirm the code between them matches
+the three "Current state" excerpts. If not, STOP (drift).
 
 Print-text notes: `Lineups generated: N%` must stay byte-identical (the GUI's
 progress regex at `gui.py:11` parses it). "Total solver time" becomes "Total
@@ -551,7 +579,7 @@ Then fix imports at the top of `engine.py`:
 **Verify**:
 - `python -c "from nba_optimizer import engine, ranker, exporter"` → exit 0
 - `python -m pytest -q` → `42 passed`
-- `python $env:TEMP\bench_engine.py (Get-Location).Path 500` → last line `BENCH rows=R bad_rows=0 wall=W` with `R` = 500 minus the printed `Duplicates removed` count (normally 500); the output contains `Lineups generated: 100%` exactly once, `Total generation time`, and no second "Spinning up" line.
+- `python $env:TEMP\plan006\bench_engine.py (Get-Location).Path 500` → last line `BENCH rows=R bad_rows=0 wall=W` with `R` = 500 minus the printed `Duplicates removed` count (normally 500); the output contains `Lineups generated: 100%` exactly once, `Total generation time`, and no second "Spinning up" line.
 - Run the benchmark three times; take the lowest `W`. Expect `W <= 0.80 * BASELINE_WALL`. (Measured with exactly this code: 10.8 s vs a 15.4 s best baseline at 500 lineups, ≈0.70×; ≈0.66× at 2500. The 0.80 bound leaves room for machine noise.)
 
 Commit: `perf: single initializer-backed worker pool for engine generation (plan 006)`.
@@ -574,7 +602,11 @@ Commit: `perf: single initializer-backed worker pool for engine generation (plan
   worker path, and the "Notes" cell to mention the fixture-slate objective
   equivalence check against `generate_single_lineup`.
 - `AGENTS.md`: extend the `tests/test_engine_constraints.py` bullet to
-  mention the persistent `LineupModel` and worker batch path.
+  mention the persistent `LineupModel` and worker batch path. In the
+  "Repo-Specific Pitfalls" bullet that ends "engine's LP constraints are
+  covered, but its data/slotting plumbing is not", change the ending to say
+  the worker batch path (solve + slotting) is now covered but `run()`'s pool
+  orchestration and the `min_unique` filter are not.
 
 **Verify**: `git diff --stat` lists only in-scope files. `Select-String -Path docs\codebase\ARCHITECTURE.md -Pattern 'pickles the full DataFrame'` → no output.
 
