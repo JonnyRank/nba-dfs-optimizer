@@ -148,7 +148,7 @@ Run from the repo root in PowerShell. If `python` is not the repo venv, use `.\v
 
 **Out of scope** (do NOT touch):
 - The bodies and signatures of `generate_single_lineup` and `slot_lineup_by_time`. `generate_single_lineup` stays as the reference implementation the existing tests and the new equivalence test compare against; `slot_lineup_by_time` is reused unchanged inside the worker.
-- `engine.run`'s signature and return value (`orchestrator.py` and `scripts/run_optimizer_pysimplegui.py` call it).
+- `engine.run`'s signature and return value (`orchestrator.py:28` is the only caller; the CLI and GUI reach it through the orchestrator).
 - `src/nba_optimizer/late_swapper.py` — has its own PuLP model; not part of this change.
 - `src/nba_optimizer/utils.py` / `load_data` — loader stays as is.
 - The O(n²) `min_unique` filter algorithm — keep its logic; only the tuple shape it iterates changes.
@@ -323,9 +323,12 @@ Write exactly these four tests, each with a docstring in the file's style:
    filter `Projection >= 10.0`, `reset_index(drop=True)`. Solve with
    `LineupModel(df_pool, cfg.min_salary, cfg.salary_cap, cfg.roster_size, cfg.min_games).solve(df_pool["Projection"])`
    and with `generate_single_lineup(df_pool, 0.0, ...)`. Assert both return 8
-   players and that the summed `Projection` of the two selections is equal
-   within `1e-6`. (Compare objectives, not player sets — ties may pick
-   different but equally optimal lineups.) Build the fixture path with
+   players and that the summed `Projection` values `a` (LineupModel) and `b`
+   (PuLP) satisfy `abs(a - b) <= 1e-4 * max(a, b)`. The docstring must say why:
+   both solvers use HiGHS's default `mip_rel_gap = 1e-4`, and the two models
+   are structured differently, so each may legally stop at a slightly
+   different near-optimal lineup. (Compare objectives, not player sets — ties
+   may pick different but equally optimal lineups.) Build the fixture path with
    `os.path.join(os.path.dirname(__file__), "fixtures", ...)` as `tests/test_utils.py:24` does.
 2. `test_persistent_model_selects_the_only_feasible_lineup` — on `_build_pool()`,
    `solve(df_pool["Projection"])` returns `[0, 1, 2, 3, 4, 5, 6, 7]` (the
@@ -400,6 +403,9 @@ Then add a test (5th new test) in `tests/test_engine_constraints.py`:
    for each `(positions, slotted)`: `len(positions) == 8`,
    `len(slotted) == 8`, no entry in `slotted` is `"ERROR"` or `"EMPTY"`, and
    `set(slotted) == set(df_pool.loc[list(positions), "Name + ID"])`.
+   Wrap the body in `try: ... finally: engine._WORKER_STATE.clear()` so the
+   module-global worker state (including a live `Highs` instance) does not
+   leak into later tests in the same pytest process.
    (Import `from nba_optimizer import engine` for the private names.)
 
 **Verify**: `python -m pytest -q` → `42 passed`.
@@ -412,7 +418,7 @@ In `run()`, replace everything from the `print(f"Spinning up pool ...")`
 call through the end of the second `with concurrent.futures.ProcessPoolExecutor()`
 block (current lines 256–345) with logic of this shape. Keep every existing
 `print` message text that still applies ("Spinning up pool...",
-"Lineups generated: N%", "Total candidates generated: ...; Total solver time: ...",
+"Lineups generated: N%", "Total candidates generated: ...; Total generation time: ..." (rename "solver" to "generation": the timed section now covers solving and slotting),
 "Filtering candidates for uniqueness, then slotting by start time...",
 "Duplicates removed ...", "Final valid lineups slotted and selected: ...").
 
@@ -540,7 +546,7 @@ Commit: `docs: describe initializer-backed engine pool (plan 006)`.
 Stop and report back (do not improvise) if:
 
 - The code at the locations in "Current state" doesn't match the excerpts.
-- Test 1 (objective equivalence) fails — the persistent model is not the same MIP; do not "fix" it by loosening the tolerance.
+- Test 1 (objective equivalence) fails, i.e. the objectives differ by more than the `1e-4` relative MIP gap — the persistent model is not the same MIP; do not "fix" it by loosening the tolerance further.
 - Any `highspy` call in Step 1 raises `AttributeError`/`TypeError` (API differs from 1.12.0) — report the installed `highspy` version (`python -c "import highspy, importlib.metadata as m; print(m.version('highspy'))"`).
 - The benchmark shows `bad_rows > 0`, fewer than 500 rows, or `wall > 0.75 * BASELINE_WALL` after Step 4. Report both numbers; do not tune batch sizes, worker counts, or solver options beyond what this plan specifies.
 - The run hangs or reports `BrokenProcessPool` (likely an exception inside `_init_worker`; workers print its traceback).
@@ -569,5 +575,16 @@ Stop and report back (do not improvise) if:
   that the `min_unique` filter logic is unchanged apart from the tuple shape,
   and that `df_pool` uses `reset_index(drop=True)` (positions must equal row
   labels for `slot_lineup_by_time` and the parent filter).
+- Behavior change: every candidate is now slotted inside the worker
+  *before* the parent's `min_unique` filter, whereas before only surviving
+  lineups were slotted. With the defaults (`min_unique=1`,
+  `randomness=0.25`) duplicates are rare and the extra cost is negligible;
+  with `min_unique >= 2` or `randomness = 0` a noticeable share of the
+  ~5 ms slotting solves is wasted. If that matters, return unslotted
+  positions and slot only the survivors in the same pool (second
+  `executor.map` over `_slot_positions`) — still one pool, still no
+  DataFrame per task.
+- The timing print is renamed "Total generation time" because it now
+  includes slotting.
 - Deferred: the `min_unique` filter is O(n²) set intersections (~3M for 2500
   lineups, ~1 s); vectorize only if it shows up in a profile.

@@ -140,11 +140,11 @@
 * **LLM Instructions**: Act as a Senior QA Engineer. Draft a strategy for setting up a `pytest` suite for the `nba_optimizer`. Do not test the GUI or the orchestrator yet; focus solely on writing deterministic tests for the `PuLP` constraints in `engine.py` and the data loading in `utils.py`. Propose 3 specific test cases.
 
 ### [Research] Reduce Multiprocessing Serialization Overhead
-* **Status**: Not Started
+* **Status**: Complete (research) — measured and answered in `plans/006-persistent-worker-model.md`; implementation tracked in https://github.com/JonnyRank/nba-dfs-optimizer/issues/58. Per-task DataFrame pickling is <1% of runtime; `shared_memory` rejected (see `plans/README.md`).
 * **Target Files**: `src/nba_optimizer/engine.py`
 * **Context**: The `ProcessPoolExecutor` in `engine.py` pickles the entire player pool DataFrame per worker, which creates significant serialization overhead on Windows environments as the pool scales.
 * **Acceptance Criteria**:
-  * [ ] Investigate Python's `multiprocessing.shared_memory` or strategies to pass only essential primitive data (like dicts or specific arrays) to the worker functions instead of full Pandas DataFrames.
+  * [x] Investigate Python's `multiprocessing.shared_memory` or strategies to pass only essential primitive data (like dicts or specific arrays) to the worker functions instead of full Pandas DataFrames.
 * **LLM Instructions**: Act as a Python Performance Expert. Analyze the `concurrent.futures.ProcessPoolExecutor` implementation in `engine.py`. Detail the memory and time costs of pickling the DataFrame across workers on Windows. Propose the most efficient architectural fix to minimize IPC (Inter-Process Communication) overhead.
 
 ### [Implement] Vectorize Lineup Ranking Logic
