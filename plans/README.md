@@ -13,6 +13,7 @@ Last reconciled: 2026-06-23 at commit `2b9b262`.
 | 003 | Replace latest-file pipeline handoff with explicit stage artifacts | P1 | M | 001 | DONE ✓ | https://github.com/JonnyRank/nba-dfs-optimizer/issues/42 |
 | 004 | Consolidate player-pool loading into a shared utility | P1 | M | 001 | DONE ✓ | https://github.com/JonnyRank/nba-dfs-optimizer/issues/43 |
 | 005 | Vectorize lineup ranking without changing output semantics | P2 | S-M | 001, 004 | TODO | https://github.com/JonnyRank/nba-dfs-optimizer/issues/44 |
+| 006 | Generate lineups from one long-lived worker pool with a persistent per-worker HiGHS model | P2 | M | — | TODO | https://github.com/JonnyRank/nba-dfs-optimizer/issues/58 |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale — finding fixed independently or approach abandoned)
 
@@ -21,8 +22,11 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 - 003 depends on 001 because the current repo has no automated regression check; add the baseline first so pipeline-contract changes have a cheap verification gate.
 - 004 depends on 001 for the same reason: loader consolidation touches three high-risk modules and needs deterministic fixture coverage before refactoring.
 - 005 depends on 004 because both plans modify `src/nba_optimizer/ranker.py`, and the shared loader plan removes an internal `engine.load_data()` dependency that would otherwise force a second pass through the same file.
+- 006 (added 2026-10-14 at `29809ed`) is independent of 005 (different files). It reuses the engine tests from 001 and the loader from 004, both DONE.
 - 002 is independent and can land any time, but putting it near the front reduces setup friction for every later executor.
 
 ## Findings considered and rejected
 
-- No findings were rejected in this planning batch. Two audited items remain unplanned by choice: the standalone ranker default-weight mismatch and graceful interruption for engine generation.
+- Zero-copy DataFrame sharing for engine workers (`multiprocessing.shared_memory`, Arrow): rejected 2026-10-14 — the pickled pool is ~41 KB and per-task pickling is <1% of engine runtime; plan 006 sends it once per worker instead.
+- Using fewer engine workers (physical cores only): rejected 2026-10-14 — measured 14 workers slower than 20 on the 14C/20T dev machine.
+- 2026-06-11 batch: no findings were rejected. Two audited items remain unplanned by choice: the standalone ranker default-weight mismatch and graceful interruption for engine generation.
