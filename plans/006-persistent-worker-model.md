@@ -551,7 +551,7 @@ Then fix imports at the top of `engine.py`:
 **Verify**:
 - `python -c "from nba_optimizer import engine, ranker, exporter"` → exit 0
 - `python -m pytest -q` → `42 passed`
-- `python $env:TEMP\bench_engine.py (Get-Location).Path 500` → last line `BENCH rows=500 bad_rows=0 wall=W`; the output contains `Lineups generated: 100%` exactly once, `Total generation time`, and no second "Spinning up" line.
+- `python $env:TEMP\bench_engine.py (Get-Location).Path 500` → last line `BENCH rows=R bad_rows=0 wall=W` with `R` = 500 minus the printed `Duplicates removed` count (normally 500); the output contains `Lineups generated: 100%` exactly once, `Total generation time`, and no second "Spinning up" line.
 - Run the benchmark three times; take the lowest `W`. Expect `W <= 0.80 * BASELINE_WALL`. (Measured with exactly this code: 10.8 s vs a 15.4 s best baseline at 500 lineups, ≈0.70×; ≈0.66× at 2500. The 0.80 bound leaves room for machine noise.)
 
 Commit: `perf: single initializer-backed worker pool for engine generation (plan 006)`.
@@ -601,8 +601,8 @@ Commit: `docs: describe initializer-backed engine pool (plan 006)`.
 - [ ] `(Select-String -Path src\nba_optimizer\engine.py -Pattern 'initializer=_init_worker' -SimpleMatch).Count` → `1`
 - [ ] `(Select-String -Path src\nba_optimizer\engine.py -Pattern 'OPENBLAS_NUM_THREADS' -SimpleMatch).Count` → `1`
 - [ ] `(Select-String -Path src\nba_optimizer\engine.py -Pattern 'itertools' -SimpleMatch).Count` → `0`
-- [ ] `generate_single_lineup` and `slot_lineup_by_time` are byte-for-byte unchanged (AST comparison against the planned-at commit) — run
-  `python -c "import ast,subprocess; old=subprocess.run(['git','show','29809ed:src/nba_optimizer/engine.py'],capture_output=True,text=True,check=True).stdout; new=open('src/nba_optimizer/engine.py',encoding='utf-8').read(); f=lambda s:{n.name:ast.dump(n) for n in ast.parse(s).body if isinstance(n,ast.FunctionDef)}; o,n=f(old),f(new); print(all(o[k]==n[k] for k in ('generate_single_lineup','slot_lineup_by_time')))"`
+- [ ] `generate_single_lineup` and `slot_lineup_by_time` are semantically unchanged (AST-identical against the planned-at commit; comments and whitespace ignored) — run
+  `python -c "import ast,subprocess; old=subprocess.run(['git','show','29809ed:src/nba_optimizer/engine.py'],capture_output=True,text=True,encoding='utf-8',check=True).stdout; new=open('src/nba_optimizer/engine.py',encoding='utf-8').read(); f=lambda s:{n.name:ast.dump(n) for n in ast.parse(s).body if isinstance(n,ast.FunctionDef)}; o,n=f(old),f(new); print(all(o[k]==n[k] for k in ('generate_single_lineup','slot_lineup_by_time')))"`
   → `True`
 - [ ] `git status` shows no modified files outside the in-scope list (the bench script lives in `$env:TEMP`)
 - [ ] `plans/README.md` status row updated
