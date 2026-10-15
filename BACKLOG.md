@@ -148,7 +148,7 @@
 * **LLM Instructions**: Act as a Python Performance Expert. Analyze the `concurrent.futures.ProcessPoolExecutor` implementation in `engine.py`. Detail the memory and time costs of pickling the DataFrame across workers on Windows. Propose the most efficient architectural fix to minimize IPC (Inter-Process Communication) overhead.
 
 ### [Implement] Vectorize Lineup Ranking Logic
-* **Status**: Not Started
+* **Status**: Rejected — measured negligible (0.13 s per 2,500 lineups); ranking semantics locked by tests instead (plan 007)
 * **Target Files**: `src/nba_optimizer/ranker.py`
 * **Context**: `ranker.py` loops through generated lineups using Pandas `iterrows()`, which creates an $O(n)$ bottleneck with a high constant factor. This needs to be converted into vectorized Pandas operations.
 * **Acceptance Criteria**:

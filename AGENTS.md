@@ -71,8 +71,9 @@ A deterministic pytest baseline exists:
 - `tests/test_engine_constraints.py` — core `engine.generate_single_lineup` LP constraints (roster size, salary band, positional eligibility, `min_games`), plus the persistent `LineupModel` and the worker batch path (`_init_worker` / `_generate_batch`).
 - `tests/test_late_swap.py` — late-swap game-key resolution, lock detection, and enforced `min_games`.
 - `tests/test_pipeline_artifacts.py` — explicit artifact handoff between stages (ranker/exporter/exposure_report honor passed-in paths over "latest file").
+- `tests/test_ranker.py` — `ranker.rank_lineups` scoring semantics (totals, 0.1 geomean floor, weighted rank order, ties).
 
-The core ranking/export/leverage logic in `ranker.py`, `exporter.py`, and `exposure_report.py` remains otherwise untested — prefer targeted manual verification with real CSV inputs and output inspection for those.
+The core export and leverage logic in `exporter.py` and `exposure_report.py` remains otherwise untested — prefer targeted manual verification with real CSV inputs and output inspection for those.
 
 Do not add generic or opaque tests just to increase coverage. New tests must be transparent, domain-relevant, and directly tied to real optimizer behavior. See `docs/codebase/TESTING.md` for details.
 
