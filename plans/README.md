@@ -14,7 +14,7 @@ Last reconciled: 2026-10-15 at commit `eade9a1`.
 | 004 | Consolidate player-pool loading into a shared utility | P1 | M | 001 | DONE ✓ | https://github.com/JonnyRank/nba-dfs-optimizer/issues/43 |
 | 005 | Vectorize lineup ranking without changing output semantics | P2 | S-M | 001, 004 | REJECTED (measured: 0.13 s per 2,500 lineups, negligible vs ~44 s generation; tests moved to 007) | https://github.com/JonnyRank/nba-dfs-optimizer/issues/44 |
 | 006 | Generate lineups from one long-lived worker pool with a persistent per-worker HiGHS model | P2 | M | — | DONE ✓ | https://github.com/JonnyRank/nba-dfs-optimizer/issues/58 |
-| 007 | Lock down lineup-ranking semantics with characterization tests | P2 | S | — | TODO | https://github.com/JonnyRank/nba-dfs-optimizer/issues/62 |
+| 007 | Lock down lineup-ranking semantics with characterization tests | P2 | S | — | DONE ✓ | https://github.com/JonnyRank/nba-dfs-optimizer/issues/62 |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale — finding fixed independently or approach abandoned)
 
