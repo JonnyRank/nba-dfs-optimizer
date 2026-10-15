@@ -23,8 +23,8 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 - 003 depends on 001 because the current repo has no automated regression check; add the baseline first so pipeline-contract changes have a cheap verification gate.
 - 004 depends on 001 for the same reason: loader consolidation touches three high-risk modules and needs deterministic fixture coverage before refactoring.
 - 005 depends on 004 because both plans modify `src/nba_optimizer/ranker.py`, and the shared loader plan removes an internal `engine.load_data()` dependency that would otherwise force a second pass through the same file.
-- 007 (added 2026-10-15 at `eade9a1`) has no dependencies. It replaces 005; land it before any future change to `rank_lineups`.
 - 006 (added 2026-10-14 at `29809ed`) is independent of 005 (different files). It reuses the engine tests from 001 and the loader from 004, both DONE.
+- 007 (added 2026-10-15 at `eade9a1`) has no dependencies. It replaces 005; land it before any future change to `rank_lineups`.
 - 002 is independent and can land any time, but putting it near the front reduces setup friction for every later executor.
 
 ## Findings considered and rejected
