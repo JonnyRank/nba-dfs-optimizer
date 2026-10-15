@@ -213,8 +213,10 @@ def test_persistent_model_matches_pulp_objective_on_fixture_slate():
 
     Both solvers use HiGHS's default mip_rel_gap = 1e-4, and the two models are
     structured differently, so each may legally stop at a slightly different
-    near-optimal lineup. We therefore compare objectives within that relative
-    gap, not player sets (ties may pick different but equally optimal lineups).
+    near-optimal lineup. Each result lies within 1e-4 of the true optimum z*, so
+    the two can differ by up to ~1e-4 * z*; we therefore compare objectives
+    within 2e-4 * max(a, b), not player sets (ties may pick different but
+    equally optimal lineups).
     """
     df_pool = _load_fixture_pool()
     cfg = Config()
@@ -236,7 +238,7 @@ def test_persistent_model_matches_pulp_objective_on_fixture_slate():
 
     a = df_pool.loc[positions, "Projection"].sum()
     b = df_pool.loc[list(selected_indices), "Projection"].sum()
-    assert abs(a - b) <= 1e-4 * max(a, b)
+    assert abs(a - b) <= 2e-4 * max(a, b)
 
 
 def test_persistent_model_selects_the_only_feasible_lineup():

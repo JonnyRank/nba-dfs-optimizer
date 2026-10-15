@@ -185,6 +185,9 @@ class LineupModel:
         h = highspy.Highs()
         h.setOptionValue("output_flag", False)
         # One solver thread per worker; the process pool supplies the parallelism.
+        # Other HiGHS solves in the same worker (slot_lineup_by_time's
+        # pulp.HiGHS) must leave "threads" at its default 0, which reuses this
+        # 1-thread scheduler; an explicit threads=N there makes HiGHS error.
         h.setOptionValue("threads", 1)
         h.addVars(n_cols, np.zeros(n_cols), np.ones(n_cols))
         h.changeColsIntegrality(
@@ -284,6 +287,11 @@ def _generate_batch(batch_size: int) -> List[Tuple[Tuple[int, ...], List[str]]]:
             names = [state["names"][p] for p in positions]
             slotted = slot_lineup_by_time(names, state["df_pool"])
             results.append((tuple(positions), slotted))
+        except RuntimeError:
+            # LineupModel.solve raises RuntimeError when HiGHS itself errors
+            # (misconfigured solver). Every later lineup would fail the same
+            # way, so fail the whole batch once instead of per lineup.
+            raise
         except Exception:
             traceback.print_exc()
     return results
@@ -417,7 +425,11 @@ def run(
 
         # Spawned workers inherit this env at "import numpy"; without it each
         # worker's OpenBLAS reserves per-thread buffers (~700 MB commit per
-        # worker vs ~90 MB). Workers do no BLAS work.
+        # worker vs ~90 MB). Workers do no BLAS work. Only affects "spawn"
+        # (Windows) and "forkserver" starts; under "fork" numpy is already
+        # imported. It persists in this process (e.g. the GUI) for later
+        # child processes, which is harmless while no stage uses BLAS-heavy
+        # workers.
         os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
 
         # Small batches amortize task overhead while keeping ~4 batches per
@@ -459,6 +471,10 @@ def run(
         print(
             f"Total candidates generated: {len(candidates)}; Total generation time: {execution_time:.2f} seconds"
         )
+
+        if not candidates:
+            print("Error: no lineups were generated; aborting.")
+            return ""
 
         # Filter for Uniqueness / Min Unique (lineups arrive already slotted)
         final_lineups = []
