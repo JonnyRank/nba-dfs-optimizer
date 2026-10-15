@@ -10,10 +10,14 @@ because including either of them breaks the salary-floor or roster-size
 constraint.
 """
 
+import os
+
 import pandas as pd
 
 from nba_optimizer.config import ROSTER_SLOTS, Config
-from nba_optimizer.engine import generate_single_lineup
+from nba_optimizer.engine import LineupModel, generate_single_lineup, load_data
+
+FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "fixtures")
 
 
 def _build_pool() -> pd.DataFrame:
@@ -81,6 +85,16 @@ def _is_slot_eligible(pos_str: str, slot: str) -> bool:
     if slot == "F":
         return "SF" in pos_str or "PF" in pos_str
     return slot in pos_str
+
+
+def _load_fixture_pool() -> pd.DataFrame:
+    """Load the real-shaped fixture slate, keeping players with Projection >= 10."""
+    df_pool = load_data(
+        os.path.join(FIXTURES_DIR, "NBA-Projs-sample.csv"),
+        os.path.join(FIXTURES_DIR, "unfilled-DKEntries.csv"),
+    )
+    df_pool = df_pool[df_pool["Projection"] >= 10.0]
+    return df_pool.reset_index(drop=True)
 
 
 def test_lineup_size_and_salary_bounds():
@@ -186,3 +200,92 @@ def test_min_games_is_enforced_against_single_game_optimum():
 
     df_selected = df_pool.loc[list(selected_indices)]
     assert df_selected["Game"].nunique() >= cfg.min_games
+
+
+def test_persistent_model_matches_pulp_objective_on_fixture_slate():
+    """The persistent HiGHS LineupModel reaches the same objective as the
+    reference PuLP model on a real slate.
+
+    Both solvers use HiGHS's default mip_rel_gap = 1e-4, and the two models are
+    structured differently, so each may legally stop at a slightly different
+    near-optimal lineup. We therefore compare objectives within that relative
+    gap, not player sets (ties may pick different but equally optimal lineups).
+    """
+    df_pool = _load_fixture_pool()
+    cfg = Config()
+
+    positions = LineupModel(
+        df_pool, cfg.min_salary, cfg.salary_cap, cfg.roster_size, cfg.min_games
+    ).solve(df_pool["Projection"])
+    _, selected_indices = generate_single_lineup(
+        df_pool,
+        randomness=0.0,
+        min_salary=cfg.min_salary,
+        salary_cap=cfg.salary_cap,
+        roster_size=cfg.roster_size,
+        min_games=cfg.min_games,
+    )
+
+    assert positions is not None and len(positions) == cfg.roster_size
+    assert selected_indices is not None and len(selected_indices) == cfg.roster_size
+
+    a = df_pool.loc[positions, "Projection"].sum()
+    b = df_pool.loc[list(selected_indices), "Projection"].sum()
+    assert abs(a - b) <= 1e-4 * max(a, b)
+
+
+def test_persistent_model_selects_the_only_feasible_lineup():
+    """On the synthetic pool exactly one 8-player lineup is feasible (the
+    first 8 rows), so the persistent model must return exactly those rows."""
+    df_pool = _build_pool()
+    cfg = Config()
+
+    model = LineupModel(df_pool, cfg.min_salary, cfg.salary_cap, cfg.roster_size, cfg.min_games)
+
+    assert model.solve(df_pool["Projection"]) == [0, 1, 2, 3, 4, 5, 6, 7]
+
+
+def test_persistent_model_enforces_min_games_against_single_game_optimum():
+    """The persistent model must honor min_games even when the projection
+    optimum sits in one game, and must ignore players whose Game is NaN
+    (it filters them with pd.notna, unlike the reference model's groupby)."""
+    df_pool = _build_single_game_dominant_pool()
+    cfg = Config()
+
+    positions = LineupModel(
+        df_pool, cfg.min_salary, cfg.salary_cap, cfg.roster_size, cfg.min_games
+    ).solve(df_pool["Projection"])
+    assert positions is not None and len(positions) == cfg.roster_size
+    assert df_pool.loc[positions, "Game"].nunique() >= cfg.min_games
+
+    ghost = pd.DataFrame(
+        [("Ghost (99)", 3000, "PG/SG", 5, float("nan"))],
+        columns=["Name + ID", "Salary", "Roster Position", "Projection", "Game"],
+    )
+    df_pool = pd.concat([df_pool, ghost], ignore_index=True)
+
+    positions = LineupModel(
+        df_pool, cfg.min_salary, cfg.salary_cap, cfg.roster_size, cfg.min_games
+    ).solve(df_pool["Projection"])
+    assert positions is not None and len(positions) == cfg.roster_size
+    assert df_pool.loc[positions, "Game"].dropna().nunique() >= cfg.min_games
+
+
+def test_persistent_model_resolve_replaces_objective():
+    """Re-solving the same model instance uses the new objective, not a stale
+    one: after making the first selected player hugely negative, that player
+    must drop out of the next lineup."""
+    df_pool = _load_fixture_pool()
+    cfg = Config()
+    model = LineupModel(df_pool, cfg.min_salary, cfg.salary_cap, cfg.roster_size, cfg.min_games)
+
+    first = model.solve(df_pool["Projection"])
+    assert first is not None and len(first) == cfg.roster_size
+    p = first[0]
+
+    proj = df_pool["Projection"].to_numpy(dtype=float).copy()
+    proj[p] = -1000.0
+    second = model.solve(proj)
+
+    assert second is not None and len(second) == cfg.roster_size
+    assert p not in second

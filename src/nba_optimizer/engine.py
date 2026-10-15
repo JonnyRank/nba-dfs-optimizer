@@ -6,8 +6,9 @@ import os
 import time
 import traceback
 from datetime import datetime
-from typing import List, Set, Tuple
+from typing import List, Optional, Set, Tuple
 
+import highspy
 import numpy as np
 import pandas as pd
 import pulp
@@ -134,6 +135,115 @@ def generate_single_lineup(
     except Exception:
         traceback.print_exc()
         return None, None
+
+
+# --- PERSISTENT MODEL (built once per worker process) ---
+
+
+def _is_slot_eligible(pos_str: str, slot: str) -> bool:
+    """DK slot eligibility; same rules as generate_single_lineup."""
+    if slot == "UTIL":
+        return True
+    if slot == "G":
+        return "PG" in pos_str or "SG" in pos_str
+    if slot == "F":
+        return "SF" in pos_str or "PF" in pos_str
+    return slot in pos_str
+
+
+class LineupModel:
+    """The generate_single_lineup MIP, built once and re-solved per lineup.
+
+    Only the objective coefficients change between solves, so the PuLP model
+    build and PuLP->HiGHS transfer (~30% of per-lineup time) are paid once per
+    worker instead of once per lineup. Columns 0..n-1 are the player binaries
+    in positional (row) order of df.
+    """
+
+    def __init__(
+        self, df: pd.DataFrame, min_salary: int, salary_cap: int, roster_size: int, min_games: int
+    ):
+        n = len(df)
+        self.n_players = n
+        pos_list = df["Roster Position"].astype(str).tolist()
+        salary_arr = df["Salary"].to_numpy(dtype=float)
+        game_list = df["Game"].tolist()
+
+        # Slot columns exist only for eligible (player, slot) pairs, which is
+        # equivalent to generate_single_lineup's "slot_vars[i][s] == 0" rows.
+        slot_pairs = [
+            (i, s) for i in range(n) for s in ROSTER_SLOTS if _is_slot_eligible(pos_list[i], s)
+        ]
+        games = [g for g in pd.unique(df["Game"]) if pd.notna(g) and g != ""]
+        n_cols = n + len(slot_pairs) + len(games)
+
+        # threads=1 below is rejected (run() returns kError) if HiGHS's
+        # process-global scheduler was already started with more threads,
+        # e.g. by an earlier PuLP HiGHS solve in this process. Reset it so
+        # the model works regardless of what solved first.
+        highspy.Highs.resetGlobalScheduler(True)
+        h = highspy.Highs()
+        h.setOptionValue("output_flag", False)
+        # One solver thread per worker; the process pool supplies the parallelism.
+        h.setOptionValue("threads", 1)
+        h.addVars(n_cols, np.zeros(n_cols), np.ones(n_cols))
+        h.changeColsIntegrality(
+            n_cols,
+            np.arange(n_cols, dtype=np.int32),
+            np.array([highspy.HighsVarType.kInteger] * n_cols),
+        )
+
+        def add_row(lower, upper, cols, coefs):
+            h.addRow(
+                float(lower),
+                float(upper),
+                len(cols),
+                np.asarray(cols, dtype=np.int32),
+                np.asarray(coefs, dtype=float),
+            )
+
+        player_cols = list(range(n))
+        add_row(min_salary, salary_cap, player_cols, salary_arr)
+        add_row(roster_size, roster_size, player_cols, [1.0] * n)
+
+        slot_cols_by_player = {i: [] for i in range(n)}
+        slot_cols_by_slot = {s: [] for s in ROSTER_SLOTS}
+        for k, (i, s) in enumerate(slot_pairs):
+            slot_cols_by_player[i].append(n + k)
+            slot_cols_by_slot[s].append(n + k)
+        for i in range(n):
+            cols = slot_cols_by_player[i]
+            # sum_s slot[i][s] - player[i] == 0
+            add_row(0, 0, cols + [i], [1.0] * len(cols) + [-1.0])
+        for s in ROSTER_SLOTS:
+            cols = slot_cols_by_slot[s]
+            add_row(1, 1, cols, [1.0] * len(cols))
+
+        # game[g] - sum(players in g) <= 0 ; sum(game) >= min_games
+        inf = highspy.kHighsInf
+        game_cols = []
+        for g_idx, game in enumerate(games):
+            col = n + len(slot_pairs) + g_idx
+            game_cols.append(col)
+            members = [i for i in range(n) if game_list[i] == game]
+            add_row(-inf, 0, [col] + members, [1.0] + [-1.0] * len(members))
+        add_row(min_games, inf, game_cols, [1.0] * len(game_cols))
+
+        h.changeObjectiveSense(highspy.ObjSense.kMaximize)
+        self._highs = h
+        self._player_cols = np.arange(n, dtype=np.int32)
+
+    def solve(self, projections) -> Optional[List[int]]:
+        """Maximize sum(projections * player). Returns sorted row positions, or None if not optimal."""
+        h = self._highs
+        h.changeColsCost(self.n_players, self._player_cols, np.asarray(projections, dtype=float))
+        run_status = h.run()
+        if run_status == highspy.HighsStatus.kError:
+            raise RuntimeError(f"HiGHS run failed: {h.getModelStatus()}")
+        if h.getModelStatus() != highspy.HighsModelStatus.kOptimal:
+            return None
+        col_values = np.asarray(h.getSolution().col_value[: self.n_players])
+        return np.flatnonzero(col_values > 0.5).tolist()
 
 
 def slot_lineup_by_time(lineup_names: List[str], df: pd.DataFrame) -> List[str]:
