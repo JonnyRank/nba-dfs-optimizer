@@ -336,3 +336,7 @@ Stop and report back (do not improvise) if:
 - Any intended change to ranking (a new metric, different tie handling, a different geomean floor) must update these tests in the same PR. That is the point of them. A reviewer should treat an unexplained change to an expected value as a red flag.
 - `sort_values("Lineup_Score")` uses an unstable sort, so lineups with equal scores can come out in any order. The tests deliberately don't assert the order of tied scores. If that order ever matters (e.g. for reproducible exports), add `kind="stable"` and a test in the same PR.
 - If vectorization is ever revisited (e.g. for pools of 100k+ lineups), these tests are the safety net. Re-measure first.
+
+## Reconcile note (2026-10-15, after PR #63 review)
+
+Review follow-ups in `23b5314` added `test_missing_weight_keys_default_to_one` (it pins the `weights.get(key, 1.0)` default) and a tie-order note in `test_tied_metrics_share_average_rank`'s docstring. So `tests/test_ranker.py` now has **8** tests and the full suite **50**, not the 7 / 49 stated above. The committed `tests/test_ranker.py` is canonical; the Step 1 code block is the original 7-test version.
