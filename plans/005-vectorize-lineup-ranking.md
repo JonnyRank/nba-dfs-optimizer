@@ -13,7 +13,8 @@
 - **Depends on**: `plans/001-establish-verification-baseline.md`, `plans/004-consolidate-player-data-loading.md`
 - **Category**: perf
 - **Planned at**: commit `2b9b262`, 2026-06-23 (refreshed from `d6cbd5f` — see reconcile note below)
-- **Issue**: https://github.com/JonnyRank/nba-dfs-optimizer/issues/44
+- **Issue**: https://github.com/JonnyRank/nba-dfs-optimizer/issues/44 (closed as not planned)
+- **Status**: REJECTED 2026-10-15 at `eade9a1`; superseded by `plans/007-ranker-characterization-tests.md`. See "Reconcile note (2026-10-15)" at the end.
 
 ## Why this matters
 
@@ -169,3 +170,9 @@ Stop and report back if:
 ## Reconcile note (2026-06-23)
 
 This plan was refreshed from commit `d6cbd5f` to `2b9b262`. The finding is unchanged: `ranker.py` still uses `iterrows()` at line 38 in `rank_lineups()`. Since the original plan was written, `ranker.py`'s `run()` function was extended (plan 003) to accept explicit `lineup_file` / `projs_file` parameters and return the output path — but `rank_lineups()` itself (the target of this plan) is untouched. The current-state excerpts at lines 28-76 remain accurate. Plan 004 is still TODO (and is a prerequisite), so this plan remains executable in order after plan 004 lands.
+
+## Reconcile note (2026-10-15): REJECTED
+
+Measured at `eade9a1` before refreshing: `rank_lineups` (still the `iterrows()` loop, unchanged since `2b9b262`) takes **0.13 s for 2,500 lineups, 0.50 s for 10,000 and 2.5 s for 50,000** on the fixture player pool. That compares with about 44 s of lineup generation on a production slate after plan 006. Vectorizing would save at most a fraction of a second per run, so the premise that "ranking is the next clear bottleneck" does not hold. Do not execute this plan.
+
+Its one valuable part, the characterization tests for ranking semantics (`ranker.py` scoring is untested), moved to `plans/007-ranker-characterization-tests.md`. If pools ever grow to 100k+ lineups, re-measure first, and land plan 007 before any rewrite.
