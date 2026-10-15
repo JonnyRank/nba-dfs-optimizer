@@ -30,7 +30,7 @@ python -m pytest tests/test_engine_constraints.py tests/test_utils.py -q
 | Scope | Covered? | Typical target | Notes |
 |-------|----------|----------------|-------|
 | Unit | Yes (partial) | `nba_optimizer.utils` parsing helpers (`extract_player_id`, `parse_game_time`, `read_ragged_csv`) | Deterministic, pure-function tests |
-| Unit/Integration | Yes (partial) | `nba_optimizer.engine.generate_single_lineup` | Exercises the LP solve directly with `randomness=0.0` against a tiny synthetic player pool; asserts roster size, salary band, positional eligibility, and min-games constraints |
+| Unit/Integration | Yes (partial) | `nba_optimizer.engine.generate_single_lineup`, `nba_optimizer.engine.LineupModel`, and the `_init_worker` / `_generate_batch` worker path | Exercises the LP solve directly with `randomness=0.0` against a tiny synthetic player pool; asserts roster size, salary band, positional eligibility, and min-games constraints; also checks fixture-slate objective equivalence of `LineupModel` against `generate_single_lineup` |
 | Integration | Partial | `ranker.run()`, `exporter.run()`, `exposure_report._resolve_entries_file()` artifact handoff | Covered by `test_pipeline_artifacts.py` using synthetic temp-file fixtures. Full end-to-end pipeline (LP solve → rank → export) is not covered. |
 | E2E | No (manual) | Full pipeline | Verification is done by running the pipeline with real CSV inputs and inspecting output |
 

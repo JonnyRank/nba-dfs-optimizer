@@ -1,13 +1,14 @@
 import argparse
 import concurrent.futures
-import itertools
+import math
 import multiprocessing
 import os
 import time
 import traceback
 from datetime import datetime
-from typing import List, Set, Tuple
+from typing import List, Optional, Set, Tuple
 
+import highspy
 import numpy as np
 import pandas as pd
 import pulp
@@ -136,6 +137,166 @@ def generate_single_lineup(
         return None, None
 
 
+# --- PERSISTENT MODEL (built once per worker process) ---
+
+
+def _is_slot_eligible(pos_str: str, slot: str) -> bool:
+    """DK slot eligibility; same rules as generate_single_lineup."""
+    if slot == "UTIL":
+        return True
+    if slot == "G":
+        return "PG" in pos_str or "SG" in pos_str
+    if slot == "F":
+        return "SF" in pos_str or "PF" in pos_str
+    return slot in pos_str
+
+
+class LineupModel:
+    """The generate_single_lineup MIP, built once and re-solved per lineup.
+
+    Only the objective coefficients change between solves, so the PuLP model
+    build and PuLP->HiGHS transfer (~30% of per-lineup time) are paid once per
+    worker instead of once per lineup. Columns 0..n-1 are the player binaries
+    in positional (row) order of df.
+    """
+
+    def __init__(
+        self, df: pd.DataFrame, min_salary: int, salary_cap: int, roster_size: int, min_games: int
+    ):
+        n = len(df)
+        self.n_players = n
+        pos_list = df["Roster Position"].astype(str).tolist()
+        salary_arr = df["Salary"].to_numpy(dtype=float)
+        game_list = df["Game"].tolist()
+
+        # Slot columns exist only for eligible (player, slot) pairs, which is
+        # equivalent to generate_single_lineup's "slot_vars[i][s] == 0" rows.
+        slot_pairs = [
+            (i, s) for i in range(n) for s in ROSTER_SLOTS if _is_slot_eligible(pos_list[i], s)
+        ]
+        games = [g for g in pd.unique(df["Game"]) if pd.notna(g) and g != ""]
+        n_cols = n + len(slot_pairs) + len(games)
+
+        # threads=1 below is rejected (run() returns kError) if HiGHS's
+        # process-global scheduler was already started with more threads,
+        # e.g. by an earlier PuLP HiGHS solve in this process. Reset it so
+        # the model works regardless of what solved first.
+        highspy.Highs.resetGlobalScheduler(True)
+        h = highspy.Highs()
+        h.setOptionValue("output_flag", False)
+        # One solver thread per worker; the process pool supplies the parallelism.
+        # Other HiGHS solves in the same worker (slot_lineup_by_time's
+        # pulp.HiGHS) must leave "threads" at its default 0, which reuses this
+        # 1-thread scheduler; an explicit threads=N there makes HiGHS error.
+        h.setOptionValue("threads", 1)
+        h.addVars(n_cols, np.zeros(n_cols), np.ones(n_cols))
+        h.changeColsIntegrality(
+            n_cols,
+            np.arange(n_cols, dtype=np.int32),
+            np.array([highspy.HighsVarType.kInteger] * n_cols),
+        )
+
+        def add_row(lower, upper, cols, coefs):
+            h.addRow(
+                float(lower),
+                float(upper),
+                len(cols),
+                np.asarray(cols, dtype=np.int32),
+                np.asarray(coefs, dtype=float),
+            )
+
+        player_cols = list(range(n))
+        add_row(min_salary, salary_cap, player_cols, salary_arr)
+        add_row(roster_size, roster_size, player_cols, [1.0] * n)
+
+        slot_cols_by_player = {i: [] for i in range(n)}
+        slot_cols_by_slot = {s: [] for s in ROSTER_SLOTS}
+        for k, (i, s) in enumerate(slot_pairs):
+            slot_cols_by_player[i].append(n + k)
+            slot_cols_by_slot[s].append(n + k)
+        for i in range(n):
+            cols = slot_cols_by_player[i]
+            # sum_s slot[i][s] - player[i] == 0
+            add_row(0, 0, cols + [i], [1.0] * len(cols) + [-1.0])
+        for s in ROSTER_SLOTS:
+            cols = slot_cols_by_slot[s]
+            add_row(1, 1, cols, [1.0] * len(cols))
+
+        # game[g] - sum(players in g) <= 0 ; sum(game) >= min_games
+        inf = highspy.kHighsInf
+        game_cols = []
+        for g_idx, game in enumerate(games):
+            col = n + len(slot_pairs) + g_idx
+            game_cols.append(col)
+            members = [i for i in range(n) if game_list[i] == game]
+            add_row(-inf, 0, [col] + members, [1.0] + [-1.0] * len(members))
+        add_row(min_games, inf, game_cols, [1.0] * len(game_cols))
+
+        h.changeObjectiveSense(highspy.ObjSense.kMaximize)
+        self._highs = h
+        self._player_cols = np.arange(n, dtype=np.int32)
+
+    def solve(self, projections) -> Optional[List[int]]:
+        """Maximize sum(projections * player). Returns sorted row positions, or None if not optimal."""
+        h = self._highs
+        h.changeColsCost(self.n_players, self._player_cols, np.asarray(projections, dtype=float))
+        run_status = h.run()
+        if run_status == highspy.HighsStatus.kError:
+            raise RuntimeError(f"HiGHS run failed: {h.getModelStatus()}")
+        if h.getModelStatus() != highspy.HighsModelStatus.kOptimal:
+            return None
+        col_values = np.asarray(h.getSolution().col_value[: self.n_players])
+        return np.flatnonzero(col_values > 0.5).tolist()
+
+
+# Columns a worker needs: model build (Salary, Roster Position, Game,
+# Projection) and slot_lineup_by_time (Name + ID, Roster Position, StartTime).
+WORKER_COLUMNS = ["Name + ID", "Roster Position", "Salary", "Projection", "Game", "StartTime"]
+
+# Per-process state, populated once by _init_worker. Lives in each spawned
+# worker; the parent process never reads it.
+_WORKER_STATE = {}
+
+
+def _init_worker(
+    df_pool: pd.DataFrame, randomness: float, min_salary: int, salary_cap: int, roster_size: int, min_games: int
+) -> None:
+    """ProcessPoolExecutor initializer: receive the pool once, build the model once."""
+    _WORKER_STATE["df_pool"] = df_pool
+    _WORKER_STATE["names"] = df_pool["Name + ID"].tolist()
+    _WORKER_STATE["projection"] = df_pool["Projection"].to_numpy(dtype=float)
+    _WORKER_STATE["randomness"] = randomness
+    _WORKER_STATE["rng"] = np.random.default_rng()
+    _WORKER_STATE["model"] = LineupModel(df_pool, min_salary, salary_cap, roster_size, min_games)
+
+
+def _generate_batch(batch_size: int) -> List[Tuple[Tuple[int, ...], List[str]]]:
+    """Solve and slot batch_size lineups. Returns (row positions, slotted names) per lineup."""
+    state = _WORKER_STATE
+    results = []
+    for _ in range(batch_size):
+        try:
+            projection = state["projection"]
+            if state["randomness"] > 0:
+                sim_proj = state["rng"].normal(projection, projection * state["randomness"])
+            else:
+                sim_proj = projection
+            positions = state["model"].solve(sim_proj)
+            if positions is None:
+                continue
+            names = [state["names"][p] for p in positions]
+            slotted = slot_lineup_by_time(names, state["df_pool"])
+            results.append((tuple(positions), slotted))
+        except RuntimeError:
+            # LineupModel.solve raises RuntimeError when HiGHS itself errors
+            # (misconfigured solver). Every later lineup would fail the same
+            # way, so fail the whole batch once instead of per lineup.
+            raise
+        except Exception:
+            traceback.print_exc()
+    return results
+
+
 def slot_lineup_by_time(lineup_names: List[str], df: pd.DataFrame) -> List[str]:
     players = df[df["Name + ID"].isin(lineup_names)].copy()
     if len(players) != 8:
@@ -253,61 +414,80 @@ def run(
 
         target_lineups = num_lineups
 
+        # Windows caps ProcessPoolExecutor at 61 workers.
+        num_workers = min(61, multiprocessing.cpu_count())
         print(
-            f"Spinning up pool with {multiprocessing.cpu_count()} cores to generate ~{target_lineups} candidates..."
+            f"Spinning up pool with {num_workers} cores to generate ~{target_lineups} candidates..."
         )
+
+        # Positional index so LineupModel's column order == row label.
+        df_pool = df[WORKER_COLUMNS].reset_index(drop=True)
+
+        # Spawned workers inherit this env at "import numpy"; without it each
+        # worker's OpenBLAS reserves per-thread buffers (~700 MB commit per
+        # worker vs ~90 MB). Workers do no BLAS work. Only affects "spawn"
+        # (Windows) and "forkserver" starts; under "fork" numpy is already
+        # imported. It stays set for the rest of this run's process, which is
+        # harmless: later stages start no child processes, and this process's
+        # own BLAS was configured at its numpy import. The GUI launches each
+        # run as a fresh process, so it does not carry over between runs.
+        os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+
+        # Small batches amortize task overhead while keeping ~4 batches per
+        # worker for load balancing and progress reporting.
+        batch_size = max(1, min(25, math.ceil(target_lineups / (num_workers * 4))))
+        batch_sizes = [batch_size] * (target_lineups // batch_size)
+        if target_lineups % batch_size:
+            batch_sizes.append(target_lineups % batch_size)
 
         candidates = []
 
         # Start the timer
         start_time = time.perf_counter()
 
-        with concurrent.futures.ProcessPoolExecutor() as executor:
-            # We must pass df, randomness, and min_salary to each worker
-            # Since df is static, it gets pickled once (or shared via COW on Linux, but picked on Windows)
-            futures = [
-                executor.submit(
-                    generate_single_lineup, df, randomness, cfg.min_salary, cfg.salary_cap, cfg.roster_size, cfg.min_games
-                )
-                for _ in range(target_lineups)
-            ]
-
-            # Calculate the iteration interval for 20% chunks once, outside the loop
-            interval = max(1, target_lineups // 5)
-
-            for i, future in enumerate(concurrent.futures.as_completed(futures)):
+        with concurrent.futures.ProcessPoolExecutor(
+            max_workers=num_workers,
+            initializer=_init_worker,
+            initargs=(df_pool, randomness, cfg.min_salary, cfg.salary_cap, cfg.roster_size, cfg.min_games),
+        ) as executor:
+            future_size_map = {executor.submit(_generate_batch, b): b for b in batch_sizes}
+            completed = 0
+            last_bucket = 0
+            for future in concurrent.futures.as_completed(future_size_map):
                 try:
-                    names, indices = future.result()
-                    if names and indices:
-                        candidates.append((names, indices))
-
-                    # Only do the math and print when hitting the interval or the final task
-                    if (i + 1) % interval == 0 or (i + 1) == target_lineups:
-                        percentage = int(((i + 1) / target_lineups) * 100)
-                        print(f"Lineups generated: {percentage}%")
-
+                    candidates.extend(future.result())
                 except Exception as exc:
                     print(f"Worker generated exception: {exc}")
+                completed += future_size_map[future]
+                # Report in 20% steps; bucket 5 (100%) is reached exactly once.
+                bucket = completed * 5 // target_lineups
+                if bucket > last_bucket:
+                    print(f"Lineups generated: {bucket * 20}%")
+                    last_bucket = bucket
 
         # Stop the timer and calculate the duration
         end_time = time.perf_counter()
         execution_time = end_time - start_time
 
         print(
-            f"Total candidates generated: {len(candidates)}; Total solver time: {execution_time:.2f} seconds"
+            f"Total candidates generated: {len(candidates)}; Total generation time: {execution_time:.2f} seconds"
         )
-        # print(f"Total solver time: {execution_time:.2f} seconds")
 
-        # Filter for Uniqueness / Min Unique
-        valid_raw_names = []
+        if not candidates:
+            print("Error: no lineups were generated; aborting.")
+            return ""
+
+        # Filter for Uniqueness / Min Unique (lineups arrive already slotted)
+        final_lineups = []
         selected_indices_list = []
         duplicates_removed = 0
 
-        print("Filtering candidates for uniqueness, then slotting by start time...")
-        for names, indices in candidates:
-            if len(valid_raw_names) >= target_lineups:
+        print("Filtering candidates for uniqueness...")
+        for positions, slotted in candidates:
+            if len(final_lineups) >= target_lineups:
                 break
 
+            indices = set(positions)
             is_valid = True
             for prev_indices in selected_indices_list:
                 overlap = len(indices.intersection(prev_indices))
@@ -317,30 +497,10 @@ def run(
                     break
 
             if is_valid:
-                valid_raw_names.append(names)
+                final_lineups.append(slotted)
                 selected_indices_list.append(indices)
 
-        # DEPRECATED as part of oversampling removal
-        # excess_discarded = len(candidates) - len(valid_raw_names) - duplicates_removed
-
         print(f"Duplicates removed (min_unique constraint): {duplicates_removed}")
-        # DEPRECATED as part of oversampling removal
-        # print(f"Excess candidates discarded unread: {excess_discarded}")
-
-        # Parallelize the slotting process
-        # print("Slotting final lineups by start time...")
-        final_lineups = []
-
-        with concurrent.futures.ProcessPoolExecutor() as executor:
-            # map() executes in parallel but yields results in the original order
-            results = executor.map(
-                slot_lineup_by_time,
-                valid_raw_names,
-                itertools.repeat(df, len(valid_raw_names)),
-            )
-
-            for slotted in results:
-                final_lineups.append(slotted)
 
         print(f"Final valid lineups slotted and selected: {len(final_lineups)}")
 

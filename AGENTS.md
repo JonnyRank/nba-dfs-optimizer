@@ -62,13 +62,13 @@ pip install -e .[gui]
 
 - Stages communicate through timestamped CSV files. The orchestrator now passes each stage's output path explicitly to the next stage, so stale outputs cannot be silently picked up on the orchestrated path. Standalone module invocations (`python -m nba_optimizer.<module>`) still fall back to "latest file" lookup, so beware stale outputs from a failed run there.
 - Player-pool loading is consolidated in `utils.parse_dk_entries` and `utils.merge_player_pool`; engine, ranker, and late_swapper all share it (plan 004). Engine and ranker merge with `how="inner"`; late_swapper merges with `how="left"` and derives the canonical `Game` column via `derive_game_key`. If you change projection or DKEntries parsing, that single path covers every stage — but confirm both merge modes still behave.
-- `engine.py` and `late_swapper.py` are the riskiest files to change because they are large and high-churn (`late_swapper.py` now has targeted tests; engine's LP constraints are covered, but its data/slotting plumbing is not).
+- `engine.py` and `late_swapper.py` are the riskiest files to change because they are large and high-churn (`late_swapper.py` now has targeted tests; engine's LP constraints and worker batch path (solve + slotting) are covered, but `run()`'s pool orchestration and the `min_unique` filter are not).
 
 ## Testing And Verification
 
 A deterministic pytest baseline exists:
 - `tests/test_utils.py` — shared parsing/loader helpers (`parse_dk_entries`, `merge_player_pool`, etc.).
-- `tests/test_engine_constraints.py` — core `engine.generate_single_lineup` LP constraints (roster size, salary band, positional eligibility, `min_games`).
+- `tests/test_engine_constraints.py` — core `engine.generate_single_lineup` LP constraints (roster size, salary band, positional eligibility, `min_games`), plus the persistent `LineupModel` and the worker batch path (`_init_worker` / `_generate_batch`).
 - `tests/test_late_swap.py` — late-swap game-key resolution, lock detection, and enforced `min_games`.
 - `tests/test_pipeline_artifacts.py` — explicit artifact handoff between stages (ranker/exporter/exposure_report honor passed-in paths over "latest file").
 

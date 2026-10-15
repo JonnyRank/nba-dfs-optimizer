@@ -13,7 +13,7 @@ Last reconciled: 2026-06-23 at commit `2b9b262`.
 | 003 | Replace latest-file pipeline handoff with explicit stage artifacts | P1 | M | 001 | DONE ✓ | https://github.com/JonnyRank/nba-dfs-optimizer/issues/42 |
 | 004 | Consolidate player-pool loading into a shared utility | P1 | M | 001 | DONE ✓ | https://github.com/JonnyRank/nba-dfs-optimizer/issues/43 |
 | 005 | Vectorize lineup ranking without changing output semantics | P2 | S-M | 001, 004 | TODO | https://github.com/JonnyRank/nba-dfs-optimizer/issues/44 |
-| 006 | Generate lineups from one long-lived worker pool with a persistent per-worker HiGHS model | P2 | M | — | TODO | https://github.com/JonnyRank/nba-dfs-optimizer/issues/58 |
+| 006 | Generate lineups from one long-lived worker pool with a persistent per-worker HiGHS model | P2 | M | — | DONE ✓ | https://github.com/JonnyRank/nba-dfs-optimizer/issues/58 |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale — finding fixed independently or approach abandoned)
 

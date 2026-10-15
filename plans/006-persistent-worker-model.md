@@ -22,6 +22,7 @@
 - **Planned at**: commit `29809ed`, 2026-10-14
 - **Reviewed at**: commit `4784083`, 2026-10-14 — the plan's Step 1/3/4 code was applied to a scratch copy of `engine.py` and run: all 5 new test scenarios pass and the benchmark below was reproduced (see "Why this matters")
 - **Issue**: https://github.com/JonnyRank/nba-dfs-optimizer/issues/58
+- **Executed**: 2026-10-15 on `advisor/006-persistent-worker-model`. One reviewer-approved deviation from Step 1: `LineupModel.__init__` calls `highspy.Highs.resetGlobalScheduler(True)` before `threads=1`, and `solve()` raises `RuntimeError` on `HighsStatus.kError`. Without the reset, any earlier PuLP HiGHS solve in the same process (e.g. the existing tests) leaves the global scheduler at the default thread count, `run()` returns `kError`, and `solve()` silently returned `None`. The "Reviewed at" check above missed this because it ran the new tests in isolation. Benchmark (500 lineups): best-of-3 9.71 s vs 16.09 s baseline (0.60x).
 
 ## Why this matters
 

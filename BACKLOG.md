@@ -140,7 +140,7 @@
 * **LLM Instructions**: Act as a Senior QA Engineer. Draft a strategy for setting up a `pytest` suite for the `nba_optimizer`. Do not test the GUI or the orchestrator yet; focus solely on writing deterministic tests for the `PuLP` constraints in `engine.py` and the data loading in `utils.py`. Propose 3 specific test cases.
 
 ### [Research] Reduce Multiprocessing Serialization Overhead
-* **Status**: Complete (research) — measured and answered in `plans/006-persistent-worker-model.md`; implementation tracked in https://github.com/JonnyRank/nba-dfs-optimizer/issues/58. Per-task DataFrame pickling is <1% of runtime; `shared_memory` rejected (see `plans/README.md`).
+* **Status**: Complete (research) — measured and answered in `plans/006-persistent-worker-model.md`; implemented by plan 006 in PR https://github.com/JonnyRank/nba-dfs-optimizer/pull/61 (closes #58). Per-task DataFrame pickling is <1% of runtime; `shared_memory` rejected (see `plans/README.md`).
 * **Target Files**: `src/nba_optimizer/engine.py`
 * **Context**: The `ProcessPoolExecutor` in `engine.py` pickles the entire player pool DataFrame per worker, which creates significant serialization overhead on Windows environments as the pool scales.
 * **Acceptance Criteria**:

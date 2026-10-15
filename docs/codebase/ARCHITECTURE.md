@@ -38,8 +38,8 @@ DKEntries.csv (with locked players) + NBA-Projs-*.csv
 ```
 
 1. **Data Loading:** Engine reads DKEntries.csv (player pool with salaries, positions, game info) and merges with projection CSV on player ID.
-2. **Parallel Generation:** `ProcessPoolExecutor` spawns one LP solve per target lineup. Each worker applies random noise to projections, solves a binary LP (PuLP + HiGHS), and returns selected player names + indices.
-3. **Uniqueness Filtering:** Main process filters candidates by `min_unique` overlap constraint, then parallelizes time-based slot assignment.
+2. **Parallel Generation:** One `ProcessPoolExecutor` whose workers receive the player pool once via `initializer` (`_init_worker`) and build a persistent HiGHS `LineupModel` once per worker. Workers then solve and slot lineups in batches (`_generate_batch`), applying random noise to projections and re-solving the same model with only the objective swapped, and return row positions + slotted names.
+3. **Uniqueness Filtering:** Main process filters the already-slotted candidates by `min_unique` overlap constraint.
 4. **Ranking:** Ranker loads the lineup pool CSV, computes per-lineup Total Projection / Total Ownership / Geomean Ownership, applies user-specified weights to rank positions, and sorts by composite score.
 5. **Export:** Exporter reads the DKEntries template (ragged CSV), fills entry slots with top-ranked lineups, and writes the upload-ready file.
 6. **Reporting:** Exposure report resolves the target entries file via `_resolve_entries_file()`. If `--entries_file` is given, that path is used directly. Otherwise, it tries three glob patterns against `output_dir` in order — `upload-ready-DKEntries-*.csv`, `late-swap-entries-*.csv`, and `{base}*{ext}` (derived from `cfg.entries_path`, e.g. `DKEntries*.csv` to catch variants like `DKEntries(1).csv`) — collects the newest match from each pattern, and returns the overall most-recently-modified candidate. It then parses the file, counts per-player appearances, and computes leverage (exposure % − projected ownership %).
@@ -76,8 +76,8 @@ DKEntries.csv (with locked players) + NBA-Projs-*.csv
 - **File-system coupling (orchestrated path — mitigated):** When run through the orchestrator, each stage now passes its output path explicitly to the next stage, so stale files from a prior partial run cannot be picked up. The "latest file" heuristic is preserved only for standalone direct-module invocation (`python -m nba_optimizer.ranker`, etc.).
 - **File-system coupling (standalone path — remaining):** Running any stage module directly still relies on the newest matching file in the relevant directory. A stale file from a failed run could still be picked up when a stage is invoked outside the orchestrator.
 - **Data loading (resolved):** `engine.py`, `late_swapper.py`, and `ranker.py` all share `parse_dk_entries` and `merge_player_pool` from `utils.py`. Engine and ranker use `how="inner"` with a simple `"Game Info"` string split for the `Game` column (pre-lock, matchup strings are always valid). Late-swap uses `how="left"` (retaining current-lineup players without projections) and `_attach_game_column` (which calls `derive_game_key`) to recover games marked "In Progress".
-- **DataFrame pickling overhead on Windows:** `ProcessPoolExecutor` pickles the full DataFrame for each worker on Windows (no copy-on-write). For large player pools this adds serialization cost.
-- **Worker function signature complexity:** The `generate_single_lineup()` worker must receive all config values as individual parameters (salary_cap, roster_size, min_games) since it cannot access the Config instance in the multiprocessing context.
+- **Player pool sent once per worker:** the pool is shipped via the pool `initializer` (not per task), and `OPENBLAS_NUM_THREADS=1` is set so spawned workers do not each reserve ~700 MB of OpenBLAS buffers.
+- **Worker function signature complexity:** `_init_worker()` must receive all config values as individual parameters (salary_cap, roster_size, min_games) since workers cannot access the Config instance in the multiprocessing context.
 
 ### 6) Evidence
 
