@@ -120,9 +120,24 @@ def test_ownership_only_weights_rank_by_lowest_total_ownership():
     assert df_ranked["Final_Rank"].tolist() == [1, 2, 3]
 
 
+def test_missing_weight_keys_default_to_one():
+    """A weight key left out of the weights dict counts at full weight (1.0),
+    not 0: with only {"proj": 1.0}, own and geo ranks still add to the score.
+
+    Scores (Proj_Rank + Own_Rank + Geo_Rank): L1 2+3+3=8, L2 1+1+2=4, L3 3+2+1=6.
+    """
+    df_ranked = rank_lineups(_lineups(LINEUP_1, LINEUP_2, LINEUP_3), _players(), {"proj": 1.0})
+
+    assert df_ranked.set_index("Lineup_ID")["Lineup_Score"].to_dict() == {1: 8.0, 2: 4.0, 3: 6.0}
+
+
 def test_tied_metrics_share_average_rank():
     """Lineups with identical metrics get the average of the tied ranks
-    (pandas rank method='average'), e.g. two-way tie for first = 1.5."""
+    (pandas rank method='average'), e.g. two-way tie for first = 1.5.
+
+    Row order among tied Lineup_Score values is deliberately not asserted:
+    rank_lineups sorts with the default (unstable) quicksort, so it is not
+    guaranteed."""
     df_ranked = rank_lineups(_lineups(LINEUP_1, LINEUP_1), _players(), DEFAULT_WEIGHTS)
 
     assert df_ranked["Proj_Rank"].tolist() == [1.5, 1.5]

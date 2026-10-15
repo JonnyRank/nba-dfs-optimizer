@@ -44,7 +44,7 @@ python -m pytest tests/test_engine_constraints.py tests/test_utils.py -q
 
 - Coverage tool + threshold: None configured
 - Current reported coverage: Not measured
-- Known gaps: `tests/test_ranker.py` now characterizes the scoring in `ranker.py`; the formatting logic in `exporter.py` is still untested (the artifact-handoff contract is tested). `exposure_report.py` report generation and `late_swapper.py` are fully untested. Manual CSV-based verification is still required for real-slate behavior and these untested paths.
+- Known gaps: `tests/test_ranker.py` now characterizes the scoring in `ranker.py`; the formatting logic in `exporter.py` is still untested (the artifact-handoff contract is tested). `exposure_report.py` report generation is fully untested, and `late_swapper.py` has only targeted coverage (`tests/test_late_swap.py`: game-key resolution, lock detection, `min_games`). Manual CSV-based verification is still required for real-slate behavior and these untested paths.
 
 ### 6) Evidence
 
