@@ -1,6 +1,10 @@
 """Deterministic tests for the core LP constraints in
 nba_optimizer.engine.generate_single_lineup.
 
+The file also covers the persistent HiGHS ``LineupModel`` and the
+``_init_worker`` / ``_generate_batch`` worker path. The worker-path test uses
+noise (randomness=0.25) but asserts only draw-invariant properties.
+
 These exercise the worker function directly against a tiny synthetic player
 pool (randomness=0.0) so the solve is reproducible. The pool is constructed
 so that exactly one combination of 8 players satisfies the salary, roster
@@ -14,6 +18,7 @@ import os
 
 import pandas as pd
 
+from nba_optimizer import engine
 from nba_optimizer.config import ROSTER_SLOTS, Config
 from nba_optimizer.engine import LineupModel, generate_single_lineup, load_data
 
@@ -289,3 +294,28 @@ def test_persistent_model_resolve_replaces_objective():
 
     assert second is not None and len(second) == cfg.roster_size
     assert p not in second
+
+
+def test_worker_batch_returns_slotted_lineups():
+    """_init_worker + _generate_batch yield complete, slotted lineups.
+
+    randomness=0.25 is used to exercise the rng.normal branch of
+    _generate_batch; every assertion holds for any noise draw, so the test is
+    not flaky.
+    """
+    cfg = Config()
+    df_pool = _load_fixture_pool()[engine.WORKER_COLUMNS].reset_index(drop=True)
+    try:
+        engine._init_worker(
+            df_pool, 0.25, cfg.min_salary, cfg.salary_cap, cfg.roster_size, cfg.min_games
+        )
+        batch = engine._generate_batch(3)
+
+        assert len(batch) == 3
+        for positions, slotted in batch:
+            assert len(positions) == cfg.roster_size
+            assert len(slotted) == cfg.roster_size
+            assert "ERROR" not in slotted and "EMPTY" not in slotted
+            assert set(slotted) == set(df_pool.loc[list(positions), "Name + ID"])
+    finally:
+        engine._WORKER_STATE.clear()

@@ -246,6 +246,49 @@ class LineupModel:
         return np.flatnonzero(col_values > 0.5).tolist()
 
 
+# Columns a worker needs: model build (Salary, Roster Position, Game,
+# Projection) and slot_lineup_by_time (Name + ID, Roster Position, StartTime).
+WORKER_COLUMNS = ["Name + ID", "Roster Position", "Salary", "Projection", "Game", "StartTime"]
+
+# Per-process state, populated once by _init_worker. Lives in each spawned
+# worker; the parent process never reads it.
+_WORKER_STATE = {}
+
+
+def _init_worker(
+    df_pool: pd.DataFrame, randomness: float, min_salary: int, salary_cap: int, roster_size: int, min_games: int
+) -> None:
+    """ProcessPoolExecutor initializer: receive the pool once, build the model once."""
+    _WORKER_STATE["df_pool"] = df_pool
+    _WORKER_STATE["names"] = df_pool["Name + ID"].tolist()
+    _WORKER_STATE["projection"] = df_pool["Projection"].to_numpy(dtype=float)
+    _WORKER_STATE["randomness"] = randomness
+    _WORKER_STATE["rng"] = np.random.default_rng()
+    _WORKER_STATE["model"] = LineupModel(df_pool, min_salary, salary_cap, roster_size, min_games)
+
+
+def _generate_batch(batch_size: int) -> List[Tuple[Tuple[int, ...], List[str]]]:
+    """Solve and slot batch_size lineups. Returns (row positions, slotted names) per lineup."""
+    state = _WORKER_STATE
+    results = []
+    for _ in range(batch_size):
+        try:
+            projection = state["projection"]
+            if state["randomness"] > 0:
+                sim_proj = state["rng"].normal(projection, projection * state["randomness"])
+            else:
+                sim_proj = projection
+            positions = state["model"].solve(sim_proj)
+            if positions is None:
+                continue
+            names = [state["names"][p] for p in positions]
+            slotted = slot_lineup_by_time(names, state["df_pool"])
+            results.append((tuple(positions), slotted))
+        except Exception:
+            traceback.print_exc()
+    return results
+
+
 def slot_lineup_by_time(lineup_names: List[str], df: pd.DataFrame) -> List[str]:
     players = df[df["Name + ID"].isin(lineup_names)].copy()
     if len(players) != 8:
