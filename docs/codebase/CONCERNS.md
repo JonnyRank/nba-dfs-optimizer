@@ -32,7 +32,7 @@ This is a single-user, locally-run tool with no network exposure. Security risks
 
 | Concern | Evidence | Current symptom | Scaling risk | Suggested improvement |
 |---------|----------|-----------------|-------------|-----------------------|
-| DataFrame pickled per worker on Windows | `engine.py` uses `ProcessPoolExecutor` | Serialization overhead when player pool is large | Grows linearly with worker count × DataFrame size | Consider using `multiprocessing.shared_memory` or passing only necessary columns |
+| ~~DataFrame pickled per worker on Windows~~ (resolved by plan 006) | `engine.py` now ships the pool once per worker via the pool `initializer` | None | None | None |
 | `ranker.py` uses `iterrows()` for all lineups | `ranker.py:rank_lineups()` | Slow for large lineup pools (2500+) | O(n) with high constant factor due to Python loop | Vectorize with pandas operations |
 | `late_swapper.py` LP lookups previously used `df.loc` inside constraint loops | `late_swapper.py:solve_late_swap_batch()` (see commit `f4253f4`) | **Resolved** — dict-based lookups now match `engine.py` pattern | — | No action needed |
 
