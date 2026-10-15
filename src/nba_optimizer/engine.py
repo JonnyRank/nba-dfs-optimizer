@@ -1,6 +1,6 @@
 import argparse
 import concurrent.futures
-import itertools
+import math
 import multiprocessing
 import os
 import time
@@ -406,61 +406,71 @@ def run(
 
         target_lineups = num_lineups
 
+        # Windows caps ProcessPoolExecutor at 61 workers.
+        num_workers = min(61, multiprocessing.cpu_count())
         print(
-            f"Spinning up pool with {multiprocessing.cpu_count()} cores to generate ~{target_lineups} candidates..."
+            f"Spinning up pool with {num_workers} cores to generate ~{target_lineups} candidates..."
         )
+
+        # Positional index so LineupModel's column order == row label.
+        df_pool = df[WORKER_COLUMNS].reset_index(drop=True)
+
+        # Spawned workers inherit this env at "import numpy"; without it each
+        # worker's OpenBLAS reserves per-thread buffers (~700 MB commit per
+        # worker vs ~90 MB). Workers do no BLAS work.
+        os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+
+        # Small batches amortize task overhead while keeping ~4 batches per
+        # worker for load balancing and progress reporting.
+        batch_size = max(1, min(25, math.ceil(target_lineups / (num_workers * 4))))
+        batch_sizes = [batch_size] * (target_lineups // batch_size)
+        if target_lineups % batch_size:
+            batch_sizes.append(target_lineups % batch_size)
 
         candidates = []
 
         # Start the timer
         start_time = time.perf_counter()
 
-        with concurrent.futures.ProcessPoolExecutor() as executor:
-            # We must pass df, randomness, and min_salary to each worker
-            # Since df is static, it gets pickled once (or shared via COW on Linux, but picked on Windows)
-            futures = [
-                executor.submit(
-                    generate_single_lineup, df, randomness, cfg.min_salary, cfg.salary_cap, cfg.roster_size, cfg.min_games
-                )
-                for _ in range(target_lineups)
-            ]
-
-            # Calculate the iteration interval for 20% chunks once, outside the loop
-            interval = max(1, target_lineups // 5)
-
-            for i, future in enumerate(concurrent.futures.as_completed(futures)):
+        with concurrent.futures.ProcessPoolExecutor(
+            max_workers=num_workers,
+            initializer=_init_worker,
+            initargs=(df_pool, randomness, cfg.min_salary, cfg.salary_cap, cfg.roster_size, cfg.min_games),
+        ) as executor:
+            future_size_map = {executor.submit(_generate_batch, b): b for b in batch_sizes}
+            completed = 0
+            last_bucket = 0
+            for future in concurrent.futures.as_completed(future_size_map):
                 try:
-                    names, indices = future.result()
-                    if names and indices:
-                        candidates.append((names, indices))
-
-                    # Only do the math and print when hitting the interval or the final task
-                    if (i + 1) % interval == 0 or (i + 1) == target_lineups:
-                        percentage = int(((i + 1) / target_lineups) * 100)
-                        print(f"Lineups generated: {percentage}%")
-
+                    candidates.extend(future.result())
                 except Exception as exc:
                     print(f"Worker generated exception: {exc}")
+                completed += future_size_map[future]
+                # Report in 20% steps; bucket 5 (100%) is reached exactly once.
+                bucket = completed * 5 // target_lineups
+                if bucket > last_bucket:
+                    print(f"Lineups generated: {bucket * 20}%")
+                    last_bucket = bucket
 
         # Stop the timer and calculate the duration
         end_time = time.perf_counter()
         execution_time = end_time - start_time
 
         print(
-            f"Total candidates generated: {len(candidates)}; Total solver time: {execution_time:.2f} seconds"
+            f"Total candidates generated: {len(candidates)}; Total generation time: {execution_time:.2f} seconds"
         )
-        # print(f"Total solver time: {execution_time:.2f} seconds")
 
-        # Filter for Uniqueness / Min Unique
-        valid_raw_names = []
+        # Filter for Uniqueness / Min Unique (lineups arrive already slotted)
+        final_lineups = []
         selected_indices_list = []
         duplicates_removed = 0
 
-        print("Filtering candidates for uniqueness, then slotting by start time...")
-        for names, indices in candidates:
-            if len(valid_raw_names) >= target_lineups:
+        print("Filtering candidates for uniqueness...")
+        for positions, slotted in candidates:
+            if len(final_lineups) >= target_lineups:
                 break
 
+            indices = set(positions)
             is_valid = True
             for prev_indices in selected_indices_list:
                 overlap = len(indices.intersection(prev_indices))
@@ -470,30 +480,10 @@ def run(
                     break
 
             if is_valid:
-                valid_raw_names.append(names)
+                final_lineups.append(slotted)
                 selected_indices_list.append(indices)
 
-        # DEPRECATED as part of oversampling removal
-        # excess_discarded = len(candidates) - len(valid_raw_names) - duplicates_removed
-
         print(f"Duplicates removed (min_unique constraint): {duplicates_removed}")
-        # DEPRECATED as part of oversampling removal
-        # print(f"Excess candidates discarded unread: {excess_discarded}")
-
-        # Parallelize the slotting process
-        # print("Slotting final lineups by start time...")
-        final_lineups = []
-
-        with concurrent.futures.ProcessPoolExecutor() as executor:
-            # map() executes in parallel but yields results in the original order
-            results = executor.map(
-                slot_lineup_by_time,
-                valid_raw_names,
-                itertools.repeat(df, len(valid_raw_names)),
-            )
-
-            for slotted in results:
-                final_lineups.append(slotted)
 
         print(f"Final valid lineups slotted and selected: {len(final_lineups)}")
 
