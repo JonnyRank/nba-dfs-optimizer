@@ -427,9 +427,10 @@ def run(
         # worker's OpenBLAS reserves per-thread buffers (~700 MB commit per
         # worker vs ~90 MB). Workers do no BLAS work. Only affects "spawn"
         # (Windows) and "forkserver" starts; under "fork" numpy is already
-        # imported. It persists in this process (e.g. the GUI) for later
-        # child processes, which is harmless while no stage uses BLAS-heavy
-        # workers.
+        # imported. It stays set for the rest of this run's process, which is
+        # harmless: later stages start no child processes, and this process's
+        # own BLAS was configured at its numpy import. The GUI launches each
+        # run as a fresh process, so it does not carry over between runs.
         os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
 
         # Small batches amortize task overhead while keeping ~4 batches per
