@@ -31,6 +31,7 @@ python -m pytest tests/test_engine_constraints.py tests/test_utils.py -q
 |-------|----------|----------------|-------|
 | Unit | Yes (partial) | `nba_optimizer.utils` parsing helpers (`extract_player_id`, `parse_game_time`, `read_ragged_csv`) | Deterministic, pure-function tests |
 | Unit/Integration | Yes (partial) | `nba_optimizer.engine.generate_single_lineup`, `nba_optimizer.engine.LineupModel`, and the `_init_worker` / `_generate_batch` worker path | Exercises the LP solve directly with `randomness=0.0` against a tiny synthetic player pool; asserts roster size, salary band, positional eligibility, and min-games constraints; also checks fixture-slate objective equivalence of `LineupModel` against `generate_single_lineup` |
+| Unit | Yes (partial) | `nba_optimizer.ranker.rank_lineups` | `tests/test_ranker.py`: totals, missing-player and 0.1 geomean floor, weighted rank order, average-rank ties, slot/Lineup_ID passthrough |
 | Integration | Partial | `ranker.run()`, `exporter.run()`, `exposure_report._resolve_entries_file()` artifact handoff | Covered by `test_pipeline_artifacts.py` using synthetic temp-file fixtures. Full end-to-end pipeline (LP solve → rank → export) is not covered. |
 | E2E | No (manual) | Full pipeline | Verification is done by running the pipeline with real CSV inputs and inspecting output |
 
@@ -43,7 +44,7 @@ python -m pytest tests/test_engine_constraints.py tests/test_utils.py -q
 
 - Coverage tool + threshold: None configured
 - Current reported coverage: Not measured
-- Known gaps: end-to-end ranking and export logic in `ranker.py` and `exporter.py` (the artifact-handoff contract is tested; the scoring/formatting logic is not). `exposure_report.py` report generation and `late_swapper.py` are fully untested. Manual CSV-based verification is still required for real-slate behavior and these untested paths.
+- Known gaps: `tests/test_ranker.py` now characterizes the scoring in `ranker.py`; the formatting logic in `exporter.py` is still untested (the artifact-handoff contract is tested). `exposure_report.py` report generation is fully untested, and `late_swapper.py` has only targeted coverage (`tests/test_late_swap.py`: game-key resolution, lock detection, `min_games`). Manual CSV-based verification is still required for real-slate behavior and these untested paths.
 
 ### 6) Evidence
 
