@@ -83,6 +83,7 @@ def test_geomean_ownership_floors_zero_and_missing_at_0_1():
     assert df_by_id.loc[1, "Geomean_Ownership"] == pytest.approx(
         _geomean([30, 25, 20, 15, 10, 8, 5, 2])
     )
+    # LINEUP_3 is the second input row here, so its Lineup_ID is 2.
     # Z0 (0%) and Ghost (missing) both become 0.1.
     assert df_by_id.loc[2, "Geomean_Ownership"] == pytest.approx(
         _geomean([30, 25, 20, 15, 10, 0.1, 5, 0.1])
