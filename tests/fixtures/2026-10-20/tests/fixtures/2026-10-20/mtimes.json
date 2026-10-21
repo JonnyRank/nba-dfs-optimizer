@@ -1,0 +1,17 @@
+{
+  "_note": "Original modified times on Jonny's PC (Google Drive), 2026-10-20. Tests apply these with os.utime because git does not keep mtimes. ranked-lineups is trimmed to its top 100 rows; lineup-pool omitted (0.5 MB).",
+  "mtimes": {
+    "L0-NBA-Projs-2026-10-20_13-55-35.csv": "2026-10-20T13:55:35.749000-05:00",
+    "L1-DK_NBA_Main_Late_Swap_Lineups.csv": "2026-10-20T17:59:24.370000-05:00",
+    "L1-NBA-Projs-2026-10-20_17-55-17.csv": "2026-10-20T17:55:17.121000-05:00",
+    "L2-DK_NBA_Main_Late_Swap_Lineups.csv": "2026-10-20T20:29:50.834000-05:00",
+    "L2-NBA-Projs-2026-10-20_20-28-20.csv": "2026-10-20T20:28:20.916000-05:00",
+    "NBA-Projs-Template-26-27-WIP_2026-10-20_21-44-33.csv": "2026-10-20T21:44:33.167000-05:00",
+    "Post-L0-DKEntries.csv": "2026-10-20T18:05:33.609000-05:00",
+    "Post-L1-DKEntries.csv": "2026-10-20T19:33:34.181000-05:00",
+    "Post-L2-DKEntries.csv": "2026-10-20T21:48:16.849000-05:00",
+    "Pre-L0-DKEntries.csv": "2026-10-20T13:20:07.956000-05:00",
+    "ranked-lineups-2026-10-20_135723.csv": "2026-10-20T13:57:23.713000-05:00",
+    "upload-ready-DKEntries-2026-10-20_135723.csv": "2026-10-20T13:57:23.820000-05:00"
+  }
+}

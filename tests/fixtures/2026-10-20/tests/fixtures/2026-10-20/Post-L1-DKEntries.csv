@@ -1,0 +1,133 @@
+Entry ID,Contest Name,Contest ID,Entry Fee,PG,SG,SF,PF,C,G,F,UTIL,,Instructions
+5303852548,NBA $100K Four Point Play [20 Entry Max],196456024,$4,Dylan Harper (44451282),Payton Pritchard (44451268) (LOCKED),Ausar Thompson (44451275) (LOCKED),Chet Holmgren (44451259),Jalen Duren (44451238) (LOCKED),Cason Wallace (44451301),Jalen Williams (44451235),Victor Wembanyama (44451199),,1. Column A lists all of your contest entries for this draftgroup
+5303852549,NBA $100K Four Point Play [20 Entry Max],196456024,$4,Dylan Harper (44451282),Josh Hart (44451247) (LOCKED),Ausar Thompson (44451275) (LOCKED),Jayson Tatum (44451207) (LOCKED),Paul Reed (44451391) (LOCKED),Cason Wallace (44451301),OG Anunoby (44451272) (LOCKED),Victor Wembanyama (44451199),,2. Your current lineup is listed next to each entry (blank for reservations)
+5303852550,NBA $100K Four Point Play [20 Entry Max],196456024,$4,Jalen Brunson (44451222) (LOCKED),Dylan Harper (44451282),Ausar Thompson (44451275) (LOCKED),John Collins (44451297) (LOCKED),Jalen Duren (44451238) (LOCKED),De'Aaron Fox (44451252),Julian Champagnie (44451340),Victor Wembanyama (44451199),,3. You can change the lineup for an entry by entering the IDs of the players in the row next to that entry
+5303852551,NBA $100K Four Point Play [20 Entry Max],196456024,$4,Jalen Brunson (44451222) (LOCKED),Dylan Harper (44451282),Jalen Williams (44451235),Jayson Tatum (44451207) (LOCKED),Jalen Duren (44451238) (LOCKED),Cason Wallace (44451301),OG Anunoby (44451272) (LOCKED),Isaiah Hartenstein (44451290),,4. Use data from the Name+ID column or the ID column; you cannot use just the player's name
+5303852552,NBA $100K Four Point Play [20 Entry Max],196456024,$4,Cade Cunningham (44451204) (LOCKED),Dylan Harper (44451282),Jalen Williams (44451235),Karl-Anthony Towns (44451218) (LOCKED),Paul Reed (44451391) (LOCKED),De'Aaron Fox (44451252),Julian Champagnie (44451340),Jalen Duren (44451238) (LOCKED),,5. For faster processing only include entries you are changing in the file you upload
+5303852553,NBA $100K Four Point Play [20 Entry Max],196456024,$4,VJ Edgecombe (44451255) (LOCKED),Dylan Harper (44451282),Cason Wallace (44451301),OG Anunoby (44451272) (LOCKED),Jalen Duren (44451238) (LOCKED),De'Aaron Fox (44451252),Chet Holmgren (44451259),Victor Wembanyama (44451199),,
+5303852554,NBA $100K Four Point Play [20 Entry Max],196456024,$4,VJ Edgecombe (44451255) (LOCKED),Dylan Harper (44451282),Ausar Thompson (44451275) (LOCKED),Jayson Tatum (44451207) (LOCKED),Paul Reed (44451391) (LOCKED),De'Aaron Fox (44451252),Julian Champagnie (44451340),Victor Wembanyama (44451199),,Position,Name + ID,Name,ID,Roster Position,Salary,Game Info,TeamAbbrev,AvgPointsPerGame
+5303852555,NBA $100K Four Point Play [20 Entry Max],196456024,$4,Jalen Brunson (44451222) (LOCKED),Dylan Harper (44451282),Ausar Thompson (44451275) (LOCKED),Karl-Anthony Towns (44451218) (LOCKED),Jalen Duren (44451238) (LOCKED),De'Aaron Fox (44451252),OG Anunoby (44451272) (LOCKED),Chet Holmgren (44451259),,C,Victor Wembanyama (44451199),Victor Wembanyama,44451199,C/UTIL,10500,OKC@SAS 10/20/2026 09:30PM ET,SAS,51.66
+5303852556,NBA $100K Four Point Play [20 Entry Max],196456024,$4,De'Aaron Fox (44451252),Dylan Harper (44451282),Ausar Thompson (44451275) (LOCKED),Jayson Tatum (44451207) (LOCKED),Paul Reed (44451391) (LOCKED),Cason Wallace (44451301),OG Anunoby (44451272) (LOCKED),Victor Wembanyama (44451199),,PG,Shai Gilgeous-Alexander (44451201),Shai Gilgeous-Alexander,44451201,PG/G/UTIL,10200,OKC@SAS 10/20/2026 09:30PM ET,OKC,49.91
+5303852557,NBA $100K Four Point Play [20 Entry Max],196456024,$4,Jalen Brunson (44451222) (LOCKED),Stephon Castle (44451232),Cason Wallace (44451301),Jayson Tatum (44451207) (LOCKED),Paul Reed (44451391) (LOCKED),Dylan Harper (44451282),Karl-Anthony Towns (44451218) (LOCKED),Isaiah Hartenstein (44451290),,PG,Cade Cunningham (44451204) (LOCKED),Cade Cunningham,44451204,PG/G/UTIL,9500,Final,DET,49.33
+5303852558,NBA $100K Four Point Play [20 Entry Max],196456024,$4,Cade Cunningham (44451204) (LOCKED),Dylan Harper (44451282),Josh Hart (44451247) (LOCKED),OG Anunoby (44451272) (LOCKED),Jalen Duren (44451238) (LOCKED),Cason Wallace (44451301),Karl-Anthony Towns (44451218) (LOCKED),Isaiah Hartenstein (44451290),,PF,Jayson Tatum (44451207) (LOCKED),Jayson Tatum,44451207,PF/F/UTIL,9000,Final,BOS,47.80
+5303852559,NBA $100K Four Point Play [20 Entry Max],196456024,$4,Cade Cunningham (44451204) (LOCKED),Stephon Castle (44451232),Ausar Thompson (44451275) (LOCKED),Jayson Tatum (44451207) (LOCKED),Paul Reed (44451391) (LOCKED),Dylan Harper (44451282),OG Anunoby (44451272) (LOCKED),Isaiah Hartenstein (44451290),,PG,Tyrese Maxey (44451210) (LOCKED),Tyrese Maxey,44451210,PG/G/UTIL,8300,In Progress,PHI,46.95
+5303852560,NBA $100K Four Point Play [20 Entry Max],196456024,$4,Jalen Brunson (44451222) (LOCKED),Dylan Harper (44451282),Ausar Thompson (44451275) (LOCKED),Julian Champagnie (44451340),Mitchell Robinson (44451313) (LOCKED),De'Aaron Fox (44451252),Jalen Williams (44451235),Victor Wembanyama (44451199),,C,Joel Embiid (44451213) (LOCKED),Joel Embiid,44451213,C/UTIL,8100,In Progress,PHI,45.34
+5303852561,NBA $100K Four Point Play [20 Entry Max],196456024,$4,Payton Pritchard (44451268) (LOCKED),Dylan Harper (44451282),Jalen Williams (44451235),Chet Holmgren (44451259),Paul Reed (44451391) (LOCKED),Jalen Brunson (44451222) (LOCKED),Cason Wallace (44451301),Victor Wembanyama (44451199),,SF,Jaylen Brown (44451215) (LOCKED),Jaylen Brown,44451215,SF/F/UTIL,8000,In Progress,PHI,46.01
+5303852562,NBA $100K Four Point Play [20 Entry Max],196456024,$4,Cade Cunningham (44451204) (LOCKED),Payton Pritchard (44451268) (LOCKED),Ausar Thompson (44451275) (LOCKED),LeBron James (44451225) (LOCKED),Jalen Duren (44451238) (LOCKED),Dylan Harper (44451282),Chet Holmgren (44451259),Isaiah Hartenstein (44451290),,PF/C,Karl-Anthony Towns (44451218) (LOCKED),Karl-Anthony Towns,44451218,PF/C/F/UTIL,7800,In Progress,NYK,42.01
+5303852563,NBA $100K Four Point Play [20 Entry Max],196456024,$4,Dylan Harper (44451282),Payton Pritchard (44451268) (LOCKED),Ausar Thompson (44451275) (LOCKED),John Collins (44451297) (LOCKED),Jalen Duren (44451238) (LOCKED),Stephon Castle (44451232),OG Anunoby (44451272) (LOCKED),Victor Wembanyama (44451199),,PG,Jalen Brunson (44451222) (LOCKED),Jalen Brunson,44451222,PG/G/UTIL,7600,In Progress,NYK,42.09
+5303852564,NBA $100K Four Point Play [20 Entry Max],196456024,$4,Ajay Mitchell (44451278),Dylan Harper (44451282),Jalen Williams (44451235),Jayson Tatum (44451207) (LOCKED),Paul Reed (44451391) (LOCKED),De'Aaron Fox (44451252),Karl-Anthony Towns (44451218) (LOCKED),Jalen Duren (44451238) (LOCKED),,PF,LeBron James (44451225) (LOCKED),LeBron James,44451225,PF/F/UTIL,7500,In Progress,PHI,42.11
+5304480129,NBA $100K Four Point Play [20 Entry Max],196456024,$4,De'Aaron Fox (44451252),Landry Shamet (44451400) (LOCKED),Jalen Williams (44451235),Jayson Tatum (44451207) (LOCKED),Paul Reed (44451391) (LOCKED),Dylan Harper (44451282),OG Anunoby (44451272) (LOCKED),Victor Wembanyama (44451199),,PG/SG,Derrick White (44451228) (LOCKED),Derrick White,44451228,PG/SG/G/UTIL,7000,Final,BOS,34.48
+5304480130,NBA $100K Four Point Play [20 Entry Max],196456024,$4,Jalen Brunson (44451222) (LOCKED),Josh Hart (44451247) (LOCKED),Ausar Thompson (44451275) (LOCKED),Jayson Tatum (44451207) (LOCKED),Paul Reed (44451391) (LOCKED),Dylan Harper (44451282),Jalen Williams (44451235),Jalen Duren (44451238) (LOCKED),,SG,Stephon Castle (44451232),Stephon Castle,44451232,SG/G/UTIL,6800,OKC@SAS 10/20/2026 09:30PM ET,SAS,36.58
+5304480131,NBA $100K Four Point Play [20 Entry Max],196456024,$4,Cade Cunningham (44451204) (LOCKED),Ajay Mitchell (44451278),Ausar Thompson (44451275) (LOCKED),John Collins (44451297) (LOCKED),Mitchell Robinson (44451313) (LOCKED),Dylan Harper (44451282),OG Anunoby (44451272) (LOCKED),Victor Wembanyama (44451199),,SF,Jalen Williams (44451235),Jalen Williams,44451235,SF/F/UTIL,6600,OKC@SAS 10/20/2026 09:30PM ET,OKC,32.33
+5303843143,NBA $30K And-One [20 Entry Max],196456031,$1,Jalen Brunson (44451222) (LOCKED),Dylan Harper (44451282),Ausar Thompson (44451275) (LOCKED),Karl-Anthony Towns (44451218) (LOCKED),Isaiah Hartenstein (44451290),De'Aaron Fox (44451252),Chet Holmgren (44451259),Stephon Castle (44451232),,C,Jalen Duren (44451238) (LOCKED),Jalen Duren,44451238,C/UTIL,6500,Final,DET,36.29
+5303843152,NBA $30K And-One [20 Entry Max],196456031,$1,Cade Cunningham (44451204) (LOCKED),Dylan Harper (44451282),Ausar Thompson (44451275) (LOCKED),Karl-Anthony Towns (44451218) (LOCKED),Jalen Duren (44451238) (LOCKED),Ajay Mitchell (44451278),Julian Champagnie (44451340),Chet Holmgren (44451259),,SF,Devin Vassell (44451240),Devin Vassell,44451240,SF/F/UTIL,6400,OKC@SAS 10/20/2026 09:30PM ET,SAS,26.54
+5303843153,NBA $30K And-One [20 Entry Max],196456031,$1,Jalen Brunson (44451222) (LOCKED),Dylan Harper (44451282),Ausar Thompson (44451275) (LOCKED),Jayson Tatum (44451207) (LOCKED),Mitchell Robinson (44451313) (LOCKED),De'Aaron Fox (44451252),Chet Holmgren (44451259),Jalen Williams (44451235),,SF/PF,Paul George (44451243) (LOCKED),Paul George,44451243,SF/PF/F/UTIL,6300,Final,BOS,33.15
+5303843154,NBA $30K And-One [20 Entry Max],196456031,$1,Cade Cunningham (44451204) (LOCKED),Dylan Harper (44451282),Jalen Williams (44451235),OG Anunoby (44451272) (LOCKED),Jalen Duren (44451238) (LOCKED),De'Aaron Fox (44451252),Chet Holmgren (44451259),Isaiah Hartenstein (44451290),,SG/SF,Josh Hart (44451247) (LOCKED),Josh Hart,44451247,SG/SF/F/G/UTIL,6200,In Progress,NYK,31.58
+5303843155,NBA $30K And-One [20 Entry Max],196456031,$1,Cade Cunningham (44451204) (LOCKED),Dylan Harper (44451282),Cason Wallace (44451301),Jayson Tatum (44451207) (LOCKED),Paul Reed (44451391) (LOCKED),De'Aaron Fox (44451252),OG Anunoby (44451272) (LOCKED),Jalen Duren (44451238) (LOCKED),,PG,De'Aaron Fox (44451252),De'Aaron Fox,44451252,PG/G/UTIL,6100,OKC@SAS 10/20/2026 09:30PM ET,SAS,34.09
+5303843156,NBA $30K And-One [20 Entry Max],196456031,$1,Cade Cunningham (44451204) (LOCKED),Ajay Mitchell (44451278),Cason Wallace (44451301),Jayson Tatum (44451207) (LOCKED),Jalen Duren (44451238) (LOCKED),Dylan Harper (44451282),OG Anunoby (44451272) (LOCKED),Isaiah Hartenstein (44451290),,PG/SG,VJ Edgecombe (44451255) (LOCKED),VJ Edgecombe,44451255,PG/SG/G/UTIL,6000,In Progress,PHI,33.02
+5303843157,NBA $30K And-One [20 Entry Max],196456031,$1,Jalen Brunson (44451222) (LOCKED),Cason Wallace (44451301),Josh Hart (44451247) (LOCKED),Jayson Tatum (44451207) (LOCKED),Paul Reed (44451391) (LOCKED),De'Aaron Fox (44451252),Karl-Anthony Towns (44451218) (LOCKED),Isaiah Hartenstein (44451290),,PF,Chet Holmgren (44451259),Chet Holmgren,44451259,PF/F/UTIL,5900,OKC@SAS 10/20/2026 09:30PM ET,OKC,34.76
+5303843158,NBA $30K And-One [20 Entry Max],196456031,$1,Jalen Brunson (44451222) (LOCKED),Payton Pritchard (44451268) (LOCKED),Jalen Williams (44451235),Jayson Tatum (44451207) (LOCKED),Paul Reed (44451391) (LOCKED),Dylan Harper (44451282),Chet Holmgren (44451259),Jalen Duren (44451238) (LOCKED),,SF,Mikal Bridges (44451262) (LOCKED),Mikal Bridges,44451262,SF/F/UTIL,5700,In Progress,NYK,28.34
+5303843159,NBA $30K And-One [20 Entry Max],196456031,$1,Dylan Harper (44451282),Stephon Castle (44451232),Ausar Thompson (44451275) (LOCKED),Karl-Anthony Towns (44451218) (LOCKED),Paul Reed (44451391) (LOCKED),Shai Gilgeous-Alexander (44451201),Jalen Williams (44451235),Mitchell Robinson (44451313) (LOCKED),,PF,Tobias Harris (44451265),Tobias Harris,44451265,PF/F/UTIL,5500,OKC@SAS 10/20/2026 09:30PM ET,SAS,27.79
+5303843160,NBA $30K And-One [20 Entry Max],196456031,$1,Cade Cunningham (44451204) (LOCKED),Dylan Harper (44451282),Ausar Thompson (44451275) (LOCKED),John Collins (44451297) (LOCKED),Jalen Duren (44451238) (LOCKED),Jalen Brunson (44451222) (LOCKED),OG Anunoby (44451272) (LOCKED),De'Aaron Fox (44451252),,PG/SG,Payton Pritchard (44451268) (LOCKED),Payton Pritchard,44451268,PG/SG/G/UTIL,5400,Final,BOS,31.89
+5303843161,NBA $30K And-One [20 Entry Max],196456031,$1,Cade Cunningham (44451204) (LOCKED),Dylan Harper (44451282),Ausar Thompson (44451275) (LOCKED),Jayson Tatum (44451207) (LOCKED),Mitchell Robinson (44451313) (LOCKED),Cason Wallace (44451301),OG Anunoby (44451272) (LOCKED),Jalen Duren (44451238) (LOCKED),,PF,OG Anunoby (44451272) (LOCKED),OG Anunoby,44451272,PF/F/UTIL,5300,In Progress,NYK,32.69
+5303843162,NBA $30K And-One [20 Entry Max],196456031,$1,Jalen Brunson (44451222) (LOCKED),Stephon Castle (44451232),Ausar Thompson (44451275) (LOCKED),Jayson Tatum (44451207) (LOCKED),Mitchell Robinson (44451313) (LOCKED),Dylan Harper (44451282),OG Anunoby (44451272) (LOCKED),Jalen Duren (44451238) (LOCKED),,SF,Ausar Thompson (44451275) (LOCKED),Ausar Thompson,44451275,SF/F/UTIL,5200,Final,DET,27.37
+5303843163,NBA $30K And-One [20 Entry Max],196456031,$1,De'Aaron Fox (44451252),Stephon Castle (44451232),Ausar Thompson (44451275) (LOCKED),Jayson Tatum (44451207) (LOCKED),Jalen Duren (44451238) (LOCKED),Dylan Harper (44451282),OG Anunoby (44451272) (LOCKED),Chet Holmgren (44451259),,PG/SG,Ajay Mitchell (44451278),Ajay Mitchell,44451278,PG/SG/G/UTIL,5100,OKC@SAS 10/20/2026 09:30PM ET,OKC,26.68
+5303843164,NBA $30K And-One [20 Entry Max],196456031,$1,Cade Cunningham (44451204) (LOCKED),Dylan Harper (44451282),Ausar Thompson (44451275) (LOCKED),OG Anunoby (44451272) (LOCKED),Jalen Duren (44451238) (LOCKED),Stephon Castle (44451232),Jalen Williams (44451235),Isaiah Hartenstein (44451290),,PG/SG,Dylan Harper (44451282),Dylan Harper,44451282,PG/SG/G/UTIL,5100,OKC@SAS 10/20/2026 09:30PM ET,SAS,24.78
+5303843165,NBA $30K And-One [20 Entry Max],196456031,$1,Cade Cunningham (44451204) (LOCKED),Cason Wallace (44451301),Ausar Thompson (44451275) (LOCKED),John Collins (44451297) (LOCKED),Victor Wembanyama (44451199),Dylan Harper (44451282),OG Anunoby (44451272) (LOCKED),Isaiah Hartenstein (44451290),,SF/PF,Alex Caruso (44451286),Alex Caruso,44451286,SF/PF/F/UTIL,5000,OKC@SAS 10/20/2026 09:30PM ET,OKC,17.19
+5303843166,NBA $30K And-One [20 Entry Max],196456031,$1,De'Aaron Fox (44451252),Cason Wallace (44451301),Mikal Bridges (44451262) (LOCKED),OG Anunoby (44451272) (LOCKED),Jalen Duren (44451238) (LOCKED),Dylan Harper (44451282),Chet Holmgren (44451259),Victor Wembanyama (44451199),,C,Isaiah Hartenstein (44451290),Isaiah Hartenstein,44451290,C/UTIL,4900,OKC@SAS 10/20/2026 09:30PM ET,OKC,28.52
+5303843167,NBA $30K And-One [20 Entry Max],196456031,$1,Dylan Harper (44451282),Stephon Castle (44451232),Ausar Thompson (44451275) (LOCKED),Jayson Tatum (44451207) (LOCKED),Jalen Duren (44451238) (LOCKED),Cason Wallace (44451301),Karl-Anthony Towns (44451218) (LOCKED),Isaiah Hartenstein (44451290),,C,Neemias Queta (44451292) (LOCKED),Neemias Queta,44451292,C/UTIL,4800,Final,BOS,26.83
+5303843168,NBA $30K And-One [20 Entry Max],196456031,$1,Dylan Harper (44451282),Payton Pritchard (44451268) (LOCKED),Ausar Thompson (44451275) (LOCKED),Jayson Tatum (44451207) (LOCKED),Victor Wembanyama (44451199),Cason Wallace (44451301),OG Anunoby (44451272) (LOCKED),Isaiah Hartenstein (44451290),,SF,Sam Hauser (44451294) (LOCKED),Sam Hauser,44451294,SF/F/UTIL,4700,Final,BOS,18.59
+5303843169,NBA $30K And-One [20 Entry Max],196456031,$1,Cade Cunningham (44451204) (LOCKED),Dylan Harper (44451282),Jalen Williams (44451235),Chet Holmgren (44451259),Jalen Duren (44451238) (LOCKED),Jalen Brunson (44451222) (LOCKED),Julian Champagnie (44451340),Mitchell Robinson (44451313) (LOCKED),,PF/C,John Collins (44451297) (LOCKED),John Collins,44451297,PF/C/F/UTIL,4700,Final,DET,24.99
+5303843170,NBA $30K And-One [20 Entry Max],196456031,$1,Jalen Brunson (44451222) (LOCKED),Dylan Harper (44451282),Ausar Thompson (44451275) (LOCKED),OG Anunoby (44451272) (LOCKED),Victor Wembanyama (44451199),Stephon Castle (44451232),Cason Wallace (44451301),Isaiah Hartenstein (44451290),,SG/SF,Duncan Robinson (44451306) (LOCKED),Duncan Robinson,44451306,SG/SF/F/G/UTIL,4600,Final,DET,21.56
+,,,,,,,,,,,,,SG/SF,Cason Wallace (44451301),Cason Wallace,44451301,SG/SF/F/G/UTIL,4600,OKC@SAS 10/20/2026 09:30PM ET,OKC,21.42
+,,,,,,,,,,,,,C,Mitchell Robinson (44451313) (LOCKED),Mitchell Robinson,44451313,C/UTIL,4500,Final,BOS,20.24
+,,,,,,,,,,,,,PG/SG,Daniss Jenkins (44451315) (LOCKED),Daniss Jenkins,44451315,PG/SG/G/UTIL,4500,Final,DET,19.76
+,,,,,,,,,,,,,C,Andre Drummond (44451311) (LOCKED),Andre Drummond,44451311,C/UTIL,4500,In Progress,NYK,20.52
+,,,,,,,,,,,,,SF/PF,Keldon Johnson (44451319),Keldon Johnson,44451319,SF/PF/F/UTIL,4500,OKC@SAS 10/20/2026 09:30PM ET,SAS,21.50
+,,,,,,,,,,,,,SG/SF,Kevin Huerter (44451323) (LOCKED),Kevin Huerter,44451323,SG/SF/F/G/UTIL,4400,Final,DET,20.19
+,,,,,,,,,,,,,PG/SG,Anfernee Simons (44451328) (LOCKED),Anfernee Simons,44451328,PG/SG/G/UTIL,4400,In Progress,PHI,22.98
+,,,,,,,,,,,,,C,Luka Garza (44451332) (LOCKED),Luka Garza,44451332,C/UTIL,4300,Final,BOS,15.57
+,,,,,,,,,,,,,PF,Ronald Holland II (44451334) (LOCKED),Ronald Holland II,44451334,PF/F/UTIL,4300,Final,DET,16.53
+,,,,,,,,,,,,,SG,Jared McCain (44451337),Jared McCain,44451337,SG/G/UTIL,4300,OKC@SAS 10/20/2026 09:30PM ET,OKC,14.52
+,,,,,,,,,,,,,PF,Julian Champagnie (44451340),Julian Champagnie,44451340,PF/F/UTIL,4300,OKC@SAS 10/20/2026 09:30PM ET,SAS,24.18
+,,,,,,,,,,,,,SG/SF,Baylor Scheierman (44451348) (LOCKED),Baylor Scheierman,44451348,SG/SF/F/G/UTIL,4200,Final,BOS,13.60
+,,,,,,,,,,,,,SG/SF,Kentavious Caldwell-Pope (44451343) (LOCKED),Kentavious Caldwell-Pope,44451343,SG/SF/F/G/UTIL,4200,In Progress,PHI,17.48
+,,,,,,,,,,,,,PG,Jose Alvarado (44451353) (LOCKED),Jose Alvarado,44451353,PG/G/UTIL,4200,In Progress,NYK,16.08
+,,,,,,,,,,,,,SF/PF,Harrison Barnes (44451356),Harrison Barnes,44451356,SF/PF/F/UTIL,4200,OKC@SAS 10/20/2026 09:30PM ET,SAS,15.62
+,,,,,,,,,,,,,PG,Devin Carter (44451360) (LOCKED),Devin Carter,44451360,PG/G/UTIL,4100,Final,BOS,18.97
+,,,,,,,,,,,,,SF,Bruce Brown (44451363) (LOCKED),Bruce Brown,44451363,SF/F/UTIL,4100,In Progress,NYK,18.09
+,,,,,,,,,,,,,PG/SG,Miles McBride (44451369) (LOCKED),Miles McBride,44451369,PG/SG/G/UTIL,4000,In Progress,NYK,18.47
+,,,,,,,,,,,,,PG,Nikola Topic (44451366),Nikola Topic,44451366,PG/G/UTIL,4000,OKC@SAS 10/20/2026 09:30PM ET,OKC,8.38
+,,,,,,,,,,,,,PF,Taurean Prince (44451373) (LOCKED),Taurean Prince,44451373,PF/F/UTIL,3900,Final,DET,18.12
+,,,,,,,,,,,,,PF/C,Jaylin Williams (44451376),Jaylin Williams,44451376,PF/C/F/UTIL,3900,OKC@SAS 10/20/2026 09:30PM ET,OKC,19.22
+,,,,,,,,,,,,,C,Luke Kornet (44451380),Luke Kornet,44451380,C/UTIL,3900,OKC@SAS 10/20/2026 09:30PM ET,SAS,17.77
+,,,,,,,,,,,,,PG,Mike Conley (44451382) (LOCKED),Mike Conley,44451382,PG/G/UTIL,3800,Final,BOS,12.81
+,,,,,,,,,,,,,C,Paul Reed (44451391) (LOCKED),Paul Reed,44451391,C/UTIL,3800,Final,DET,18.09
+,,,,,,,,,,,,,PF,Dean Wade (44451385) (LOCKED),Dean Wade,44451385,PF/F/UTIL,3800,In Progress,PHI,15.13
+,,,,,,,,,,,,,SF,Carter Bryant (44451388),Carter Bryant,44451388,SF/F/UTIL,3800,OKC@SAS 10/20/2026 09:30PM ET,SAS,8.86
+,,,,,,,,,,,,,SG/SF,Jordan Clarkson (44451393) (LOCKED),Jordan Clarkson,44451393,SG/SF/F/G/UTIL,3700,In Progress,NYK,12.94
+,,,,,,,,,,,,,C,Adem Bona (44451398) (LOCKED),Adem Bona,44451398,C/UTIL,3700,In Progress,PHI,12.81
+,,,,,,,,,,,,,PF/C,Chris Cenac Jr. (44451403) (LOCKED),Chris Cenac Jr.,44451403,PF/C/F/UTIL,3600,Final,BOS,0
+,,,,,,,,,,,,,SG,Landry Shamet (44451400) (LOCKED),Landry Shamet,44451400,SG/G/UTIL,3600,In Progress,NYK,14.26
+,,,,,,,,,,,,,PF/C,Dominick Barlow (44451407) (LOCKED),Dominick Barlow,44451407,PF/C/F/UTIL,3600,In Progress,PHI,17.07
+,,,,,,,,,,,,,PG/SG,Jordan McLaughlin (44451411),Jordan McLaughlin,44451411,PG/SG/G/UTIL,3600,OKC@SAS 10/20/2026 09:30PM ET,SAS,5.18
+,,,,,,,,,,,,,SG/SF,Isaiah Joe (44451415) (LOCKED),Isaiah Joe,44451415,SG/SF/F/G/UTIL,3500,Final,DET,17.50
+,,,,,,,,,,,,,PF/C,Mohamed Diawara (44451425) (LOCKED),Mohamed Diawara,44451425,PF/C/F/UTIL,3500,In Progress,NYK,7.02
+,,,,,,,,,,,,,PG/SG,Caleb Love (44451429) (LOCKED),Caleb Love,44451429,PG/SG/G/UTIL,3500,In Progress,PHI,18.64
+,,,,,,,,,,,,,SG/SF,Otega Oweh (44451420),Otega Oweh,44451420,SG/SF/F/G/UTIL,3500,OKC@SAS 10/20/2026 09:30PM ET,OKC,0
+,,,,,,,,,,,,,SG/SF,Hugo Gonzalez (44451437) (LOCKED),Hugo Gonzalez,44451437,SG/SF/F/G/UTIL,3400,Final,BOS,10.22
+,,,,,,,,,,,,,C,Tacko Fall (44451433) (LOCKED),Tacko Fall,44451433,C/UTIL,3400,In Progress,PHI,0
+,,,,,,,,,,,,,PG,Tyler Kolek (44451442) (LOCKED),Tyler Kolek,44451442,PG/G/UTIL,3400,In Progress,NYK,11.06
+,,,,,,,,,,,,,PG/SG,Labaron Philon Jr. (44451445) (LOCKED),Labaron Philon Jr.,44451445,PG/SG/G/UTIL,3400,In Progress,PHI,0
+,,,,,,,,,,,,,C,Aday Mara (44451435),Aday Mara,44451435,C/UTIL,3400,OKC@SAS 10/20/2026 09:30PM ET,OKC,0
+,,,,,,,,,,,,,C,Jayden Quaintance (44451449),Jayden Quaintance,44451449,C/UTIL,3400,OKC@SAS 10/20/2026 09:30PM ET,SAS,0
+,,,,,,,,,,,,,SF,Javonte Green (44451469) (LOCKED),Javonte Green,44451469,SF/F/UTIL,3300,Final,DET,14.02
+,,,,,,,,,,,,,SF,Tyler Nickel (44451451) (LOCKED),Tyler Nickel,44451451,SF/F/UTIL,3300,In Progress,NYK,0
+,,,,,,,,,,,,,SG,Pacome Dadiet (44451454) (LOCKED),Pacome Dadiet,44451454,SG/G/UTIL,3300,In Progress,NYK,4.10
+,,,,,,,,,,,,,SF,Jabari Walker (44451457) (LOCKED),Jabari Walker,44451457,SF/F/UTIL,3300,In Progress,PHI,9.36
+,,,,,,,,,,,,,SG/SF,Rayan Rupert (44451464) (LOCKED),Rayan Rupert,44451464,SG/SF/F/G/UTIL,3300,In Progress,PHI,12.48
+,,,,,,,,,,,,,SF/PF,Kenrich Williams (44451460),Kenrich Williams,44451460,SF/PF/F/UTIL,3300,OKC@SAS 10/20/2026 09:30PM ET,OKC,12.90
+,,,,,,,,,,,,,SF,Brice Williams (44451478) (LOCKED),Brice Williams,44451478,SF/F/UTIL,3200,Final,DET,0
+,,,,,,,,,,,,,PF,Jordan Walsh (44451485) (LOCKED),Jordan Walsh,44451485,PF/F/UTIL,3200,Final,BOS,13.5
+,,,,,,,,,,,,,C,James Wiseman (44451476) (LOCKED),James Wiseman,44451476,C/UTIL,3200,In Progress,NYK,6.75
+,,,,,,,,,,,,,SF/PF,Justin Edwards (44451481) (LOCKED),Justin Edwards,44451481,SF/PF/F/UTIL,3200,In Progress,PHI,11.38
+,,,,,,,,,,,,,PG/SG,Bennett Stirtz (44451472),Bennett Stirtz,44451472,PG/SG/G/UTIL,3200,OKC@SAS 10/20/2026 09:30PM ET,OKC,0
+,,,,,,,,,,,,,PG,Ebuka Okorie (44451492) (LOCKED),Ebuka Okorie,44451492,PG/G/UTIL,3100,Final,DET,0
+,,,,,,,,,,,,,SF/PF,Kevin McCullar Jr. (44451488) (LOCKED),Kevin McCullar Jr.,44451488,SF/PF/F/UTIL,3100,In Progress,NYK,6.24
+,,,,,,,,,,,,,SF/PF,Brooks Barnhizer (44451495),Brooks Barnhizer,44451495,SF/PF/F/UTIL,3100,OKC@SAS 10/20/2026 09:30PM ET,OKC,5.72
+,,,,,,,,,,,,,C,Ugonna Onyenso (44451499) (LOCKED),Ugonna Onyenso,44451499,C/UTIL,3000,Final,DET,0
+,,,,,,,,,,,,,SF,Dillon Mitchell (44451504) (LOCKED),Dillon Mitchell,44451504,SF/F/UTIL,3000,Final,BOS,0
+,,,,,,,,,,,,,PG/SG,Hayden Gray (44451507) (LOCKED),Hayden Gray,44451507,PG/SG/G/UTIL,3000,Final,BOS,11
+,,,,,,,,,,,,,C,Tolu Smith (44451511) (LOCKED),Tolu Smith,44451511,C/UTIL,3000,Final,DET,8.74
+,,,,,,,,,,,,,SF/PF,Gabe McGlothan (44451515) (LOCKED),Gabe McGlothan,44451515,SF/PF/F/UTIL,3000,Final,BOS,0
+,,,,,,,,,,,,,SF/PF,Tucker DeVries (44451547) (LOCKED),Tucker DeVries,44451547,SF/PF/F/UTIL,3000,Final,BOS,0
+,,,,,,,,,,,,,SF,John Ukomadu (44451557) (LOCKED),John Ukomadu,44451557,SF/F/UTIL,3000,Final,DET,0
+,,,,,,,,,,,,,PG/SG,Milos Uzan (44451564) (LOCKED),Milos Uzan,44451564,PG/SG/G/UTIL,3000,Final,BOS,0
+,,,,,,,,,,,,,PF,Isaac Jones (44451577) (LOCKED),Isaac Jones,44451577,PF/F/UTIL,3000,Final,DET,2.61
+,,,,,,,,,,,,,PG,EJ Harkless (44451580) (LOCKED),EJ Harkless,44451580,PG/G/UTIL,3000,Final,DET,16.53
+,,,,,,,,,,,,,C,Amari Williams (44451587) (LOCKED),Amari Williams,44451587,C/UTIL,3000,Final,BOS,5.12
+,,,,,,,,,,,,,SG,Chaz Lanier (44451589) (LOCKED),Chaz Lanier,44451589,SG/G/UTIL,3000,Final,DET,4.32
+,,,,,,,,,,,,,SG/SF,Ron Harper Jr. (44451592) (LOCKED),Ron Harper Jr.,44451592,SG/SF/F/G/UTIL,3000,Final,BOS,8.26
+,,,,,,,,,,,,,PF,Drew Eubanks (44451501) (LOCKED),Drew Eubanks,44451501,PF/F/UTIL,3000,In Progress,NYK,11.32
+,,,,,,,,,,,,,SF/PF,Saint Thomas (44451519) (LOCKED),Saint Thomas,44451519,SF/PF/F/UTIL,3000,In Progress,PHI,0
+,,,,,,,,,,,,,C,Ariel Hukporti (44451538) (LOCKED),Ariel Hukporti,44451538,C/UTIL,3000,In Progress,PHI,7.58
+,,,,,,,,,,,,,SF,Dillon Jones (44451540) (LOCKED),Dillon Jones,44451540,SF/F/UTIL,3000,In Progress,PHI,4.32
+,,,,,,,,,,,,,PG/SG,Duke Miles (44451543) (LOCKED),Duke Miles,44451543,PG/SG/G/UTIL,3000,In Progress,PHI,0
+,,,,,,,,,,,,,PG/SG,Jaden Akins (44451551) (LOCKED),Jaden Akins,44451551,PG/SG/G/UTIL,3000,In Progress,NYK,0
+,,,,,,,,,,,,,PG/SG,Jameer Nelson Jr. (44451560) (LOCKED),Jameer Nelson Jr.,44451560,PG/SG/G/UTIL,3000,In Progress,PHI,0
+,,,,,,,,,,,,,SF,Ochai Agbaji (44451597) (LOCKED),Ochai Agbaji,44451597,SF/F/UTIL,3000,In Progress,NYK,10.39
+,,,,,,,,,,,,,C,Tony Bradley (44451603) (LOCKED),Tony Bradley,44451603,C/UTIL,3000,In Progress,NYK,9.03
+,,,,,,,,,,,,,C,Thomas Sorber (44451513),Thomas Sorber,44451513,C/UTIL,3000,OKC@SAS 10/20/2026 09:30PM ET,OKC,0
+,,,,,,,,,,,,,SF,Josh Dix (44451523),Josh Dix,44451523,SF/F/UTIL,3000,OKC@SAS 10/20/2026 09:30PM ET,OKC,0
+,,,,,,,,,,,,,SG,Zhaire Smith (44451526),Zhaire Smith,44451526,SG/G/UTIL,3000,OKC@SAS 10/20/2026 09:30PM ET,OKC,0
+,,,,,,,,,,,,,PG,Ja'Kobi Gillespie (44451529),Ja'Kobi Gillespie,44451529,PG/G/UTIL,3000,OKC@SAS 10/20/2026 09:30PM ET,SAS,0
+,,,,,,,,,,,,,PF,Maliq Brown (44451532),Maliq Brown,44451532,PF/F/UTIL,3000,OKC@SAS 10/20/2026 09:30PM ET,SAS,0
+,,,,,,,,,,,,,PG,RJ Davis (44451535),RJ Davis,44451535,PG/G/UTIL,3000,OKC@SAS 10/20/2026 09:30PM ET,SAS,0
+,,,,,,,,,,,,,C,Christoph Tilly (44451555),Christoph Tilly,44451555,C/UTIL,3000,OKC@SAS 10/20/2026 09:30PM ET,OKC,0
+,,,,,,,,,,,,,SG,Anthony Pritchard (44451568),Anthony Pritchard,44451568,SG/G/UTIL,3000,OKC@SAS 10/20/2026 09:30PM ET,OKC,0
+,,,,,,,,,,,,,PF,Andrew Holifield (44451571),Andrew Holifield,44451571,PF/F/UTIL,3000,OKC@SAS 10/20/2026 09:30PM ET,OKC,0
+,,,,,,,,,,,,,PG,Jon Elmore (44451574),Jon Elmore,44451574,PG/G/UTIL,3000,OKC@SAS 10/20/2026 09:30PM ET,SAS,0
+,,,,,,,,,,,,,PG/SG,David Jones-Garcia (44451583),David Jones-Garcia,44451583,PG/SG/G/UTIL,3000,OKC@SAS 10/20/2026 09:30PM ET,SAS,8.02
+,,,,,,,,,,,,,SG,Taelon Peter (44451600),Taelon Peter,44451600,SG/G/UTIL,3000,OKC@SAS 10/20/2026 09:30PM ET,SAS,9.78
+,,,,,,,,,,,,,C,Tarris Reed Jr. (44451605),Tarris Reed Jr.,44451605,C/UTIL,3000,OKC@SAS 10/20/2026 09:30PM ET,SAS,0
+,,,,,,,,,,,,,C,Malik Williams (44451607),Malik Williams,44451607,C/UTIL,3000,OKC@SAS 10/20/2026 09:30PM ET,SAS,0
