@@ -10,6 +10,8 @@ or deleted. Running it again rebuilds the same records.
 import argparse
 import os
 import re
+import zipfile
+import zlib
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
@@ -63,14 +65,22 @@ class FoundFile:
     reason: str = ""
     copied_as: Optional[str] = None
     df: Optional[pd.DataFrame] = None
+    member: Optional[str] = None  # the CSV inside a standings zip (path is the zip)
 
     @property
     def name(self) -> str:
-        return os.path.basename(self.path)
+        return os.path.basename(self.member or self.path)
+
+    @property
+    def label(self) -> str:
+        if self.member:
+            return f"{os.path.basename(self.path)}:{self.name}"
+        return self.name
 
     def to_json(self) -> dict:
         return {
             "file": self.path,
+            "member": self.member,
             "role": self.role,
             "modified": records.iso_seconds(self.mtime),
             "sha256": self.sha256,
@@ -209,13 +219,48 @@ def _classify(path: str, backfill: bool) -> Optional[str]:
     return role
 
 
-def scan(ctx: SlateContext, search_dirs: List[str], now: datetime, backfill: bool = False) -> List[FoundFile]:
+def _scan_zip(path: str, mtime: datetime, contest_ids, warnings: Optional[List[str]]) -> Optional[FoundFile]:
+    """A FoundFile for a contest-standings zip (its single CSV), or None if it isn't one."""
+    member, problem, contest_id = records.standings_zip_member(path)
+    sha = None
+    if member is not None:
+        try:
+            # Reads the whole member, so a bad CRC or truncated download fails here, not mid-copy.
+            sha = records.sha256_file(path, member)
+        except (zipfile.BadZipFile, zlib.error, RuntimeError, NotImplementedError, OSError, EOFError) as e:
+            problem = f"unreadable zip ({e}); skipped"
+    if problem and contest_id is not None and contest_id not in contest_ids:
+        # Another slate's zip (e.g. last night's, still inside the window): list it, don't warn.
+        reason = "other slate (IDs don't match slate.json)"
+        return FoundFile(path=path, role="standings", mtime=mtime, sha256=records.sha256_file(path), reason=reason)
+    if problem:
+        print(f"Warning: {os.path.basename(path)}: {problem}")
+        if warnings is not None:
+            warnings.append(f"{os.path.basename(path)}: {problem}")
+        return FoundFile(path=path, role="standings", mtime=mtime, sha256=records.sha256_file(path), reason=problem)
+    if member is None:
+        return None
+    return FoundFile(path=path, role="standings", mtime=mtime, sha256=sha, member=member)
+
+
+def scan(
+    ctx: SlateContext,
+    search_dirs: List[str],
+    now: datetime,
+    backfill: bool = False,
+    warnings: Optional[List[str]] = None,
+) -> List[FoundFile]:
     """Classify every top-level CSV modified in [lock 0 - 24 h, now] that belongs to this slate.
+
+    Contest-standings zips count too: the single CSV inside is the file (its
+    name, contents and sha256), with the zip's modified time. A zip holding
+    anything besides that CSV is listed, skipped and warned about.
 
     Files with identical contents in the same lock window collapse to one
     (the same export re-saved after a lock still counts in the later
-    window); copies already in the slate folder are preferred only when no
-    original remains elsewhere.
+    window, and a standings zip and its unzipped CSV are one file); copies
+    already in the slate folder are preferred only when no original remains
+    elsewhere.
     """
     slate_norm = os.path.normcase(os.path.abspath(ctx.slate_dir))
     seen_dirs, seen_paths = set(), set()
@@ -230,11 +275,18 @@ def scan(ctx: SlateContext, search_dirs: List[str], now: datetime, backfill: boo
         for name in sorted(os.listdir(d)):
             path = os.path.join(d, name)
             p_norm = os.path.normcase(os.path.abspath(path))
-            if not name.lower().endswith(".csv") or not os.path.isfile(path) or p_norm in seen_paths:
+            ext = os.path.splitext(name)[1].lower()
+            if ext not in (".csv", ".zip") or not os.path.isfile(path) or p_norm in seen_paths:
                 continue
             seen_paths.add(p_norm)
             mtime = records.file_mtime(path)
             if mtime < ctx.window_start or mtime > now:
+                continue
+            if ext == ".zip":
+                f = _scan_zip(path, mtime, ctx.contest_ids, warnings)
+                if f:
+                    f.lock = ctx.lock_of(mtime)
+                    found.append(f)
                 continue
             role = _classify(path, backfill)
             if role is None:
@@ -256,7 +308,7 @@ def scan(ctx: SlateContext, search_dirs: List[str], now: datetime, backfill: boo
         out.append(rep)
         for dup in group[1:]:
             if not in_slate(dup):
-                dup.reason = f"duplicate of {rep.name}"
+                dup.reason = f"duplicate of {rep.label}"
                 out.append(dup)
     out.sort(key=lambda f: (f.mtime, f.path))
 
@@ -369,10 +421,10 @@ def _lineup_copy_name(f: FoundFile, k: int) -> str:
     return f"L{k}-{clean}"
 
 
-def _place(path: str, slate_dir: str, canonical: str, dry_run: bool) -> str:
+def _place(path: str, slate_dir: str, canonical: str, dry_run: bool, member: Optional[str] = None) -> str:
     if dry_run:
-        return records.snapshot_name(path, slate_dir, canonical)
-    return records.snapshot_input(path, slate_dir, canonical)
+        return records.snapshot_name(path, slate_dir, canonical, member)
+    return records.snapshot_input(path, slate_dir, canonical, member)
 
 
 def _source_for(f: FoundFile) -> str:
@@ -472,7 +524,7 @@ def finalize(
     print(f"Slate folder: {slate_dir}")
     ctx = load_context(slate_dir, entries, dry_run, slate_type)
     warnings: List[str] = []
-    found = scan(ctx, search_dirs, now, backfill=bool(entries) and assume_default_params)
+    found = scan(ctx, search_dirs, now, backfill=bool(entries) and assume_default_params, warnings=warnings)
     pins = load_pins(slate_dir)
     n_locks = len(ctx.locks)
 
@@ -677,8 +729,9 @@ def finalize(
 
     standings = []
     for f in _active(found, ("standings",)):
-        f.copied_as = _place(f.path, slate_dir, f.name, dry_run)
-        f.used, f.reason = True, "contest standings (copied as downloaded)"
+        f.copied_as = _place(f.path, slate_dir, f.name, dry_run, f.member)
+        how = "extracted from zip" if f.member else "copied as downloaded"
+        f.used, f.reason = True, f"contest standings ({how})"
         standings.append(f.copied_as)
 
     payload = {
@@ -763,7 +816,7 @@ def _print_summary(payload: dict, found: List[FoundFile], dry_run: bool) -> None
         lock = "-" if f.lock is None else f"L{f.lock}"
         mark = "used   " if f.used else "ignored"
         target = f" -> {f.copied_as}" if f.copied_as and f.copied_as != f.name else ""
-        print(f"  {mark} {lock:>3} {f.role:<16} {f.mtime:%H:%M:%S} {f.name}{target}  ({f.reason})")
+        print(f"  {mark} {lock:>3} {f.role:<16} {f.mtime:%H:%M:%S} {f.label}{target}  ({f.reason})")
     print("Chain:")
     n = len(payload["chain"])
     for c in payload["chain"]:
