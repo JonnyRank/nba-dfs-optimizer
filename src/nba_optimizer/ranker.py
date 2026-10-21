@@ -211,7 +211,7 @@ def write_run_record(
     df_projs = pd.read_csv(projs_file)
     payload = {
         "schema": records.SCHEMA_VERSION,
-        "run_id": f"{slate_id}_{records.compact_ts(run_time)}",
+        "run_id": f"{slate_id}_{records.compact_ts(run_time)}" if slate_id else records.compact_ts(run_time),
         "slate_id": slate_id,
         "generated_at": records.iso_seconds(run_time),
         "lock": lock,

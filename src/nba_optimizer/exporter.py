@@ -120,15 +120,16 @@ def write_export_entry_set(
 ) -> str:
     """Write the optimizer entry-set candidate for *export_file*; return its path.
 
-    A run on a known slate after its last lock writes nothing (returns ""):
-    no lock is left for the lineups to be in force at. Without a slate
-    (legacy layout) the set is recorded as L0.
+    Writes nothing (returns "") when the run record has no lock: either the
+    run was after the slate's last lock, or no slate facts were available
+    (e.g. a mid-night DKEntries in the legacy layout), so the lock is unknown.
     """
     from .slate import SLATE_FILE
 
     lock = run_record.get("lock")
-    if run_record.get("slate_id") and lock is None:
-        print("Warning: run is after the slate's last lock; no entry set written.")
+    if lock is None:
+        reason = "run is after the slate's last lock" if run_record.get("slate_id") else "no slate facts for this run"
+        print(f"Warning: {reason}; no entry set written.")
         return ""
 
     slate_dir = os.path.dirname(os.path.abspath(ranked_file))
@@ -144,7 +145,7 @@ def write_export_entry_set(
 
     payload = records.make_entry_set(
         slate_id=run_record.get("slate_id"),
-        lock=0 if lock is None else lock,
+        lock=lock,
         source="optimizer",
         created_at=run_time,
         lineups_file=lineups_file,

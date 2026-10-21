@@ -238,3 +238,15 @@ def test_record_rejects_other_slate_projections(opening_night, tmp_path):
     pd.DataFrame({"ID": [1, 2, 3], "Projection": [30.0, 20.0, 10.0], "Own_Proj": [10.0, 5.0, 1.0]}).to_csv(other, index=False)
     with pytest.raises(ValueError, match="don't match this slate"):
         capture.record(str(other), str(slate_dir), lock=1)
+
+
+def test_record_twice_rewrites_same_entry_set(opening_night, tmp_path):
+    """Re-recording a file reuses its copy and entry-set ID (both keyed by contents/mtime)."""
+    slate_dir = tmp_path / "slates" / SLATE_ID
+    capture.load_context(str(slate_dir), entries=str(opening_night / "Pre-L0-DKEntries.csv"))
+    upload = str(opening_night / "upload-ready-DKEntries-2026-10-20_135723.csv")
+    capture.record(upload, str(slate_dir), lock=0)
+    first = sorted(os.listdir(slate_dir))
+    capture.record(upload, str(slate_dir), lock=0)
+    assert sorted(os.listdir(slate_dir)) == first
+    assert len([n for n in first if "-entry-set-" in n]) == 1

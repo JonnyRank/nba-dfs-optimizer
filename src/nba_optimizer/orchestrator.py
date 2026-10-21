@@ -68,7 +68,8 @@ def run_pipeline(args):
     run_time = datetime.now().astimezone().replace(microsecond=0)
     try:
         config, slate, projs_file = prepare_slate_inputs(config, run_time)
-    except (ValueError, FileNotFoundError) as e:
+    except (ValueError, KeyError, OSError) as e:
+        # OSError covers FileNotFoundError and a Drive-locked copy (PermissionError).
         print(f"Error: {e}")
         return
     slate_date = slate["slate_date"] if slate else None
