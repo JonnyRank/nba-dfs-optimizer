@@ -3,6 +3,7 @@ import concurrent.futures
 import math
 import multiprocessing
 import os
+import secrets
 import time
 import traceback
 from datetime import datetime
@@ -258,27 +259,44 @@ WORKER_COLUMNS = ["Name + ID", "Roster Position", "Salary", "Projection", "Game"
 _WORKER_STATE = {}
 
 
+def new_seed() -> int:
+    """A fresh random 63-bit base seed."""
+    return secrets.randbits(63)
+
+
+def lineup_rng(base_seed: int, j: int) -> np.random.Generator:
+    """RNG for lineup j: depends only on (base_seed, j), never on which worker draws it."""
+    return np.random.default_rng(np.random.SeedSequence(base_seed, spawn_key=(j,)))
+
+
 def _init_worker(
-    df_pool: pd.DataFrame, randomness: float, min_salary: int, salary_cap: int, roster_size: int, min_games: int
+    df_pool: pd.DataFrame,
+    randomness: float,
+    min_salary: int,
+    salary_cap: int,
+    roster_size: int,
+    min_games: int,
+    base_seed: Optional[int] = None,
 ) -> None:
     """ProcessPoolExecutor initializer: receive the pool once, build the model once."""
     _WORKER_STATE["df_pool"] = df_pool
     _WORKER_STATE["names"] = df_pool["Name + ID"].tolist()
     _WORKER_STATE["projection"] = df_pool["Projection"].to_numpy(dtype=float)
     _WORKER_STATE["randomness"] = randomness
-    _WORKER_STATE["rng"] = np.random.default_rng()
+    _WORKER_STATE["base_seed"] = new_seed() if base_seed is None else base_seed
     _WORKER_STATE["model"] = LineupModel(df_pool, min_salary, salary_cap, roster_size, min_games)
 
 
-def _generate_batch(batch_size: int) -> List[Tuple[Tuple[int, ...], List[str]]]:
-    """Solve and slot batch_size lineups. Returns (row positions, slotted names) per lineup."""
+def _generate_batch(j0: int, j1: int) -> List[Tuple[int, Tuple[int, ...], List[str]]]:
+    """Solve and slot lineups j0..j1-1. Returns (j, row positions, slotted names) per lineup."""
     state = _WORKER_STATE
     results = []
-    for _ in range(batch_size):
+    for j in range(j0, j1):
         try:
             projection = state["projection"]
             if state["randomness"] > 0:
-                sim_proj = state["rng"].normal(projection, projection * state["randomness"])
+                rng = lineup_rng(state["base_seed"], j)
+                sim_proj = rng.normal(projection, projection * state["randomness"])
             else:
                 sim_proj = projection
             positions = state["model"].solve(sim_proj)
@@ -286,7 +304,7 @@ def _generate_batch(batch_size: int) -> List[Tuple[Tuple[int, ...], List[str]]]:
                 continue
             names = [state["names"][p] for p in positions]
             slotted = slot_lineup_by_time(names, state["df_pool"])
-            results.append((tuple(positions), slotted))
+            results.append((j, tuple(positions), slotted))
         except RuntimeError:
             # LineupModel.solve raises RuntimeError when HiGHS itself errors
             # (misconfigured solver). Every later lineup would fail the same
@@ -376,8 +394,21 @@ def run(
     num_lineups: int = 2500,
     randomness: float = 0.25,
     min_unique: int = 1,
+    projs_file: Optional[str] = None,
+    run_time: Optional[datetime] = None,
+    slate_date: Optional[str] = None,
 ) -> str:
     """Run the lineup generation engine.
+
+    Uses ``cfg.seed`` as the base seed; when it is ``None`` a fresh seed is
+    drawn, printed and written back to ``cfg.seed`` so later stages can
+    record it. The same seed and inputs give the same pool regardless of
+    worker count or completion order.
+
+    Args:
+        projs_file: Explicit projections CSV; defaults to the latest in cfg.projs_dir.
+        run_time: The run's instant, shared by every stage's filenames.
+        slate_date: ``YYYY-MM-DD`` used in the pool filename (defaults to run_time's date).
 
     Returns:
         Path to the written lineup-pool CSV, or an empty string if the run
@@ -399,7 +430,12 @@ def run(
         print("Please enable randomness (>0) for parallel mode efficiency.")
 
     try:
-        projs_file = get_latest_file(cfg.projs_dir, "NBA-Projs-*.csv")
+        if cfg.seed is None:
+            cfg.seed = new_seed()
+        print(f"Seed: {cfg.seed}")
+
+        if not projs_file:
+            projs_file = get_latest_file(cfg.projs_dir, "NBA-Projs-*.csv")
         print(f"Using projections: {os.path.basename(projs_file)}")
 
         df = load_data(projs_file, cfg.entries_path)
@@ -436,9 +472,10 @@ def run(
         # Small batches amortize task overhead while keeping ~4 batches per
         # worker for load balancing and progress reporting.
         batch_size = max(1, min(25, math.ceil(target_lineups / (num_workers * 4))))
-        batch_sizes = [batch_size] * (target_lineups // batch_size)
-        if target_lineups % batch_size:
-            batch_sizes.append(target_lineups % batch_size)
+        # Lineup index ranges [j0, j1); each lineup's noise depends only on its j.
+        batch_ranges = [
+            (j0, min(j0 + batch_size, target_lineups)) for j0 in range(0, target_lineups, batch_size)
+        ]
 
         candidates = []
 
@@ -448,9 +485,11 @@ def run(
         with concurrent.futures.ProcessPoolExecutor(
             max_workers=num_workers,
             initializer=_init_worker,
-            initargs=(df_pool, randomness, cfg.min_salary, cfg.salary_cap, cfg.roster_size, cfg.min_games),
+            initargs=(
+                df_pool, randomness, cfg.min_salary, cfg.salary_cap, cfg.roster_size, cfg.min_games, cfg.seed,
+            ),
         ) as executor:
-            future_size_map = {executor.submit(_generate_batch, b): b for b in batch_sizes}
+            future_size_map = {executor.submit(_generate_batch, j0, j1): j1 - j0 for j0, j1 in batch_ranges}
             completed = 0
             last_bucket = 0
             for future in concurrent.futures.as_completed(future_size_map):
@@ -477,13 +516,17 @@ def run(
             print("Error: no lineups were generated; aborting.")
             return ""
 
+        # Completion order varies run to run; filter in lineup-index order so
+        # the same seed reproduces the same pool.
+        candidates.sort(key=lambda c: c[0])
+
         # Filter for Uniqueness / Min Unique (lineups arrive already slotted)
         final_lineups = []
         selected_indices_list = []
         duplicates_removed = 0
 
         print("Filtering candidates for uniqueness...")
-        for positions, slotted in candidates:
+        for _, positions, slotted in candidates:
             if len(final_lineups) >= target_lineups:
                 break
 
@@ -508,7 +551,8 @@ def run(
         if not os.path.exists(cfg.lineup_pool_dir):
             os.makedirs(cfg.lineup_pool_dir)
 
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+        run_time = run_time or datetime.now()
+        timestamp = f"{slate_date or run_time.strftime('%Y-%m-%d')}_{run_time.strftime('%H%M%S')}"
         output_file = os.path.join(
             cfg.lineup_pool_dir, f"lineup-pool-{timestamp}.csv"
         )
@@ -535,10 +579,11 @@ def main():
     parser.add_argument("-u", "--min_unique", type=int, default=1, help="Min unique players between lineups (Default: 1)")
     parser.add_argument("-ms", "--min_salary", type=int, default=49500, help="Min salary for a lineup (Default: 49500)")
     parser.add_argument("-mp", "--min_projection", type=float, default=10.0, help="Min projection for a player to be considered (Default: 10.0)")
+    parser.add_argument("--seed", type=int, default=None, help="Base seed (Default: draw a fresh one)")
     args = parser.parse_args()
 
     cfg = load_config_from_env()
-    cfg = replace(cfg, min_salary=args.min_salary, min_projection=args.min_projection)
+    cfg = replace(cfg, min_salary=args.min_salary, min_projection=args.min_projection, seed=args.seed)
 
     run(
         cfg,

@@ -6,18 +6,25 @@ from typing import Optional
 
 import pandas as pd
 
+from . import records
 from .config import Config, ROSTER_SLOTS, STANDARD_EXPORT_PREFIX
 from .utils import get_latest_file, read_ragged_csv
 
 
-def run(cfg: Config, ranked_file: Optional[str] = None) -> str:
+def run(cfg: Config, ranked_file: Optional[str] = None, run_time: Optional[datetime] = None) -> str:
     """Export top-ranked lineups into a DraftKings-compatible CSV.
+
+    After the CSV, writes the entry-set candidate for the run's lock (L0 for a
+    pre-lock run). When the ranked file sits in a slate folder (it has a
+    slate.json), the upload-ready CSV is copied there and the entry set is
+    written there; otherwise the entry set goes next to the CSV.
 
     Args:
         cfg: Pipeline configuration.
         ranked_file: Explicit path to a ranked-lineups CSV. When omitted, the
             most recent file in ``cfg.ranked_lineup_dir`` is used (standalone
             fallback behaviour).
+        run_time: The run's instant, shared by every stage's filenames.
 
     Returns:
         Path to the written export CSV, or an empty string if the run failed
@@ -68,7 +75,11 @@ def run(cfg: Config, ranked_file: Optional[str] = None) -> str:
                 df_entries.loc[target_idx, slot] = df_ranked.loc[i, slot]
 
         # 5. Save the combined file
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+        run_time = (run_time or datetime.now()).astimezone()
+        run_record = _read_run_record(ranked_file)
+        slate_id = run_record.get("slate_id")
+        slate_date = slate_id[:10] if slate_id else run_time.strftime("%Y-%m-%d")
+        timestamp = f"{slate_date}_{run_time.strftime('%H%M%S')}"
         output_file = os.path.join(
             cfg.output_dir, f"{STANDARD_EXPORT_PREFIX}-{timestamp}.csv"
         )
@@ -77,12 +88,64 @@ def run(cfg: Config, ranked_file: Optional[str] = None) -> str:
         df_entries.to_csv(output_file, index=False, na_rep="")
 
         print(f"Successfully exported {fill_count} lineups to {output_file}")
+
+        try:
+            write_export_entry_set(output_file, ranked_file, run_record, run_time)
+        except Exception as e:
+            print(f"Warning: entry set not written: {e}")
         return output_file
 
     except Exception as e:
         print(f"Error: {e}")
         traceback.print_exc()
         return ""
+
+
+def _read_run_record(ranked_file: str) -> dict:
+    path = records.run_record_path(ranked_file)
+    if not os.path.isfile(path):
+        return {}
+    try:
+        return records.read_json(path)
+    except (OSError, ValueError) as e:
+        print(f"Warning: couldn't read run record {os.path.basename(path)}: {e}")
+        return {}
+
+
+def write_export_entry_set(
+    export_file: str, ranked_file: str, run_record: dict, run_time: datetime
+) -> str:
+    """Write the optimizer entry-set candidate for *export_file*; return its path."""
+    from .slate import SLATE_FILE
+
+    slate_dir = os.path.dirname(os.path.abspath(ranked_file))
+    if os.path.isfile(os.path.join(slate_dir, SLATE_FILE)):
+        lineups_file = records.snapshot_input(export_file, slate_dir, os.path.basename(export_file))
+        target_dir = slate_dir
+        slate = records.read_json(os.path.join(slate_dir, SLATE_FILE))
+        entry_order = slate.get("entry_ids")
+    else:
+        lineups_file = os.path.basename(export_file)
+        target_dir = os.path.dirname(os.path.abspath(export_file))
+        entry_order = None
+
+    lock = run_record.get("lock")
+    payload = records.make_entry_set(
+        slate_id=run_record.get("slate_id"),
+        lock=0 if lock is None else lock,
+        source="optimizer",
+        created_at=run_time,
+        lineups_file=lineups_file,
+        lineups_sha256=records.sha256_file(export_file),
+        df_lineups=records.read_lineup_file(export_file),
+        projections_file=run_record.get("inputs", {}).get("projections", {}).get("file"),
+        run_id=run_record.get("run_id"),
+        rank_map=records.rank_map_from_ranked(ranked_file),
+        entry_order=entry_order,
+    )
+    path = records.write_entry_set(target_dir, payload)
+    print(f"Entry set: {os.path.basename(path)} ({len(payload['entries'])} entries)")
+    return path
 
 
 def main():

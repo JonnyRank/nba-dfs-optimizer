@@ -257,3 +257,17 @@ def test_merge_player_pool_normalizes_float_projs_ids(dk_entries_file):
     df = merge_player_pool(df_players, df_projs_float, how="inner")
     assert len(df) == 1, "float ID in projs should still match after normalization"
     assert df.iloc[0]["Projection"] == 42.0
+
+
+def test_merge_accepts_expanded_projections():
+    """The expanded template repeats DK's columns (Name + ID, Salary, ...); DK's values win, no _x/_y."""
+    night = os.path.join(FIXTURES_DIR, "2026-10-20")
+    df_players = parse_dk_entries(os.path.join(night, "Pre-L0-DKEntries.csv"))
+    df_projs = pd.read_csv(os.path.join(night, "NBA-Projs-Template-26-27-WIP_2026-10-20_21-44-33.csv"))
+
+    merged = merge_player_pool(df_players, df_projs, how="inner", derive_time_game=True)
+
+    assert len(merged) == 125
+    assert "Name + ID" in merged.columns
+    assert not [c for c in merged.columns if c.endswith(("_x", "_y"))]
+    assert merged["Name + ID"].tolist() == df_players.set_index("ID").loc[merged["ID"], "Name + ID"].tolist()

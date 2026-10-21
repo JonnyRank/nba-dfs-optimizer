@@ -7,8 +7,11 @@ from typing import Dict, Optional
 import numpy as np
 import pandas as pd
 
+from . import records
 from .config import Config, ROSTER_SLOTS
 from .utils import get_latest_file, merge_player_pool, parse_dk_entries
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 def load_data(lineup_file: str, projs_file: str, cfg: Config) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -78,8 +81,17 @@ def run(
     geo_weight: float = 0.15,
     lineup_file: Optional[str] = None,
     projs_file: Optional[str] = None,
+    num_lineups: Optional[int] = None,
+    randomness: Optional[float] = None,
+    min_unique: Optional[int] = None,
+    base_seed: Optional[int] = None,
+    slate: Optional[dict] = None,
+    run_time: Optional[datetime] = None,
 ) -> str:
-    """Rank the lineup pool.
+    """Rank the lineup pool and write its run record.
+
+    The run record (``ranked-lineups-<...>.json``, same name as the CSV) is
+    written after the CSV; a failed record write only warns.
 
     Args:
         cfg: Pipeline configuration.
@@ -91,6 +103,12 @@ def run(
             fallback behaviour).
         projs_file: Explicit path to a projections CSV. When omitted,
             the most recent file in ``cfg.projs_dir`` is used.
+        num_lineups, randomness, min_unique, base_seed: Engine settings to
+            record. When all are given (orchestrated run) ``params_source``
+            is ``cli``; otherwise ``partial`` with unknowns as ``null``.
+        slate: Slate facts from ``slate.load_or_write_slate``; gives the
+            slate ID, the slate date for the filename and the lock.
+        run_time: The run's instant, shared by every stage's filenames.
 
     Returns:
         Path to the written ranked-lineups CSV, or an empty string if the run
@@ -124,7 +142,10 @@ def run(
         if not os.path.exists(cfg.ranked_lineup_dir):
             os.makedirs(cfg.ranked_lineup_dir)
 
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+        run_time = (run_time or datetime.now()).astimezone()
+        slate_date = slate["slate_date"] if slate else run_time.strftime("%Y-%m-%d")
+        type_part = "" if cfg.slate_type == "main" else f"{cfg.slate_type.capitalize()}-"
+        timestamp = f"{type_part}{slate_date}_{run_time.strftime('%H%M%S')}"
         output_file = os.path.join(
             cfg.ranked_lineup_dir, f"ranked-lineups-{timestamp}.csv"
         )
@@ -143,12 +164,96 @@ def run(
         df_ranked[cols].to_csv(output_file, index=False)
         print(f"Successfully ranked {len(df_ranked)} lineups.")
         print(f"Saved to: {output_file}")
+
+        engine_params = {
+            "num_lineups": num_lineups,
+            "randomness": randomness,
+            "min_unique": min_unique,
+            "base_seed": base_seed,
+        }
+        try:
+            write_run_record(
+                cfg, output_file, lineup_file, projs_file, slate, run_time,
+                lineups_written=len(df_lineups),
+                weights=weights,
+                engine_params=engine_params,
+                params_source="cli" if None not in engine_params.values() else "partial",
+            )
+        except Exception as e:
+            print(f"Warning: run record not written: {e}")
         return output_file
 
     except Exception as e:
         print(f"Error: {e}")
         traceback.print_exc()
         return ""
+
+
+def write_run_record(
+    cfg: Config,
+    ranked_file: str,
+    lineup_file: Optional[str],
+    projs_file: str,
+    slate: Optional[dict],
+    run_time: datetime,
+    lineups_written: Optional[int],
+    weights: Dict[str, float],
+    engine_params: Dict[str, Optional[float]],
+    params_source: str,
+    code_version: Optional[str] = "auto",
+) -> str:
+    """Write the run record JSON next to *ranked_file* and return its path."""
+    from .slate import lock_for_time
+
+    slate_id = slate["slate_id"] if slate else None
+    lock = None
+    if slate:
+        try:
+            lock = lock_for_time(slate, run_time)
+        except ValueError:
+            lock = None
+    df_projs = pd.read_csv(projs_file)
+    payload = {
+        "schema": records.SCHEMA_VERSION,
+        "run_id": f"{slate_id}_{records.compact_ts(run_time)}",
+        "slate_id": slate_id,
+        "generated_at": records.iso_seconds(run_time),
+        "lock": lock,
+        "parent_run_id": None,
+        "inputs": {
+            "projections": {
+                "file": os.path.basename(projs_file),
+                "sha256": records.sha256_file(projs_file),
+                "layout": records.projections_layout(df_projs),
+                "blend_check": records.check_blend(df_projs, warn=False),
+            },
+            "entries": {
+                "file": os.path.basename(cfg.entries_path),
+                "sha256": records.sha256_file(cfg.entries_path),
+            },
+        },
+        "pool_file": os.path.basename(lineup_file) if lineup_file else None,
+        "ranked_file": os.path.basename(ranked_file),
+        "params": {
+            "num_lineups": engine_params.get("num_lineups"),
+            "lineups_written": lineups_written,
+            "randomness": engine_params.get("randomness"),
+            "min_unique": engine_params.get("min_unique"),
+            "min_salary": cfg.min_salary,
+            "min_projection": cfg.min_projection,
+            "min_games": cfg.min_games,
+            "proj_weight": weights["proj"],
+            "own_weight": weights["own"],
+            "geo_weight": weights["geo"],
+            "base_seed": engine_params.get("base_seed"),
+        },
+        "params_source": params_source,
+        "code_version": records.git_code_version(REPO_ROOT) if code_version == "auto" else code_version,
+    }
+    path = records.run_record_path(ranked_file)
+    records.write_json_atomic(path, payload)
+    print(f"Run record: {os.path.basename(path)}")
+    return path
 
 
 def main():

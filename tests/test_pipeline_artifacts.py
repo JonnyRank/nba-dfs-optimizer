@@ -286,3 +286,94 @@ class TestExposureReportResolveEntriesFile:
 
         resolved = _resolve_entries_file(cfg, entries_file=None)
         assert resolved == export_path
+
+
+# ---------------------------------------------------------------------------
+# Run records and entry sets (nightly capture, O-0) on the 2026-10-20 files
+# ---------------------------------------------------------------------------
+
+NIGHT_DIR = os.path.join(FIXTURES_DIR, "2026-10-20")
+
+
+def _opening_night_run(tmp_path):
+    """Slate folder for 10/20 plus a ranker run on a pool made from the ranked fixture's lineups.
+
+    The run instant is after midnight (00:30 on 10/21) so the filenames must
+    take the slate date, not the run date.
+    """
+    from datetime import datetime
+    from nba_optimizer import ranker
+    from nba_optimizer.slate import load_or_write_slate
+
+    cfg = Config(
+        data_root=str(tmp_path / "slates"),
+        projs_dir=str(tmp_path / "projections"),
+        output_dir=str(tmp_path / "downloads"),
+    )
+    os.makedirs(cfg.output_dir)
+    slate, slate_dir = load_or_write_slate(cfg, os.path.join(NIGHT_DIR, "Pre-L0-DKEntries.csv"))
+    cfg = replace(
+        cfg,
+        entries_path=os.path.join(slate_dir, "Pre-L0-DKEntries.csv"),
+        lineup_pool_dir=slate_dir,
+        ranked_lineup_dir=slate_dir,
+    )
+    projs = os.path.join(slate_dir, "L0-NBA-Projs-2026-10-20_13-55-35.csv")
+    shutil.copy(os.path.join(NIGHT_DIR, "L0-NBA-Projs-2026-10-20_13-55-35.csv"), projs)
+    pool = os.path.join(slate_dir, "lineup-pool-2026-10-20_003000.csv")
+    pd.read_csv(os.path.join(NIGHT_DIR, "ranked-lineups-2026-10-20_135723.csv"))[list(ROSTER_SLOTS)].to_csv(
+        pool, index=False
+    )
+    run_time = datetime(2026, 10, 21, 0, 30, 0).astimezone()
+    ranked = ranker.run(
+        cfg, proj_weight=0.8, own_weight=0.0, geo_weight=0.2,
+        lineup_file=pool, projs_file=projs,
+        num_lineups=2500, randomness=0.25, min_unique=1, base_seed=987654321,
+        slate=slate, run_time=run_time,
+    )
+    return cfg, slate_dir, ranked, run_time
+
+
+def test_ranker_writes_run_record(tmp_path):
+    """The run record sits next to the ranked CSV with the same name and complete inputs/params."""
+    from nba_optimizer import records
+
+    _, slate_dir, ranked, run_time = _opening_night_run(tmp_path)
+
+    assert os.path.basename(ranked) == "ranked-lineups-2026-10-20_003000.csv"
+    record = records.read_json(ranked[:-4] + ".json")
+    assert record["run_id"] == f"2026-10-20_classic_main_{run_time:%Y%m%dT%H%M%S}"
+    assert record["slate_id"] == "2026-10-20_classic_main"
+    assert record["ranked_file"] == os.path.basename(ranked)
+    assert record["pool_file"] == "lineup-pool-2026-10-20_003000.csv"
+    assert record["params_source"] == "cli"
+    assert record["inputs"]["projections"]["file"] == "L0-NBA-Projs-2026-10-20_13-55-35.csv"
+    assert record["inputs"]["projections"]["layout"] == "basic"
+    assert record["inputs"]["entries"]["sha256"] == records.sha256_file(
+        os.path.join(NIGHT_DIR, "Pre-L0-DKEntries.csv"))
+    assert len(record["inputs"]["projections"]["sha256"]) == 64
+    params = record["params"]
+    assert None not in params.values()
+    assert isinstance(params["base_seed"], int) and params["base_seed"] == 987654321
+    assert params["lineups_written"] == 100
+
+
+def test_exporter_writes_L0_entry_set(tmp_path):
+    """Rank i goes to entry i: 1-20 in the $4 contest, 21-40 in the $1 contest."""
+    from nba_optimizer import exporter, records
+
+    cfg, slate_dir, ranked, run_time = _opening_night_run(tmp_path)
+    export = exporter.run(cfg, ranked_file=ranked, run_time=run_time)
+
+    assert os.path.dirname(export) == cfg.output_dir
+    assert os.path.isfile(os.path.join(slate_dir, os.path.basename(export)))
+    entry_set = records.read_json(os.path.join(slate_dir, f"L0-entry-set-{run_time:%Y%m%dT%H%M%S}.json"))
+    assert entry_set["source"] == "optimizer"
+    assert entry_set["run_id"] == records.read_json(ranked[:-4] + ".json")["run_id"]
+
+    entries = entry_set["entries"]
+    assert len(entries) == 40
+    assert [e["pre_lock_rank"] for e in entries] == list(range(1, 41))
+    assert {e["contest_id"] for e in entries[:20]} == {196456024}
+    assert {e["contest_id"] for e in entries[20:]} == {196456031}
+    assert all(isinstance(pid, int) for e in entries for pid in e["lineup"].values())

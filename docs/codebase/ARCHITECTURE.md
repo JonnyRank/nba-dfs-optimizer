@@ -37,6 +37,8 @@ DKEntries.csv (with locked players) + NBA-Projs-*.csv
 [Late Swapper] ── batch LP solve per unique lock state ──► late-swap-entries-{timestamp}.csv
 ```
 
+**Nightly capture (O-0):** with `NBA_DATA_ROOT` set, the orchestrator resolves the slate (`slate.load_or_write_slate`), writes `slate.json` once, copies the DKEntries and projections it read into `<NBA_DATA_ROOT>/<slate_id>/`, and points the pool/ranked outputs there. One run instant names every output; filenames use the slate date. The ranker writes a run-record JSON next to the ranked CSV, and the exporter writes an `L<k>-entry-set-*.json` (copying the upload-ready file into the slate folder). After the last lock, `nba-dfs-capture finalize` (`capture.py`) classifies the night's files by content, assigns them to locks by modified time, verifies each lock's entry set against the final DKEntries, and writes `finalize.json` + `slate-entries.csv`. The engine is seeded (`--seed`): lineup j draws from `SeedSequence(base_seed, spawn_key=(j,))`, and candidates are sorted by j before the `min_unique` filter, so a seed reproduces the pool regardless of worker scheduling.
+
 1. **Data Loading:** Engine reads DKEntries.csv (player pool with salaries, positions, game info) and merges with projection CSV on player ID.
 2. **Parallel Generation:** One `ProcessPoolExecutor` whose workers receive the player pool once via `initializer` (`_init_worker`) and build a persistent HiGHS `LineupModel` once per worker. Workers then solve and slot lineups in batches (`_generate_batch`), applying random noise to projections and re-solving the same model with only the objective swapped, and return row positions + slotted names.
 3. **Uniqueness Filtering:** Main process filters the already-slotted candidates by `min_unique` overlap constraint.
@@ -55,7 +57,10 @@ DKEntries.csv (with locked players) + NBA-Projs-*.csv
 | `exporter.py` | DK template parsing, lineup-to-entry mapping | Scoring | `src/nba_optimizer/exporter.py` |
 | `exposure_report.py` | Post-export analytics, leverage calculation, flexible file resolution via `_resolve_entries_file()` | Everything else | `src/nba_optimizer/exposure_report.py` |
 | `late_swapper.py` | Lock detection, constrained re-optimization, batch solving | Full lineup generation | `src/nba_optimizer/late_swapper.py` |
-| `orchestrator.py` | Pipeline orchestration, Config initialization and injection | Core logic | `src/nba_optimizer/orchestrator.py` |
+| `orchestrator.py` | Pipeline orchestration, Config initialization and injection, slate resolution and input snapshots | Core logic | `src/nba_optimizer/orchestrator.py` |
+| `slate.py` | Slate facts from the pre-lock DKEntries (locks, games, contests, entry IDs), `slate.json`, lock numbering | Optimization, file search | `src/nba_optimizer/slate.py` |
+| `records.py` | Run-record/entry-set payloads, file classification by content, blend check, copy/atomic-write helpers | Optimization, ranking | `src/nba_optimizer/records.py` |
+| `capture.py` | `nba-dfs-capture finalize` / `record`: search, lock assignment, chain verification against DK | Lineup generation | `src/nba_optimizer/capture.py` |
 
 ### 4) Reused Patterns
 

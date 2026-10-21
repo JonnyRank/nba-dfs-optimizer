@@ -33,6 +33,7 @@ python -m pytest tests/test_engine_constraints.py tests/test_utils.py -q
 | Unit/Integration | Yes (partial) | `nba_optimizer.engine.generate_single_lineup`, `nba_optimizer.engine.LineupModel`, and the `_init_worker` / `_generate_batch` worker path | Exercises the LP solve directly with `randomness=0.0` against a tiny synthetic player pool; asserts roster size, salary band, positional eligibility, and min-games constraints; also checks fixture-slate objective equivalence of `LineupModel` against `generate_single_lineup` |
 | Unit | Yes (partial) | `nba_optimizer.ranker.rank_lineups` | `tests/test_ranker.py`: totals, missing-player and 0.1 geomean floor, weighted rank order, average-rank ties, slot/Lineup_ID passthrough |
 | Integration | Partial | `ranker.run()`, `exporter.run()`, `exposure_report._resolve_entries_file()` artifact handoff | Covered by `test_pipeline_artifacts.py` using synthetic temp-file fixtures. Full end-to-end pipeline (LP solve → rank → export) is not covered. |
+| Unit/Integration | Yes | Nightly capture: `slate.py`, `records.py`, `capture.py` | `tests/test_slate.py`, `tests/test_records.py`, `tests/test_capture.py` run on trimmed real 2026-10-20 files in `tests/fixtures/2026-10-20/`; `tests/conftest.py`'s `opening_night` fixture copies them to a temp dir and applies their original modified times from `mtimes.json` (git doesn't keep mtimes) |
 | E2E | No (manual) | Full pipeline | Verification is done by running the pipeline with real CSV inputs and inspecting output |
 
 ### 4) Mocking and Isolation Strategy

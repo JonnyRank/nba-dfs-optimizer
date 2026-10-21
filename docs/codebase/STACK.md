@@ -61,6 +61,7 @@ python -m pytest -q
 
 - Config sources: `.env` (loaded via `python-dotenv`), `src/nba_optimizer/config.py` (constants)
 - Required env vars: `NBA_ENTRIES_PATH`, `NBA_PROJS_DIR`, `NBA_LINEUP_DIR`, `NBA_OUTPUT_DIR`
+- Optional (nightly capture, O-0): `NBA_DATA_ROOT` (per-slate folders; unset = legacy `exports/` layout), `NBA_DOWNLOADS_DIR` (searched by `nba-dfs-capture finalize`; default `~/Downloads`)
 - Deployment/runtime constraints: Local-only execution on Windows. Paths reference `C:\Users\jrank\Downloads` and Google Drive.
 
 ### 6) Evidence

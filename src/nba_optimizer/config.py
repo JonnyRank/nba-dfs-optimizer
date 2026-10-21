@@ -1,5 +1,7 @@
 import os
 from dataclasses import dataclass, field
+from typing import Optional
+
 from dotenv import load_dotenv
 
 
@@ -37,6 +39,14 @@ class Config:
     ranked_lineup_dir: str = field(default="")
     output_dir: str = "exports"
 
+    # --- NIGHTLY CAPTURE (O-0) ---
+    # data_root "" keeps the legacy exports/ layout; when set, each slate
+    # gets a folder <data_root>/<slate_id>/ holding pools, ranked files and records.
+    data_root: str = ""
+    downloads_dir: str = ""
+    slate_type: str = "main"
+    seed: Optional[int] = None
+
     def __post_init__(self):
         """Derive computed paths after initialization."""
         # Only override if not explicitly set
@@ -44,6 +54,8 @@ class Config:
             self.lineup_pool_dir = os.path.join(self.base_dir, "lineup-pools")
         if not self.ranked_lineup_dir:
             self.ranked_lineup_dir = os.path.join(self.base_dir, "ranked-lineups")
+        if not self.downloads_dir:
+            self.downloads_dir = os.path.join(os.path.expanduser("~"), "Downloads")
 
     def ensure_directories(self):
         """Create required directories if they don't exist.
@@ -71,6 +83,12 @@ class Config:
             raise OSError(f"Could not create required directories: {failed}")
 
 
+def _env_path(name: str) -> str:
+    """Env var as a path with any trailing separator removed ("" when unset)."""
+    value = os.getenv(name, "").strip()
+    return value.rstrip("\\/") if value else ""
+
+
 def load_config_from_env() -> Config:
     """Load configuration from environment variables with defaults.
 
@@ -85,6 +103,8 @@ def load_config_from_env() -> Config:
         projs_dir=os.getenv("NBA_PROJS_DIR", "projections"),
         base_dir=os.getenv("NBA_LINEUP_DIR", "exports"),
         output_dir=os.getenv("NBA_OUTPUT_DIR", "exports"),
+        data_root=_env_path("NBA_DATA_ROOT"),
+        downloads_dir=_env_path("NBA_DOWNLOADS_DIR"),
     )
 
     # Ensure directories exist
