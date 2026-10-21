@@ -476,6 +476,7 @@ def finalize(
     ``unique_lineups_by_lock`` keyed by int lock).
     """
     now = now or datetime.now().astimezone()
+    print(f"Slate folder: {slate_dir}")
     ctx = load_context(slate_dir, entries, dry_run, slate_type)
     warnings: List[str] = []
     found = scan(ctx, search_dirs, now, backfill=bool(entries) and assume_default_params)
@@ -527,7 +528,9 @@ def finalize(
         else:
             built = _pick_latest([p for p in projs if p.lock == k], before=f.mtime)
             if built is None:
-                projections_file = chain_projs[k - 1] if k > 0 else None
+                # No export in this window before the file: the lock's own
+                # projections if pinned/picked, else the previous lock's.
+                projections_file = chain_projs[k] or (chain_projs[k - 1] if k > 0 else None)
             else:
                 if not built.used:
                     built.copied_as = _place(
@@ -757,7 +760,7 @@ def _write_slate_entries(ctx: SlateContext, lineups_by_lock, provider_by_lock) -
     df = pd.DataFrame(rows, columns=SLATE_ENTRIES_COLUMNS)
     df["pre_lock_rank"] = df["pre_lock_rank"].astype("Int64")
     df.to_csv(tmp, index=False)
-    os.replace(tmp, path)
+    records.replace_with_retry(tmp, path)
 
 
 def _print_summary(payload: dict, found: List[FoundFile], dry_run: bool) -> None:
@@ -805,9 +808,14 @@ def record(
     mtime = records.file_mtime(file)
     if lock is None:
         lock = lock_for_time(ctx.slate, mtime)
+    if not 0 <= lock < len(ctx.locks):
+        raise ValueError(f"--lock {lock} is out of range; this slate has locks 0-{len(ctx.locks) - 1}")
     pins = load_pins(slate_dir)
 
     if role in PROJ_ROLES:
+        f = FoundFile(path=file, role=role, mtime=mtime, sha256=records.sha256_file(file), lock=lock)
+        if not _belongs(ctx, f):
+            raise ValueError(f"{os.path.basename(file)}: projections IDs don't match this slate's player pool")
         name = records.snapshot_input(file, slate_dir, records.projections_copy_name(file, lock))
         pins["projections"][str(lock)] = name
         records.write_json_atomic(os.path.join(slate_dir, PINS_FILE), pins)

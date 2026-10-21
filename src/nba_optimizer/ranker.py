@@ -203,15 +203,10 @@ def write_run_record(
     code_version: Optional[str] = "auto",
 ) -> str:
     """Write the run record JSON next to *ranked_file* and return its path."""
-    from .slate import lock_for_time
+    from .slate import lock_or_none
 
     slate_id = slate["slate_id"] if slate else None
-    lock = None
-    if slate:
-        try:
-            lock = lock_for_time(slate, run_time)
-        except ValueError:
-            lock = None
+    lock = lock_or_none(slate, run_time) if slate else None
     df_projs = pd.read_csv(projs_file)
     payload = {
         "schema": records.SCHEMA_VERSION,

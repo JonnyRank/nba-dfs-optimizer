@@ -6,7 +6,7 @@ import pandas as pd
 
 from . import engine, exporter, exposure_report, late_swapper, ranker, records
 from .config import load_config_from_env
-from .slate import PRE_L0_ENTRIES, load_or_write_slate, lock_for_time
+from .slate import PRE_L0_ENTRIES, load_or_write_slate, lock_or_none
 from .utils import get_latest_file
 
 
@@ -22,11 +22,10 @@ def prepare_slate_inputs(config, run_time):
     projs_file = get_latest_file(config.projs_dir, "NBA-Projs-*.csv")
 
     if slate_dir:
-        try:
-            lock = lock_for_time(slate, run_time)
-        except ValueError:
-            lock = len(slate["locks"])
-        entries_name = PRE_L0_ENTRIES if lock == 0 else f"L{lock}-DKEntries.csv"
+        # lock is None after the last lock: copies are named "Post-..." and
+        # the exporter writes no entry set (see exporter.write_export_entry_set).
+        lock = lock_or_none(slate, run_time)
+        entries_name = PRE_L0_ENTRIES if lock == 0 else f"{records.lock_prefix(lock)}-DKEntries.csv"
         entries_copy = records.snapshot_input(config.entries_path, slate_dir, entries_name)
         projs_copy = records.snapshot_input(
             projs_file, slate_dir, records.projections_copy_name(projs_file, lock)

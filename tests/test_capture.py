@@ -221,3 +221,20 @@ def test_same_export_resaved_after_lock_counts_in_both_windows(opening_night, tm
     assert (l0["lock"], l0["used"]) == (0, True)
     assert payload["chain"][0]["projections_file"] == "L0-NBA-Projs-2026-10-20_13-55-35.csv"
     assert _assignment(payload, resaved.name)["lock"] == 1
+
+
+def test_record_rejects_out_of_range_lock(opening_night, tmp_path):
+    slate_dir = tmp_path / "slates" / SLATE_ID
+    capture.load_context(str(slate_dir), entries=str(opening_night / "Pre-L0-DKEntries.csv"))
+    with pytest.raises(ValueError, match="out of range"):
+        capture.record(str(opening_night / "L1-DK_NBA_Main_Late_Swap_Lineups.csv"), str(slate_dir), lock=7)
+    assert not (slate_dir / "pins.json").exists()
+
+
+def test_record_rejects_other_slate_projections(opening_night, tmp_path):
+    slate_dir = tmp_path / "slates" / SLATE_ID
+    capture.load_context(str(slate_dir), entries=str(opening_night / "Pre-L0-DKEntries.csv"))
+    other = tmp_path / "NBA-Projs-2026-10-21_12-00-00.csv"
+    pd.DataFrame({"ID": [1, 2, 3], "Projection": [30.0, 20.0, 10.0], "Own_Proj": [10.0, 5.0, 1.0]}).to_csv(other, index=False)
+    with pytest.raises(ValueError, match="don't match this slate"):
+        capture.record(str(other), str(slate_dir), lock=1)

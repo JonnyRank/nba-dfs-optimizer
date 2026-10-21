@@ -116,32 +116,50 @@ def lock_for_time(slate: dict, t: datetime) -> int:
     raise ValueError(f"{t.isoformat()} is after the last lock of {slate['slate_id']}")
 
 
+def lock_or_none(slate: dict, t: datetime) -> Optional[int]:
+    """lock_for_time, or None once every lock has passed."""
+    try:
+        return lock_for_time(slate, t)
+    except ValueError:
+        return None
+
+
 def team_game_lock(slate: dict) -> Dict[str, int]:
     game_lock = {g: lk["lock"] for lk in slate["locks"] for g in lk["games"]}
     return {team: game_lock[game] for team, game in slate["teams"].items()}
 
 
 def find_slate_dir(cfg: Config, when: datetime) -> str:
-    """Slate folder under cfg.data_root whose lock 0 is the latest one <= when + 12 h."""
+    """Slate folder under cfg.data_root whose lock 0 is the latest one <= when + 12 h.
+
+    If that slate hasn't locked yet (tonight's pre-lock run already made its
+    folder), the most recent slate whose last lock has passed wins instead,
+    so the next-morning finalize still finds last night's folder.
+    """
     if not cfg.data_root or not os.path.isdir(cfg.data_root):
         raise FileNotFoundError("NBA_DATA_ROOT is not set or doesn't exist; pass --slate-dir")
     if when.tzinfo is None:
         when = when.astimezone()
     limit = when + timedelta(hours=12)
-    best = None
+    candidates = []
     for name in os.listdir(cfg.data_root):
         path = os.path.join(cfg.data_root, name, SLATE_FILE)
         if not os.path.isfile(path):
             continue
         try:
-            lock0 = lock_starts(read_json(path))[0]
+            starts = lock_starts(read_json(path))
         except (ValueError, KeyError, IndexError, OSError):
             continue
-        if lock0 <= limit and (best is None or lock0 > best[0]):
-            best = (lock0, os.path.dirname(path))
-    if best is None:
+        if starts and starts[0] <= limit:
+            candidates.append((starts[0], starts[-1], os.path.dirname(path)))
+    if not candidates:
         raise FileNotFoundError(f"No slate folder in {cfg.data_root} with lock 0 before {limit.isoformat()}")
-    return best[1]
+    latest = max(candidates)
+    if latest[0] > when:
+        finished = [c for c in candidates if c[1] <= when]
+        if finished:
+            return max(finished)[2]
+    return latest[2]
 
 
 def _warn_on_drift(slate: dict, entries_file: str) -> None:

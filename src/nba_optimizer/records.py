@@ -11,6 +11,7 @@ import os
 import re
 import shutil
 import subprocess
+import time
 from datetime import datetime
 from typing import Dict, Iterable, List, Optional
 
@@ -105,19 +106,27 @@ def snapshot_input(path: str, slate_dir: str, canonical_name: str) -> str:
     return name
 
 
+def replace_with_retry(tmp: str, path: str) -> None:
+    """os.replace with one retry (Google Drive can lock a file while it syncs); removes tmp on failure."""
+    try:
+        try:
+            os.replace(tmp, path)
+        except PermissionError:
+            time.sleep(1.0)
+            os.replace(tmp, path)
+    except OSError:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+        raise
+
+
 def write_json_atomic(path: str, payload: dict) -> None:
-    """Write JSON through a temp file and os.replace; retry once (Google Drive sync locks)."""
+    """Write JSON through a temp file in the same folder, then replace_with_retry."""
     tmp = f"{path}.tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2)
         f.write("\n")
-    try:
-        os.replace(tmp, path)
-    except PermissionError:
-        import time
-
-        time.sleep(1.0)
-        os.replace(tmp, path)
+    replace_with_retry(tmp, path)
 
 
 def read_json(path: str) -> dict:
@@ -150,11 +159,16 @@ def compact_ts(dt: datetime) -> str:
     return dt.strftime("%Y%m%dT%H%M%S")
 
 
-def projections_copy_name(path: str, lock: int) -> str:
+def lock_prefix(lock: Optional[int]) -> str:
+    """``L<k>`` for a lock, ``Post`` for a file saved after the last lock."""
+    return "Post" if lock is None else f"L{lock}"
+
+
+def projections_copy_name(path: str, lock: Optional[int]) -> str:
     """``L<k>-NBA-Projs-<YYYY-MM-DD_HH-MM-SS>.csv``, keeping the source's own timestamp if it has one."""
     match = PROJS_TS_RE.search(os.path.basename(path))
     ts = match.group(1) if match else file_mtime(path).strftime("%Y-%m-%d_%H-%M-%S")
-    return f"L{lock}-NBA-Projs-{ts}.csv"
+    return f"{lock_prefix(lock)}-NBA-Projs-{ts}.csv"
 
 
 # --- LINEUPS ---
@@ -292,6 +306,11 @@ def check_blend(df_projs: pd.DataFrame, warn: bool = True) -> Optional[dict]:
     """
     if "Stok Mins" not in df_projs.columns:
         return None
+    missing = [c for c in ("Blend FPPM", "Projection") if c not in df_projs.columns]
+    if missing:
+        if warn:
+            print(f"Warning: blend check skipped; expanded projections lack {missing}")
+        return None
     df = derive_projection_fields(df_projs)
     fppm_cols = [c for c in ("Stok FPPM", "LS FPPM", "My FPPM") if c in df.columns]
     fppm = df[fppm_cols].apply(pd.to_numeric, errors="coerce").fillna(0.0)
@@ -358,7 +377,7 @@ def make_entry_set(
         })
     return {
         "schema": SCHEMA_VERSION,
-        "entry_set_id": f"{slate_id}_L{lock}_{ts}",
+        "entry_set_id": f"{slate_id}_L{lock}_{ts}" if slate_id else f"L{lock}_{ts}",
         "slate_id": slate_id,
         "lock": lock,
         "source": source,

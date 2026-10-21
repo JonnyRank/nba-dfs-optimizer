@@ -295,11 +295,11 @@ class TestExposureReportResolveEntriesFile:
 NIGHT_DIR = os.path.join(FIXTURES_DIR, "2026-10-20")
 
 
-def _opening_night_run(tmp_path):
+def _opening_night_run(tmp_path, run_time=None):
     """Slate folder for 10/20 plus a ranker run on a pool made from the ranked fixture's lineups.
 
-    The run instant is after midnight (00:30 on 10/21) so the filenames must
-    take the slate date, not the run date.
+    The default run instant is after midnight (00:30 on 10/21) so the
+    filenames must take the slate date, not the run date.
     """
     from datetime import datetime
     from nba_optimizer import ranker
@@ -324,7 +324,7 @@ def _opening_night_run(tmp_path):
     pd.read_csv(os.path.join(NIGHT_DIR, "ranked-lineups-2026-10-20_135723.csv"))[list(ROSTER_SLOTS)].to_csv(
         pool, index=False
     )
-    run_time = datetime(2026, 10, 21, 0, 30, 0).astimezone()
+    run_time = run_time or datetime(2026, 10, 21, 0, 30, 0).astimezone()
     ranked = ranker.run(
         cfg, proj_weight=0.8, own_weight=0.0, geo_weight=0.2,
         lineup_file=pool, projs_file=projs,
@@ -360,9 +360,13 @@ def test_ranker_writes_run_record(tmp_path):
 
 def test_exporter_writes_L0_entry_set(tmp_path):
     """Rank i goes to entry i: 1-20 in the $4 contest, 21-40 in the $1 contest."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
     from nba_optimizer import exporter, records
 
-    cfg, slate_dir, ranked, run_time = _opening_night_run(tmp_path)
+    # 13:57:23 CT, three minutes before lock 0 (3:00 PM ET).
+    pre_lock = datetime(2026, 10, 20, 13, 57, 23, tzinfo=ZoneInfo("America/Chicago")).astimezone()
+    cfg, slate_dir, ranked, run_time = _opening_night_run(tmp_path, pre_lock)
     export = exporter.run(cfg, ranked_file=ranked, run_time=run_time)
 
     assert os.path.dirname(export) == cfg.output_dir
@@ -377,3 +381,18 @@ def test_exporter_writes_L0_entry_set(tmp_path):
     assert {e["contest_id"] for e in entries[:20]} == {196456024}
     assert {e["contest_id"] for e in entries[20:]} == {196456031}
     assert all(isinstance(pid, int) for e in entries for pid in e["lineup"].values())
+
+
+def test_exporter_skips_entry_set_after_last_lock(tmp_path):
+    """A run after the slate's last lock writes the upload file but no L0 entry set."""
+    from datetime import datetime
+    from nba_optimizer import exporter, records
+
+    cfg, slate_dir, ranked, _ = _opening_night_run(tmp_path)
+    run_record_path = ranked[:-4] + ".json"
+    record = records.read_json(run_record_path)
+    assert record["lock"] is None  # 00:30 on 10/21 is after the 9:30 PM ET lock
+    export = exporter.run(cfg, ranked_file=ranked, run_time=datetime(2026, 10, 21, 0, 31).astimezone())
+
+    assert os.path.isfile(export)
+    assert not [n for n in os.listdir(slate_dir) if "-entry-set-" in n]

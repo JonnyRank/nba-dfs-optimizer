@@ -79,7 +79,10 @@ def run(cfg: Config, ranked_file: Optional[str] = None, run_time: Optional[datet
         run_record = _read_run_record(ranked_file)
         slate_id = run_record.get("slate_id")
         slate_date = slate_id[:10] if slate_id else run_time.strftime("%Y-%m-%d")
-        timestamp = f"{slate_date}_{run_time.strftime('%H%M%S')}"
+        # Same "<Type>-" prefix as the ranked file on non-main slates (slate_id ends in _classic_<type>).
+        slate_type = slate_id.rsplit("_", 1)[-1] if slate_id else "main"
+        type_part = "" if slate_type == "main" else f"{slate_type.capitalize()}-"
+        timestamp = f"{type_part}{slate_date}_{run_time.strftime('%H%M%S')}"
         output_file = os.path.join(
             cfg.output_dir, f"{STANDARD_EXPORT_PREFIX}-{timestamp}.csv"
         )
@@ -115,8 +118,18 @@ def _read_run_record(ranked_file: str) -> dict:
 def write_export_entry_set(
     export_file: str, ranked_file: str, run_record: dict, run_time: datetime
 ) -> str:
-    """Write the optimizer entry-set candidate for *export_file*; return its path."""
+    """Write the optimizer entry-set candidate for *export_file*; return its path.
+
+    A run on a known slate after its last lock writes nothing (returns ""):
+    no lock is left for the lineups to be in force at. Without a slate
+    (legacy layout) the set is recorded as L0.
+    """
     from .slate import SLATE_FILE
+
+    lock = run_record.get("lock")
+    if run_record.get("slate_id") and lock is None:
+        print("Warning: run is after the slate's last lock; no entry set written.")
+        return ""
 
     slate_dir = os.path.dirname(os.path.abspath(ranked_file))
     if os.path.isfile(os.path.join(slate_dir, SLATE_FILE)):
@@ -129,7 +142,6 @@ def write_export_entry_set(
         target_dir = os.path.dirname(os.path.abspath(export_file))
         entry_order = None
 
-    lock = run_record.get("lock")
     payload = records.make_entry_set(
         slate_id=run_record.get("slate_id"),
         lock=0 if lock is None else lock,

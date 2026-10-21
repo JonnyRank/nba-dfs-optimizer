@@ -102,3 +102,10 @@ def test_snapshot_input_reuses_identical_and_never_overwrites(tmp_path):
     assert other.startswith("L0-NBA-Projs-") and other != first
     assert (slate_dir / first).read_text() == src_a.read_text()
     assert sorted(os.listdir(slate_dir)) == sorted([first, other])
+
+
+def test_check_blend_skips_when_columns_missing(capsys):
+    """An expanded export missing Blend FPPM warns and returns None instead of raising."""
+    df = pd.read_csv(TEMPLATE).drop(columns=["Blend FPPM"])
+    assert records.check_blend(df) is None
+    assert "blend check skipped" in capsys.readouterr().out

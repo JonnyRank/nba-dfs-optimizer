@@ -75,3 +75,24 @@ def test_first_run_needs_prelock_file(tmp_path):
     cfg = Config(data_root=str(tmp_path))
     with pytest.raises(ValueError, match="first run of the night needs a pre-lock DKEntries"):
         load_or_write_slate(cfg, os.path.join(OPENING_NIGHT_DIR, "Post-L2-DKEntries.csv"))
+
+
+def test_find_slate_dir_prefers_finished_slate_over_unlocked_one(tmp_path):
+    """Next morning, after tonight's pre-lock run made its folder, finalize still finds last night's."""
+    import json
+    from nba_optimizer.slate import find_slate_dir
+
+    def make(slate_id, starts):
+        d = tmp_path / slate_id
+        d.mkdir()
+        (d / "slate.json").write_text(json.dumps({"locks": [{"lock": k, "start": s} for k, s in enumerate(starts)]}))
+        return str(d)
+
+    last_night = make("2026-10-20_classic_main", ["2026-10-20T15:00:00-04:00", "2026-10-20T21:30:00-04:00"])
+    tonight = make("2026-10-21_classic_main", ["2026-10-21T19:00:00-04:00", "2026-10-21T22:00:00-04:00"])
+    cfg = Config(data_root=str(tmp_path))
+
+    noon = datetime(2026, 10, 21, 12, 0, tzinfo=CT)
+    assert find_slate_dir(cfg, noon) == last_night
+    after_tonights_lock0 = datetime(2026, 10, 21, 18, 30, tzinfo=CT)
+    assert find_slate_dir(cfg, after_tonights_lock0) == tonight
