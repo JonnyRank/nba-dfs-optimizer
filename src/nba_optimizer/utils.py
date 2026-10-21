@@ -169,13 +169,13 @@ def merge_player_pool(
     Returns:
         Merged DataFrame ready for use by the caller.
     """
-    # Drop DK-owned columns from projs to avoid _x/_y suffix collisions;
-    # df_players (from DKEntries) is authoritative for these values.
+    # Drop every column the projections share with the DK pool (except ID) to
+    # avoid _x/_y suffix collisions; df_players (from DKEntries) is
+    # authoritative for these values. The expanded template repeats DK's
+    # Position, Name + ID, Salary and Game Info.
     # .drop() returns a new DataFrame, so no explicit .copy() is needed.
-    df_projs = df_projs.drop(
-        columns=["Name", "Salary", "Position", "Roster Position", "Game Info"],
-        errors="ignore",
-    )
+    shared = [c for c in df_projs.columns if c in df_players.columns and c != "ID"]
+    df_projs = df_projs.drop(columns=shared)
     # Normalize projs ID the same way as parse_dk_entries: if any ID is NaN,
     # pandas reads the column as float64 and astype(str) would give "12345.0",
     # which would silently fail to match the "12345" IDs from parse_dk_entries.

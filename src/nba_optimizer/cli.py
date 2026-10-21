@@ -1,6 +1,7 @@
 import argparse
 
 from .orchestrator import run_pipeline
+from .slate import SLATE_TYPES
 
 
 def main():
@@ -75,6 +76,20 @@ def main():
         type=int,
         default=25,
         help="Display only top X exposed players (0 for all)",
+    )
+
+    parser.add_argument(
+        "--slate-type",
+        dest="slate_type",
+        choices=SLATE_TYPES,
+        default="main",
+        help="Slate type used in the slate folder name (Default: main)",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="Base seed for the engine (Default: draw a fresh one, printed and recorded)",
     )
 
     run_pipeline(parser.parse_args())

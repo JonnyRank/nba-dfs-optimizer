@@ -311,13 +311,42 @@ def test_worker_batch_returns_slotted_lineups():
         engine._init_worker(
             df_pool, 0.25, cfg.min_salary, cfg.salary_cap, cfg.roster_size, cfg.min_games
         )
-        batch = engine._generate_batch(3)
+        batch = engine._generate_batch(0, 3)
 
         assert len(batch) == 3
-        for positions, slotted in batch:
+        assert [j for j, _, _ in batch] == [0, 1, 2]
+        for _, positions, slotted in batch:
             assert len(positions) == cfg.roster_size
             assert len(slotted) == cfg.roster_size
             assert "ERROR" not in slotted and "EMPTY" not in slotted
             assert set(slotted) == set(df_pool.loc[list(positions), "Name + ID"])
     finally:
         engine._WORKER_STATE.clear()
+
+
+def test_engine_seed_reproducible():
+    """Same seed, same lineups, however the lineup indices are split across workers.
+
+    Lineup j's noise comes from SeedSequence(base_seed, spawn_key=(j,)), so a
+    single 0..5 batch and a 0..1 + 2..5 split must produce identical
+    candidates once sorted by j. A different seed draws different noise.
+    """
+    cfg = Config()
+    df_pool = _load_fixture_pool()[engine.WORKER_COLUMNS].reset_index(drop=True)
+    args = (df_pool, 0.25, cfg.min_salary, cfg.salary_cap, cfg.roster_size, cfg.min_games)
+    try:
+        engine._init_worker(*args, 12345)
+        whole = engine._generate_batch(0, 6)
+
+        engine._init_worker(*args, 12345)
+        split = engine._generate_batch(2, 6) + engine._generate_batch(0, 2)
+        split.sort(key=lambda c: c[0])
+
+        engine._init_worker(*args, 54321)
+        other = engine._generate_batch(0, 6)
+    finally:
+        engine._WORKER_STATE.clear()
+
+    assert [j for j, _, _ in whole] == list(range(6))
+    assert split == whole
+    assert [p for _, p, _ in other] != [p for _, p, _ in whole]
