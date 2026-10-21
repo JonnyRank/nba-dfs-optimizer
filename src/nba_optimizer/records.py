@@ -12,6 +12,8 @@ import re
 import shutil
 import subprocess
 import time
+import zipfile
+from contextlib import contextmanager
 from datetime import datetime
 from typing import Dict, Iterable, List, Optional
 
@@ -40,16 +42,56 @@ _SHA_CACHE: Dict[tuple, str] = {}
 # --- FILE HELPERS ---
 
 
-def sha256_file(path: str) -> str:
+@contextmanager
+def _open_source(path: str, member: Optional[str]):
+    """Binary stream of *path*, or of *member* inside the zip *path*."""
+    if member is None:
+        with open(path, "rb") as f:
+            yield f
+        return
+    with zipfile.ZipFile(path) as zf, zf.open(member) as f:
+        yield f
+
+
+def _source_size(path: str, member: Optional[str]) -> int:
+    if member is None:
+        return os.path.getsize(path)
+    with zipfile.ZipFile(path) as zf:
+        return zf.getinfo(member).file_size
+
+
+def sha256_file(path: str, member: Optional[str] = None) -> str:
+    """sha256 of *path*, or of the uncompressed *member* inside the zip *path*."""
     st = os.stat(path)
-    key = (os.path.normcase(os.path.abspath(path)), st.st_mtime_ns, st.st_size)
+    key = (os.path.normcase(os.path.abspath(path)), st.st_mtime_ns, st.st_size, member)
     if key not in _SHA_CACHE:
         h = hashlib.sha256()
-        with open(path, "rb") as f:
+        with _open_source(path, member) as f:
             for chunk in iter(lambda: f.read(1 << 20), b""):
                 h.update(chunk)
         _SHA_CACHE[key] = h.hexdigest()
     return _SHA_CACHE[key]
+
+
+def standings_zip_member(path: str) -> tuple[Optional[str], str]:
+    """(member, problem) for a contest-standings zip.
+
+    *member* is the single ``contest-standings-<id>.csv`` inside, matched on
+    the CSV's own name (the zip's name doesn't matter). It's None when the
+    zip isn't a standings zip (problem "") or holds anything besides that one
+    CSV (problem says why).
+    """
+    try:
+        with zipfile.ZipFile(path) as zf:
+            names = [i.filename for i in zf.infolist() if not i.is_dir()]
+    except (zipfile.BadZipFile, OSError):
+        return None, ""
+    matching = [n for n in names if STANDINGS_NAME_RE.match(os.path.basename(n))]
+    if not matching:
+        return None, ""
+    if len(names) != 1:
+        return None, f"zip holds {len(names)} files, expected only one contest-standings CSV; skipped"
+    return names[0], ""
 
 
 def file_mtime(path: str) -> datetime:
@@ -57,26 +99,26 @@ def file_mtime(path: str) -> datetime:
     return datetime.fromtimestamp(os.path.getmtime(path)).astimezone()
 
 
-def find_identical(path: str, directory: str) -> Optional[str]:
-    """Basename of a file in *directory* with the same sha256 as *path*, if any."""
+def find_identical(path: str, directory: str, member: Optional[str] = None) -> Optional[str]:
+    """Basename of a file in *directory* with the same sha256 as *path* (or its zip *member*), if any."""
     if not os.path.isdir(directory):
         return None
-    size = os.path.getsize(path)
+    size = _source_size(path, member)
     target = None
     for name in sorted(os.listdir(directory)):
         candidate = os.path.join(directory, name)
         if not os.path.isfile(candidate) or os.path.getsize(candidate) != size:
             continue
         if target is None:
-            target = sha256_file(path)
+            target = sha256_file(path, member)
         if sha256_file(candidate) == target:
             return name
     return None
 
 
-def snapshot_name(path: str, directory: str, canonical_name: str) -> str:
+def snapshot_name(path: str, directory: str, canonical_name: str, member: Optional[str] = None) -> str:
     """The basename snapshot_input would use, without copying anything."""
-    existing = find_identical(path, directory)
+    existing = find_identical(path, directory, member)
     if existing:
         return existing
     if not os.path.exists(os.path.join(directory, canonical_name)):
@@ -91,19 +133,36 @@ def snapshot_name(path: str, directory: str, canonical_name: str) -> str:
     return name
 
 
-def snapshot_input(path: str, slate_dir: str, canonical_name: str) -> str:
+def snapshot_input(path: str, slate_dir: str, canonical_name: str, member: Optional[str] = None) -> str:
     """Copy *path* into *slate_dir* as *canonical_name* and return the basename used.
 
     A file with identical contents already in the folder is reused. An
     existing file with the same name but different contents is never
     overwritten; ``-<HHMMSS>`` (from the source's modified time) is appended.
     The copy keeps the source's modified time.
+
+    With *member*, *path* is a zip: that member is streamed out byte for byte
+    (the zip is only read) and the copy gets the zip's modified time.
     """
     os.makedirs(slate_dir, exist_ok=True)
-    name = snapshot_name(path, slate_dir, canonical_name)
+    name = snapshot_name(path, slate_dir, canonical_name, member)
     dest = os.path.join(slate_dir, name)
-    if not os.path.exists(dest):
+    if os.path.exists(dest):
+        return name
+    if member is None:
         shutil.copy2(path, dest)
+        return name
+    tmp = f"{dest}.tmp"
+    try:
+        with _open_source(path, member) as src, open(tmp, "wb") as out:
+            shutil.copyfileobj(src, out, 1 << 20)
+        st = os.stat(path)
+        os.utime(tmp, ns=(st.st_atime_ns, st.st_mtime_ns))
+    except BaseException:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+        raise
+    replace_with_retry(tmp, dest)
     return name
 
 

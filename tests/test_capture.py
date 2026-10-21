@@ -8,6 +8,7 @@ DK accepted every upload exactly, so the chain verifies 40/40 at each lock.
 import csv
 import os
 import shutil
+import zipfile
 from datetime import datetime
 
 import pandas as pd
@@ -250,3 +251,52 @@ def test_record_twice_rewrites_same_entry_set(opening_night, tmp_path):
     capture.record(upload, str(slate_dir), lock=0)
     assert sorted(os.listdir(slate_dir)) == first
     assert len([n for n in first if "-entry-set-" in n]) == 1
+
+
+STANDINGS_CSV = b"Rank,EntryId,EntryName,TimeRemaining,Points,Lineup\r\n1,5000000001,someone (1/40),0,312.5,PG A SG B\r\n"
+MORNING = "2026-10-21T07:10:44-05:00"
+
+
+def _standings_zip(path, members):
+    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as zf:
+        for name, data in members.items():
+            zf.writestr(name, data)
+    set_mtime(str(path), MORNING)
+    return path
+
+
+def test_standings_from_zip(opening_night, tmp_path, capsys):
+    """Standings zips as DK delivers them: the single CSV is extracted, the zip is left alone."""
+    slate_dir = tmp_path / "slates" / SLATE_ID
+    good = _standings_zip(opening_night / "contest-standings-196456024.zip",
+                          {"contest-standings-196456024.csv": STANDINGS_CSV})
+    # The zip's own name doesn't matter; the CSV inside it does.
+    renamed = _standings_zip(opening_night / "standings (1).zip",
+                             {"contest-standings-196456031.csv": STANDINGS_CSV + b"2,5000000002,x,0,1,\r\n"})
+    other = _standings_zip(opening_night / "contest-standings-999999999.zip",
+                           {"contest-standings-999999999.csv": STANDINGS_CSV + b"2,6000000002,y,0,1,\r\n"})
+    two = _standings_zip(opening_night / "two-files.zip",
+                         {"contest-standings-196456024.csv": STANDINGS_CSV, "readme.txt": b"x"})
+    zip_bytes = good.read_bytes()
+
+    payload = _finalize(opening_night, slate_dir)
+
+    assert (slate_dir / "contest-standings-196456024.csv").read_bytes() == STANDINGS_CSV
+    assert (slate_dir / "contest-standings-196456031.csv").exists()
+    assert sorted(payload["standings"]) == ["contest-standings-196456024.csv", "contest-standings-196456031.csv"]
+    assert good.read_bytes() == zip_bytes and not list(slate_dir.glob("*.zip"))
+    assert not (slate_dir / "contest-standings-999999999.csv").exists()
+    a = _assignment(payload, other.name)
+    assert a["used"] is False and "other slate" in a["reason"]
+    a = _assignment(payload, two.name)
+    assert a["used"] is False and "2 files" in a["reason"]
+    assert any(two.name in w for w in payload["warnings"])
+    assert "two-files.zip" in capsys.readouterr().out
+
+    # Zip plus its unzipped CSV (and the earlier extraction): still one copy.
+    loose = opening_night / "contest-standings-196456024.csv"
+    loose.write_bytes(STANDINGS_CSV)
+    set_mtime(str(loose), MORNING)
+    payload = _finalize(opening_night, slate_dir)
+    assert len([n for n in os.listdir(slate_dir) if n.startswith("contest-standings-196456024")]) == 1
+    assert payload["standings"].count("contest-standings-196456024.csv") == 1
