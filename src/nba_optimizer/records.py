@@ -27,7 +27,8 @@ POOL_HEADER_MARKER = "Position,Name + ID,Name,ID"
 ENTRY_HEADER = ["Entry ID", "Contest Name", "Contest ID", "Entry Fee"] + list(ROSTER_SLOTS)
 BASIC_PROJS_HEADER = ["ID", "Projection", "Own_Proj"]
 STANDINGS_NAME_RE = re.compile(r"^contest-standings-(\d+)(?: \(\d+\))?\.csv$", re.IGNORECASE)
-PROJS_TS_RE = re.compile(r"(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})")
+BROWSER_SUFFIX_RE = re.compile(r" \(\d+\)(?=\.[^.]+$)")
+CAPTURE_PREFIX_RE = re.compile(r"^(?:(?:Pre|Post)-)?L\d+-|^Final-|^Post-", re.IGNORECASE)
 
 # Blend check tolerances: the workbook rounds nothing, so these only absorb float noise.
 BLEND_FPPM_TOL = 1e-6
@@ -164,11 +165,20 @@ def lock_prefix(lock: Optional[int]) -> str:
     return "Post" if lock is None else f"L{lock}"
 
 
+def clean_source_name(name: str) -> str:
+    """Drop a browser ``" (1)"`` suffix and any capture prefix (``L1-``, ``Pre-L0-``, ``Post-``, ``Final-``)."""
+    return CAPTURE_PREFIX_RE.sub("", BROWSER_SUFFIX_RE.sub("", name))
+
+
 def projections_copy_name(path: str, lock: Optional[int]) -> str:
-    """``L<k>-NBA-Projs-<YYYY-MM-DD_HH-MM-SS>.csv``, keeping the source's own timestamp if it has one."""
-    match = PROJS_TS_RE.search(os.path.basename(path))
-    ts = match.group(1) if match else file_mtime(path).strftime("%Y-%m-%d_%H-%M-%S")
-    return f"{lock_prefix(lock)}-NBA-Projs-{ts}.csv"
+    """``L<k>-`` + the source's own ``NBA-Projs-...`` name, whatever timestamp format it uses.
+
+    A source without that naming gets ``L<k>-NBA-Projs-<mtime YYYY-MM-DD_HH-MM-SS>.csv``.
+    """
+    name = clean_source_name(os.path.basename(path))
+    if not name.startswith("NBA-Projs-"):
+        name = f"NBA-Projs-{file_mtime(path).strftime('%Y-%m-%d_%H-%M-%S')}.csv"
+    return f"{lock_prefix(lock)}-{name}"
 
 
 # --- LINEUPS ---

@@ -40,8 +40,6 @@ FINAL_ENTRIES = "Final-DKEntries.csv"
 # Projections whose IDs are mostly outside tonight's pool belong to another slate.
 PROJS_MEMBERSHIP_MIN = 0.5
 
-BROWSER_SUFFIX_RE = re.compile(r" \(\d+\)(?=\.[^.]+$)")
-CAPTURE_PREFIX_RE = re.compile(r"^(?:(?:Pre|Post)-)?L\d+-|^Final-", re.IGNORECASE)
 RUN_TS_RE = re.compile(r"(\d{4}-\d{2}-\d{2})_(\d{6})")
 
 # §3.18: the settings Jonny confirmed for runs that predate run records.
@@ -364,13 +362,8 @@ def _set_in_force_before(entry_sets: List[dict], k: int) -> Optional[Dict[str, D
 # --- NAMING / COPYING ---
 
 
-def _clean_name(name: str) -> str:
-    name = BROWSER_SUFFIX_RE.sub("", name)
-    return CAPTURE_PREFIX_RE.sub("", name)
-
-
 def _lineup_copy_name(f: FoundFile, k: int) -> str:
-    clean = _clean_name(f.name)
+    clean = records.clean_source_name(f.name)
     if clean.startswith(STANDARD_EXPORT_PREFIX):
         return clean
     return f"L{k}-{clean}"
@@ -385,7 +378,7 @@ def _place(path: str, slate_dir: str, canonical: str, dry_run: bool) -> str:
 def _source_for(f: FoundFile) -> str:
     if f.role == "stok_export":
         return "stokastic"
-    if _clean_name(f.name).startswith(STANDARD_EXPORT_PREFIX):
+    if records.clean_source_name(f.name).startswith(STANDARD_EXPORT_PREFIX):
         return "optimizer"
     return "manual"
 

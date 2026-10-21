@@ -144,7 +144,8 @@ def run(
 
         run_time = (run_time or datetime.now()).astimezone()
         slate_date = slate["slate_date"] if slate else run_time.strftime("%Y-%m-%d")
-        type_part = "" if cfg.slate_type == "main" else f"{cfg.slate_type.capitalize()}-"
+        slate_type = slate["slate_type"] if slate else cfg.slate_type
+        type_part = "" if slate_type == "main" else f"{slate_type.capitalize()}-"
         timestamp = f"{type_part}{slate_date}_{run_time.strftime('%H%M%S')}"
         output_file = os.path.join(
             cfg.ranked_lineup_dir, f"ranked-lineups-{timestamp}.csv"

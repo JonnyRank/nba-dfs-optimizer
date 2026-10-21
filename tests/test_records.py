@@ -109,3 +109,16 @@ def test_check_blend_skips_when_columns_missing(capsys):
     df = pd.read_csv(TEMPLATE).drop(columns=["Blend FPPM"])
     assert records.check_blend(df) is None
     assert "blend check skipped" in capsys.readouterr().out
+
+
+def test_projections_copy_name_keeps_source_naming(tmp_path):
+    """Copies keep the macro's name (old or new timestamp format), minus browser/capture prefixes."""
+    new_format = tmp_path / "NBA-Projs-2026-10-21_10-21_13-55-35 (1).csv"
+    old_format = tmp_path / "L1-NBA-Projs-2026-10-20_17-55-17.csv"
+    other = tmp_path / "projections.csv"
+    for p in (new_format, old_format, other):
+        p.write_text("ID,Projection,Own_Proj\n")
+    assert records.projections_copy_name(str(new_format), 0) == "L0-NBA-Projs-2026-10-21_10-21_13-55-35.csv"
+    assert records.projections_copy_name(str(old_format), 2) == "L2-NBA-Projs-2026-10-20_17-55-17.csv"
+    assert records.projections_copy_name(str(new_format), None) == "Post-NBA-Projs-2026-10-21_10-21_13-55-35.csv"
+    assert records.projections_copy_name(str(other), 1).startswith("L1-NBA-Projs-")

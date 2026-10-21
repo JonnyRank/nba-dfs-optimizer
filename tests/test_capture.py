@@ -157,7 +157,7 @@ def test_projections_closest_to_lock(opening_night, tmp_path):
     os.remove(opening_night / "L2-NBA-Projs-2026-10-20_20-28-20.csv")
     names = {}
     for i, hhmm in enumerate(("20-05", "20-15", "20-25")):
-        name = f"NBA-Projs-Template-26-27-WIP_2026-10-20_{hhmm}-00.csv"
+        name = f"NBA-Projs-2026-10-20_10-20_{hhmm}-00.csv"  # NBA-Projs-<slate date>_<MM-DD_HH-MM-SS>
         _expanded_export(template, opening_night / name, i + 1)
         set_mtime(str(opening_night / name), f"2026-10-20T{hhmm.replace('-', ':')}:00-05:00")
         names[hhmm] = name
@@ -166,12 +166,12 @@ def test_projections_closest_to_lock(opening_night, tmp_path):
     slate_dir = tmp_path / "slates" / SLATE_ID
     payload = _finalize(opening_night, slate_dir)
 
-    assert payload["chain"][2]["projections_file"] == "L2-NBA-Projs-2026-10-20_20-25-00.csv"
+    assert payload["chain"][2]["projections_file"] == "L2-NBA-Projs-2026-10-20_10-20_20-25-00.csv"
     l2 = next(es for es in payload["entry_sets"] if es["lock"] == 2)
-    assert l2["projections_file"] == "L2-NBA-Projs-2026-10-20_20-15-00.csv"
+    assert l2["projections_file"] == "L2-NBA-Projs-2026-10-20_10-20_20-15-00.csv"
     ignored = _assignment(payload, names["20-05"])
     assert ignored["used"] is False and ignored["lock"] == 2
-    assert not (slate_dir / "L2-NBA-Projs-2026-10-20_20-05-00.csv").exists()
+    assert not (slate_dir / "L2-NBA-Projs-2026-10-20_10-20_20-05-00.csv").exists()
 
 
 def test_projections_carry_forward_when_window_empty(opening_night, tmp_path):
