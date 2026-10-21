@@ -29,6 +29,7 @@ POOL_HEADER_MARKER = "Position,Name + ID,Name,ID"
 ENTRY_HEADER = ["Entry ID", "Contest Name", "Contest ID", "Entry Fee"] + list(ROSTER_SLOTS)
 BASIC_PROJS_HEADER = ["ID", "Projection", "Own_Proj"]
 STANDINGS_NAME_RE = re.compile(r"^contest-standings-(\d+)(?: \(\d+\))?\.csv$", re.IGNORECASE)
+STANDINGS_ZIP_NAME_RE = re.compile(r"^contest-standings-(\d+)(?: \(\d+\))?\.zip$", re.IGNORECASE)
 BROWSER_SUFFIX_RE = re.compile(r" \(\d+\)(?=\.[^.]+$)")
 CAPTURE_PREFIX_RE = re.compile(r"^(?:(?:Pre|Post)-)?L\d+-|^Final-|^Post-", re.IGNORECASE)
 
@@ -78,27 +79,34 @@ def _zip_junk(name: str) -> bool:
     return name.startswith("__MACOSX/") or os.path.basename(name) == ".DS_Store"
 
 
-def standings_zip_member(path: str) -> tuple[Optional[str], str]:
-    """(member, problem) for a contest-standings zip.
+def standings_zip_member(path: str) -> tuple[Optional[str], str, Optional[int]]:
+    """(member, problem, contest_id) for a contest-standings zip.
 
     *member* is the single ``contest-standings-<id>.csv`` inside, matched on
     the CSV's own name (the zip's name doesn't matter). It's None when the
-    zip isn't a standings zip (problem "") or holds anything besides that one
-    CSV (problem says why).
+    zip isn't a standings zip (problem "") or can't be used (problem says
+    why: other files inside, or unreadable). *contest_id* comes from the CSV
+    name, or from the zip's own name when the zip can't be listed, so a
+    problem zip from another slate can be told apart; None if unknown.
     """
     try:
         with zipfile.ZipFile(path) as zf:
             names = [i.filename for i in zf.infolist() if not i.is_dir() and not _zip_junk(i.filename)]
-    except (zipfile.BadZipFile, OSError):
-        return None, ""
+    except (zipfile.BadZipFile, OSError) as e:
+        # A cut-off download has no file list; only its own name says it's standings.
+        m = STANDINGS_ZIP_NAME_RE.match(os.path.basename(path))
+        if m:
+            return None, f"unreadable zip ({e}); skipped", int(m.group(1))
+        return None, "", None
     # The member may include folders; callers name the copy by its basename only
     # (FoundFile.name), so nothing is ever written outside the slate folder.
     matching = [n for n in names if STANDINGS_NAME_RE.match(os.path.basename(n))]
     if not matching:
-        return None, ""
+        return None, "", None
+    contest_id = int(STANDINGS_NAME_RE.match(os.path.basename(matching[0])).group(1))
     if len(names) != 1:
-        return None, f"zip holds {len(names)} files, expected only one contest-standings CSV; skipped"
-    return names[0], ""
+        return None, f"zip holds {len(names)} files, expected only one contest-standings CSV; skipped", contest_id
+    return names[0], "", contest_id
 
 
 def file_mtime(path: str) -> datetime:

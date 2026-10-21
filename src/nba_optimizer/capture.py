@@ -219,9 +219,9 @@ def _classify(path: str, backfill: bool) -> Optional[str]:
     return role
 
 
-def _scan_zip(path: str, mtime: datetime, warnings: Optional[List[str]]) -> Optional[FoundFile]:
+def _scan_zip(path: str, mtime: datetime, contest_ids, warnings: Optional[List[str]]) -> Optional[FoundFile]:
     """A FoundFile for a contest-standings zip (its single CSV), or None if it isn't one."""
-    member, problem = records.standings_zip_member(path)
+    member, problem, contest_id = records.standings_zip_member(path)
     sha = None
     if member is not None:
         try:
@@ -229,6 +229,10 @@ def _scan_zip(path: str, mtime: datetime, warnings: Optional[List[str]]) -> Opti
             sha = records.sha256_file(path, member)
         except (zipfile.BadZipFile, zlib.error, RuntimeError, NotImplementedError, OSError, EOFError) as e:
             problem = f"unreadable zip ({e}); skipped"
+    if problem and contest_id is not None and contest_id not in contest_ids:
+        # Another slate's zip (e.g. last night's, still inside the window): list it, don't warn.
+        reason = "other slate (IDs don't match slate.json)"
+        return FoundFile(path=path, role="standings", mtime=mtime, sha256=records.sha256_file(path), reason=reason)
     if problem:
         print(f"Warning: {os.path.basename(path)}: {problem}")
         if warnings is not None:
@@ -279,7 +283,7 @@ def scan(
             if mtime < ctx.window_start or mtime > now:
                 continue
             if ext == ".zip":
-                f = _scan_zip(path, mtime, warnings)
+                f = _scan_zip(path, mtime, ctx.contest_ids, warnings)
                 if f:
                     f.lock = ctx.lock_of(mtime)
                     found.append(f)

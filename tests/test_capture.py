@@ -288,6 +288,14 @@ def test_standings_from_zip(opening_night, tmp_path, capsys):
     i = data.index(b"someone")
     corrupt.write_bytes(data[:i] + b"S" + data[i + 1:])
     set_mtime(str(corrupt), MORNING)
+    # A download cut off before the zip's file list: only its name marks it as standings.
+    cut_off = opening_night / "contest-standings-196456024 (2).zip"
+    cut_off.write_bytes(good.read_bytes()[:40])
+    set_mtime(str(cut_off), MORNING)
+    # Last night's broken zip from another contest is listed but not warned about.
+    old_cut_off = opening_night / "contest-standings-888888888.zip"
+    old_cut_off.write_bytes(good.read_bytes()[:41])
+    set_mtime(str(old_cut_off), MORNING)
     zip_bytes = good.read_bytes()
 
     payload = _finalize(opening_night, slate_dir)
@@ -298,6 +306,12 @@ def test_standings_from_zip(opening_night, tmp_path, capsys):
     assert not any(os.path.basename(a["file"]) == unrelated.name for a in payload["assignments"])
     a = _assignment(payload, corrupt.name)
     assert a["used"] is False and "unreadable zip" in a["reason"]
+    a = _assignment(payload, cut_off.name)
+    assert a["used"] is False and "unreadable zip" in a["reason"]
+    assert any(cut_off.name in w for w in payload["warnings"])
+    a = _assignment(payload, old_cut_off.name)
+    assert a["used"] is False and "other slate" in a["reason"]
+    assert not any(old_cut_off.name in w for w in payload["warnings"])
     assert sorted(payload["standings"]) == ["contest-standings-196456024.csv", "contest-standings-196456031.csv"]
     assert good.read_bytes() == zip_bytes and not list(slate_dir.glob("*.zip"))
     assert not (slate_dir / "contest-standings-999999999.csv").exists()
