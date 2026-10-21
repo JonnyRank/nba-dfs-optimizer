@@ -73,6 +73,11 @@ def sha256_file(path: str, member: Optional[str] = None) -> str:
     return _SHA_CACHE[key]
 
 
+def _zip_junk(name: str) -> bool:
+    """macOS metadata a re-compressed zip picks up (__MACOSX/, .DS_Store)."""
+    return name.startswith("__MACOSX/") or os.path.basename(name) == ".DS_Store"
+
+
 def standings_zip_member(path: str) -> tuple[Optional[str], str]:
     """(member, problem) for a contest-standings zip.
 
@@ -83,9 +88,11 @@ def standings_zip_member(path: str) -> tuple[Optional[str], str]:
     """
     try:
         with zipfile.ZipFile(path) as zf:
-            names = [i.filename for i in zf.infolist() if not i.is_dir()]
+            names = [i.filename for i in zf.infolist() if not i.is_dir() and not _zip_junk(i.filename)]
     except (zipfile.BadZipFile, OSError):
         return None, ""
+    # The member may include folders; callers name the copy by its basename only
+    # (FoundFile.name), so nothing is ever written outside the slate folder.
     matching = [n for n in names if STANDINGS_NAME_RE.match(os.path.basename(n))]
     if not matching:
         return None, ""
@@ -152,6 +159,7 @@ def snapshot_input(path: str, slate_dir: str, canonical_name: str, member: Optio
     if member is None:
         shutil.copy2(path, dest)
         return name
+    # A stale .tmp from a killed run is simply overwritten; scan never picks up .tmp files.
     tmp = f"{dest}.tmp"
     try:
         with _open_source(path, member) as src, open(tmp, "wb") as out:

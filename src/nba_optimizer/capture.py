@@ -10,6 +10,8 @@ or deleted. Running it again rebuilds the same records.
 import argparse
 import os
 import re
+import zipfile
+import zlib
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
@@ -220,6 +222,13 @@ def _classify(path: str, backfill: bool) -> Optional[str]:
 def _scan_zip(path: str, mtime: datetime, warnings: Optional[List[str]]) -> Optional[FoundFile]:
     """A FoundFile for a contest-standings zip (its single CSV), or None if it isn't one."""
     member, problem = records.standings_zip_member(path)
+    sha = None
+    if member is not None:
+        try:
+            # Reads the whole member, so a bad CRC or truncated download fails here, not mid-copy.
+            sha = records.sha256_file(path, member)
+        except (zipfile.BadZipFile, zlib.error, RuntimeError, NotImplementedError, OSError, EOFError) as e:
+            problem = f"unreadable zip ({e}); skipped"
     if problem:
         print(f"Warning: {os.path.basename(path)}: {problem}")
         if warnings is not None:
@@ -227,9 +236,7 @@ def _scan_zip(path: str, mtime: datetime, warnings: Optional[List[str]]) -> Opti
         return FoundFile(path=path, role="standings", mtime=mtime, sha256=records.sha256_file(path), reason=problem)
     if member is None:
         return None
-    return FoundFile(
-        path=path, role="standings", mtime=mtime, sha256=records.sha256_file(path, member), member=member
-    )
+    return FoundFile(path=path, role="standings", mtime=mtime, sha256=sha, member=member)
 
 
 def scan(
@@ -297,7 +304,7 @@ def scan(
         out.append(rep)
         for dup in group[1:]:
             if not in_slate(dup):
-                dup.reason = f"duplicate of {rep.name}"
+                dup.reason = f"duplicate of {rep.label}"
                 out.append(dup)
     out.sort(key=lambda f: (f.mtime, f.path))
 

@@ -271,18 +271,33 @@ def test_standings_from_zip(opening_night, tmp_path, capsys):
     good = _standings_zip(opening_night / "contest-standings-196456024.zip",
                           {"contest-standings-196456024.csv": STANDINGS_CSV})
     # The zip's own name doesn't matter; the CSV inside it does.
+    # macOS metadata entries don't count as extra files.
     renamed = _standings_zip(opening_night / "standings (1).zip",
-                             {"contest-standings-196456031.csv": STANDINGS_CSV + b"2,5000000002,x,0,1,\r\n"})
+                             {"contest-standings-196456031.csv": STANDINGS_CSV + b"2,5000000002,x,0,1,\r\n",
+                              "__MACOSX/._contest-standings-196456031.csv": b"meta"})
     other = _standings_zip(opening_night / "contest-standings-999999999.zip",
                            {"contest-standings-999999999.csv": STANDINGS_CSV + b"2,6000000002,y,0,1,\r\n"})
     two = _standings_zip(opening_night / "two-files.zip",
                          {"contest-standings-196456024.csv": STANDINGS_CSV, "readme.txt": b"x"})
+    unrelated = _standings_zip(opening_night / "photos.zip", {"foo.csv": b"a,b\r\n"})
+    # A truncated or corrupted download (bad CRC) is warned about, not fatal.
+    corrupt = opening_night / "contest-standings-196456031 (1).zip"
+    with zipfile.ZipFile(corrupt, "w", zipfile.ZIP_STORED) as zf:
+        zf.writestr("contest-standings-196456031.csv", STANDINGS_CSV + b"3,7000000003,z,0,1,\r\n")
+    data = corrupt.read_bytes()
+    i = data.index(b"someone")
+    corrupt.write_bytes(data[:i] + b"S" + data[i + 1:])
+    set_mtime(str(corrupt), MORNING)
     zip_bytes = good.read_bytes()
 
     payload = _finalize(opening_night, slate_dir)
 
     assert (slate_dir / "contest-standings-196456024.csv").read_bytes() == STANDINGS_CSV
     assert (slate_dir / "contest-standings-196456031.csv").exists()
+    assert os.path.getmtime(slate_dir / "contest-standings-196456024.csv") == os.path.getmtime(good)
+    assert not any(os.path.basename(a["file"]) == unrelated.name for a in payload["assignments"])
+    a = _assignment(payload, corrupt.name)
+    assert a["used"] is False and "unreadable zip" in a["reason"]
     assert sorted(payload["standings"]) == ["contest-standings-196456024.csv", "contest-standings-196456031.csv"]
     assert good.read_bytes() == zip_bytes and not list(slate_dir.glob("*.zip"))
     assert not (slate_dir / "contest-standings-999999999.csv").exists()
