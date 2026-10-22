@@ -440,3 +440,13 @@ def test_past_slate_full_run_uses_latest_l0_copy(night, capsys):
     assert record["inputs"]["projections"]["file"] == "L0-NBA-Projs-2026-10-20_13-59-41.csv"
     assert record["parent_run_id"] is None
     assert not [n for n in os.listdir(night.slate_dir) if "2026-10-21_16-00-00" in n]
+
+
+def test_latest_l0_copy_uses_export_time_in_name(tmp_path):
+    """A folder copied without modified times still picks the later export by its name."""
+    for name, iso in (("L0-NBA-Projs-2026-10-20_13-59-41.csv", "2026-10-21T09:00:00-05:00"),
+                      ("L0-NBA-Projs-2026-10-20_13-55-35.csv", "2026-10-21T09:05:00-05:00")):
+        (tmp_path / name).write_text("ID,Projection,Own_Proj\n")
+        ts = datetime.fromisoformat(iso).timestamp()
+        os.utime(tmp_path / name, (ts, ts))
+    assert os.path.basename(orchestrator.latest_l0_projections(str(tmp_path))) == "L0-NBA-Projs-2026-10-20_13-59-41.csv"

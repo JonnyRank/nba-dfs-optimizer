@@ -1,5 +1,6 @@
 import glob
 import os
+import re
 from dataclasses import replace
 from datetime import datetime
 from typing import Optional
@@ -11,6 +12,8 @@ from .config import load_config_from_env
 from .settings import find_record, latest_record_path, resolve_settings, stages_between, warn_ignored
 from .slate import PRE_L0_ENTRIES, SLATE_FILE, load_or_write_slate, lock_or_none
 from .utils import get_latest_file, merge_player_pool, parse_dk_entries
+
+PROJS_TIME_RE = re.compile(r"NBA-Projs-(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})")
 
 
 def _snapshot_projections(projs_file, slate, slate_dir, run_time):
@@ -34,8 +37,18 @@ def latest_l0_projections(slate_dir: str) -> str:
     copies = glob.glob(os.path.join(slate_dir, "L0-NBA-Projs-*.csv"))
     if not copies:
         raise FileNotFoundError(f"past slate: no L0-NBA-Projs-*.csv copy in {slate_dir}")
-    # Copies keep their source's modified time (snapshot_input uses copy2).
-    return max(copies, key=lambda p: (os.path.getmtime(p), os.path.basename(p)))
+    return max(copies, key=_export_time)
+
+
+def _export_time(path: str) -> datetime:
+    """The export time in an ``L0-NBA-Projs-YYYY-MM-DD_HH-MM-SS`` name, else the modified time.
+
+    The name survives a copy that drops modified times (a Drive web download, a plain cp).
+    """
+    match = PROJS_TIME_RE.search(os.path.basename(path))
+    if match:
+        return datetime.strptime(match.group(1), "%Y-%m-%d_%H-%M-%S")
+    return datetime.fromtimestamp(os.path.getmtime(path))
 
 
 def _newest_projections(config, slate, slate_dir, run_time, with_projections, rerank):
