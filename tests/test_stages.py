@@ -346,7 +346,9 @@ def test_past_slate_uses_parent_projections(night, capsys):
     capsys.readouterr()
     night.run("--from", "rank", "--to", "rank", "--proj", "Jayson Tatum=55")
 
-    assert f"past slate: using {parent_projs} from the parent run" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert f"past slate: using {parent_projs} from the parent run" in out
+    assert "has changed since the parent run" not in out
     record = night.rank_record()
     assert record["parent_run_id"] == parent["run_id"]
     assert record["inputs"]["projections"]["file"] == parent_projs
@@ -396,3 +398,18 @@ def test_no_slate_folder_writes_legacy_layout(night, capsys):
     night.run("--no-slate-folder", "--slate-dir", night.slate_dir)
     assert "--no-slate-folder can't be combined with --slate-dir" in capsys.readouterr().out
     assert not os.path.exists(night.cfg.data_root)
+
+
+def test_past_slate_warns_when_parent_projections_changed(night, capsys):
+    """R2: a parent projections file edited in place since the parent run (sha mismatch) warns."""
+    night.run("--to", "rank")
+    parent_projs = night.rank_record()["inputs"]["projections"]["file"]
+    path = os.path.join(night.slate_dir, parent_projs)
+    df = pd.read_csv(path)
+    df.loc[df["ID"] == JAYSON_TATUM, "Projection"] = 52
+    df.to_csv(path, index=False)
+
+    night.clock = datetime(2026, 10, 21, 0, 30, tzinfo=CT)
+    capsys.readouterr()
+    night.run("--from", "rank", "--to", "rank")
+    assert f"Warning: {parent_projs} has changed since the parent run" in capsys.readouterr().out

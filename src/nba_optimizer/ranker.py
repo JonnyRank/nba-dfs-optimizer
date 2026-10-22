@@ -70,7 +70,8 @@ def check_projection_coverage(df_lineups: pd.DataFrame, df_players: pd.DataFrame
     missing = [p for p in in_pool if pd.notna(p) and p not in projected]
     if missing:
         raise ValueError(
-            f"projections missing for {len(missing)} player(s) in the pool, first 5: {missing[:5]}"
+            f"projections missing for {len(missing)} player(s) in the pool, first 5: {missing[:5]} "
+            "(set a scratched player's projection to 0 rather than deleting the row)"
         )
 
 

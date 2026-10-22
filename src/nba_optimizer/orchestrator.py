@@ -92,12 +92,15 @@ def use_slate_dir(config, slate_dir, run_time, with_projections=True, newest_unl
 
 def parent_projections(config, record_dir: str, parent_record: dict) -> str:
     """The parent run's projections copy, for a re-rank on a finished slate (R2)."""
-    name = (parent_record or {}).get("inputs", {}).get("projections", {}).get("file")
+    recorded = (parent_record or {}).get("inputs", {}).get("projections", {})
+    name = recorded.get("file")
     if not name:
         raise FileNotFoundError("past slate: the parent run record names no projections file")
     for directory in (record_dir, config.projs_dir):
         path = os.path.join(directory, name)
         if os.path.isfile(path):
+            if recorded.get("sha256") and records.sha256_file(path) != recorded["sha256"]:
+                print(f"Warning: {name} has changed since the parent run")
             return path
     raise FileNotFoundError(f"past slate: the parent run's projections {name} not found in {record_dir}")
 
