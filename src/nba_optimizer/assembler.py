@@ -94,8 +94,17 @@ def fmt_pct(pct: float) -> str:
     return f"{pct:g}"
 
 
-def _solve(sets: List[set], ranks: List[int], n: int, constraints: List[dict]):
-    """(status, chosen row positions) for the rank-sum program; rows are in Final_Rank order."""
+@dataclass
+class AssembleModel:
+    """The rank-sum program, built once; constraints can be relaxed and restored between solves."""
+    prob: pulp.LpProblem
+    x: List[pulp.LpVariable]
+    n: int
+    constraints: List[dict]                       # each with "rows": its LpConstraints and "bound"
+
+
+def build_model(sets: List[set], ranks: List[int], n: int, constraints: List[dict]) -> AssembleModel:
+    """The rank-sum program over pool rows (in Final_Rank order) with every exposure constraint."""
     prob = pulp.LpProblem("Assemble", pulp.LpMinimize)
     x = [pulp.LpVariable(f"x{i}", cat=pulp.LpBinary) for i in range(len(sets))]
     prob += pulp.lpSum(r * xi for r, xi in zip(ranks, x))
@@ -106,27 +115,51 @@ def _solve(sets: List[set], ranks: List[int], n: int, constraints: List[dict]):
         for pid in players:
             rows_by_player.setdefault(pid, []).append(i)
 
+    def add(name, rows, sense, bound):
+        constraint = pulp.LpConstraint(pulp.lpSum(x[i] for i in rows), sense=sense, rhs=bound, name=name)
+        prob.addConstraint(constraint)
+        return constraint
+
     # A player's own --max replaces --max-all for that player.
     own_max = {c["dk_id"] for c in constraints if c["kind"] == "max"}
-    for c in constraints:
+    built = []
+    for k, c in enumerate(constraints):
+        c = dict(c)
         if c["kind"] == "max_all":
             # Only players who could exceed the cap need a row.
-            for pid in sorted(rows_by_player):
-                if pid not in own_max and len(rows_by_player[pid]) > c["count"]:
-                    prob += pulp.lpSum(x[i] for i in rows_by_player[pid]) <= c["count"]
-            continue
-        rows = rows_by_player.get(c["dk_id"], [])
-        if c["kind"] == "max":
-            prob += pulp.lpSum(x[i] for i in rows) <= c["count"]
+            c["rows"] = [
+                add(f"c{k}_{pid}", rows_by_player[pid], pulp.LpConstraintLE, c["count"])
+                for pid in sorted(rows_by_player)
+                if pid not in own_max and len(rows_by_player[pid]) > c["count"]
+            ]
         else:
-            prob += pulp.lpSum(x[i] for i in rows) >= c["count"]
+            sense = pulp.LpConstraintLE if c["kind"] == "max" else pulp.LpConstraintGE
+            c["rows"] = [add(f"c{k}", rows_by_player.get(c["dk_id"], []), sense, c["count"])]
+        built.append(c)
+    return AssembleModel(prob=prob, x=x, n=n, constraints=built)
 
+
+def solve_model(model: AssembleModel):
+    """(status, chosen row positions) for the model as it stands."""
     # Default threads: see the comment above engine.LineupModel.__init__.
-    prob.solve(pulp.HiGHS(msg=False))
-    status = pulp.LpStatus[prob.status]
+    model.prob.solve(pulp.HiGHS(msg=False))
+    status = pulp.LpStatus[model.prob.status]
     if status != "Optimal":
         return status, []
-    return status, [i for i, xi in enumerate(x) if (xi.value() or 0) > 0.5]
+    return status, [i for i, xi in enumerate(model.x) if (xi.value() or 0) > 0.5]
+
+
+def _relaxed_feasible(model: AssembleModel, c: dict) -> bool:
+    """Solve with *c* moved to a non-binding bound (a max to N, a min to 0), then restore it."""
+    loose = model.n if c["kind"] in ("max", "max_all") else 0
+    for row in c["rows"]:
+        row.changeRHS(loose)
+    try:
+        status, _ = solve_model(model)
+    finally:
+        for row in c["rows"]:
+            row.changeRHS(c["count"])
+    return status == "Optimal"
 
 
 def _sorted_pool(df_ranked: pd.DataFrame) -> pd.DataFrame:
@@ -153,30 +186,31 @@ def _culprit_reason(c: dict, sets: List[set], n: int) -> str:
     size = len(sets)
     if c["kind"] == "max":
         have = sum(c["dk_id"] in s for s in sets)
-        return (f"{c['label']}: in {have} of {size} lineups of this pool, so only {size - have} "
-                f"lineups without this player; need {n - c['count']}")
+        if size - have < n - c["count"]:
+            return (f"{c['label']}: in {have} of {size} lineups of this pool, so only {size - have} "
+                    f"lineups without this player; need {n - c['count']}")
+        return f"{c['label']}: in {have} of {size} lineups of this pool; conflicts with the other constraints"
     if c["kind"] == "min":
         have = sum(c["dk_id"] in s for s in sets)
-        return f"{c['label']}: in {have} of {size} lineups of this pool"
+        return f"{c['label']}: in {have} of {size} lineups of this pool; conflicts with the other constraints"
     return f"{c['label']}: too few lineups in this pool to keep every player at or under the cap"
+
+
+def _diagnose(model: AssembleModel, sets: List[set]) -> List[str]:
+    """Culprits found by relaxing one constraint at a time in the already-built *model* (R1)."""
+    if len(model.constraints) > MAX_DIAGNOSE_CONSTRAINTS:
+        return ["infeasible; remove constraints to find the conflict"]
+    found = [_culprit_reason(c, sets, model.n) for c in model.constraints if _relaxed_feasible(model, c)]
+    return found or ["infeasible; no single constraint is the cause, remove constraints to find the conflict"]
 
 
 def diagnose_infeasible(df_ranked: pd.DataFrame, settings: AssembleSettings) -> List[str]:
     """Constraints whose removal alone makes the program feasible, with a reason each (§3.8)."""
     df = _sorted_pool(df_ranked)
     sets = _player_sets(df)
-    pool_names = _names_from_pool(df)
-    ranks = df["Final_Rank"].astype(int).tolist()
-    constraints = _constraints(settings, pool_names)
-    if len(constraints) > MAX_DIAGNOSE_CONSTRAINTS:
-        return ["infeasible; remove constraints to find the conflict"]
-    found = []
-    for c in constraints:
-        rest = [o for o in constraints if o is not c]
-        status, _ = _solve(sets, ranks, settings.n_entries, rest)
-        if status == "Optimal":
-            found.append(_culprit_reason(c, sets, settings.n_entries))
-    return found or ["infeasible; no single constraint is the cause, remove constraints to find the conflict"]
+    model = build_model(sets, df["Final_Rank"].astype(int).tolist(), settings.n_entries,
+                        _constraints(settings, _names_from_pool(df)))
+    return _diagnose(model, sets)
 
 
 def validate_settings(settings: AssembleSettings) -> None:
@@ -209,10 +243,12 @@ def assemble(df_ranked: pd.DataFrame, settings: AssembleSettings) -> AssembleRes
     ranks = df["Final_Rank"].astype(int).tolist()
     constraints = _constraints(settings, pool_names)
     started = time.perf_counter()
-    status, chosen = _solve(sets, ranks, n, constraints)
+    model = build_model(sets, ranks, n, constraints)
+    status, chosen = solve_model(model)
     seconds = time.perf_counter() - started
     if status != "Optimal":
-        reasons = diagnose_infeasible(df, settings) if status == "Infeasible" else [f"solver status {status}"]
+        # The diagnosis reuses this model rather than rebuilding it per attempt.
+        reasons = _diagnose(model, sets) if status == "Infeasible" else [f"solver status {status}"]
         raise ValueError("assemble infeasible:\n  " + "\n  ".join(reasons))
 
     df_sel = df.iloc[chosen].sort_values("Final_Rank", kind="stable").reset_index(drop=True)

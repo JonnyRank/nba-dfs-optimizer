@@ -163,6 +163,12 @@ def add_pipeline_args(parser) -> None:
         help="Slate folder to work in, e.g. a past slate (uses its Pre-L0-DKEntries.csv)",
     )
     parser.add_argument(
+        "--no-slate-folder",
+        dest="no_slate_folder",
+        action="store_true",
+        help="This run only: ignore NBA_DATA_ROOT and use the legacy exports layout (for experiments)",
+    )
+    parser.add_argument(
         "-t",
         "--top_x",
         type=int,

@@ -95,7 +95,7 @@ def test_assemble_min_precheck(monkeypatch):
     def no_solve(*args, **kwargs):
         raise AssertionError("solver called")
 
-    monkeypatch.setattr(assembler, "_solve", no_solve)
+    monkeypatch.setattr(assembler, "build_model", no_solve)
     with pytest.raises(ValueError, match="in 5 of 100 lineups, need 8"):
         assemble(_ranked(), AssembleSettings(n_entries=40, min={PAUL_GEORGE: 20}))
 
@@ -145,3 +145,26 @@ def test_own_max_replaces_max_all():
     assert by_id[DYLAN_HARPER] == 40
     assert by_id[44451275] == 20
     assert all(count <= 20 for dk_id, count in by_id.items() if dk_id != DYLAN_HARPER)
+
+
+def test_diagnose_builds_model_once(monkeypatch):
+    """R1: an infeasible request with 3 caps builds the model once and names only Harper's cap.
+
+    Harper is in all 100 lineups, so his 80% cap alone is impossible; Anunoby's
+    50% cap and KAT's 20% floor are each satisfiable (see the tests above).
+    """
+    builds = []
+    real_build = assembler.build_model
+
+    def counting_build(*args, **kwargs):
+        builds.append(1)
+        return real_build(*args, **kwargs)
+
+    monkeypatch.setattr(assembler, "build_model", counting_build)
+    settings = AssembleSettings(n_entries=40, max={DYLAN_HARPER: 80, OG_ANUNOBY: 50}, min={KARL_ANTHONY_TOWNS: 20})
+    with pytest.raises(ValueError) as exc:
+        assemble(_ranked(), settings)
+
+    assert len(builds) == 1
+    culprits = str(exc.value).splitlines()[1:]
+    assert len(culprits) == 1 and culprits[0].strip().startswith("Dylan Harper max 80%")

@@ -307,7 +307,7 @@ def test_gui_and_cli_share_args():
     assert dests[0] == dests[1]
     assert {"from_stage", "to_stage", "proj", "own", "max_caps", "min_caps", "max_all",
             "clear_overrides", "clear_caps", "reset_settings", "pool", "ranked", "assembled",
-            "slate_dir"} <= dests[0]
+            "slate_dir", "no_slate_folder"} <= dests[0]
 
 
 def test_bad_cap_value_fails_before_generate(night, capsys):
@@ -332,3 +332,67 @@ def test_clear_caps_by_name_for_player_not_in_pool(tmp_path):
     args = parse(["--from", "assemble", "--clear-caps", "Ghost Player"])
     caps = resolve_settings(args, Config(), str(tmp_path), ["assemble"], df_players, 40).caps
     assert caps.max == {OG_ANUNOBY: 50}
+
+
+def test_past_slate_uses_parent_projections(night, capsys):
+    """R2: once the last lock has passed, --from rank uses the parent run's projections copy,
+    not the newer export in NBA_PROJS_DIR (which belongs to another slate)."""
+    night.run("--to", "rank")
+    parent = night.rank_record()
+    parent_projs = parent["inputs"]["projections"]["file"]
+    night.write_projections("NBA-Projs-2026-10-21_16-00-00.csv", tatum=52)
+
+    night.clock = datetime(2026, 10, 21, 0, 30, tzinfo=CT)  # after the 9:30 PM ET lock
+    capsys.readouterr()
+    night.run("--from", "rank", "--to", "rank", "--proj", "Jayson Tatum=55")
+
+    assert f"past slate: using {parent_projs} from the parent run" in capsys.readouterr().out
+    record = night.rank_record()
+    assert record["parent_run_id"] == parent["run_id"]
+    assert record["inputs"]["projections"]["file"] == parent_projs
+    assert record["projections_rule"] == "parent"
+    # Typed overrides still apply on top; "from" is the parent file's value, not the newer export's 52.
+    [o] = record["overrides"]
+    assert o["to"] == 55 and o["from"] == pytest.approx(50.5594555)
+    assert not [n for n in os.listdir(night.slate_dir) if "2026-10-21_16-00-00" in n]
+
+
+def test_rank_fails_on_missing_projections(night, capsys):
+    """R2: projections covering only part of the pool fail the rank with the count and first 5 names."""
+    night.run("--to", "rank")
+    before = night.files("ranked-lineups-")
+
+    df = pd.read_csv(night.projs_dir / PROJS_NAME)
+    pool_ids = {int(c.rsplit("(", 1)[1][:-1])
+                for c in pd.read_csv(RANKED_FIXTURE)[list(ROSTER_SLOTS)].values.ravel()}
+    dropped = sorted(pool_ids)[:6]
+    df[~df["ID"].isin(dropped)].to_csv(night.projs_dir / "NBA-Projs-2026-10-20_13-58-00.csv", index=False)
+    capsys.readouterr()
+    night.run("--from", "rank", "--to", "rank")
+
+    out = capsys.readouterr().out
+    assert "projections missing for 6 player(s) in the pool, first 5:" in out
+    assert "Lineup ranking failed" in out
+    assert night.files("ranked-lineups-") == before
+
+
+def test_no_slate_folder_writes_legacy_layout(night, capsys):
+    """R3: with NBA_DATA_ROOT set, --no-slate-folder writes everything to the legacy dirs
+    and leaves the slates folder untouched, for full runs and --from runs."""
+    night.run("--to", "assemble", "--no-slate-folder")
+    night.run("--from", "rank", "--to", "assemble", "--no-slate-folder", "-pw", "0.6")
+
+    assert not os.path.exists(night.cfg.data_root)
+    pools = os.listdir(os.path.join(night.cfg.base_dir, "lineup-pools"))
+    ranked_dir = os.path.join(night.cfg.base_dir, "ranked-lineups")
+    ranked = sorted(os.listdir(ranked_dir))
+    assert len(pools) == 1 and pools[0].startswith("lineup-pool-2026-10-20_")
+    assert len([n for n in ranked if n.startswith("ranked-lineups-") and n.endswith(".json")]) == 2
+    assert len([n for n in ranked if n.startswith("assembled-lineups-") and n.endswith(".json")]) == 2
+    rerank = latest_record(ranked_dir, "rank")
+    assert rerank["parent_run_id"] and rerank["params"]["proj_weight"] == 0.6
+
+    capsys.readouterr()
+    night.run("--no-slate-folder", "--slate-dir", night.slate_dir)
+    assert "--no-slate-folder can't be combined with --slate-dir" in capsys.readouterr().out
+    assert not os.path.exists(night.cfg.data_root)

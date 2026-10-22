@@ -23,17 +23,36 @@ def _snapshot_projections(projs_file, slate, slate_dir, run_time):
     return os.path.join(slate_dir, projs_copy)
 
 
-def prepare_slate_inputs(config, run_time, with_projections=True):
+def slate_finished(slate: Optional[dict], run_time: datetime) -> bool:
+    """True once the slate's last lock has passed."""
+    return bool(slate) and lock_or_none(slate, run_time) is None
+
+
+def _newest_projections(config, slate, slate_dir, run_time, with_projections, newest_unless_finished):
+    """Snapshot of the newest export, or None when none is wanted.
+
+    With *newest_unless_finished* (a ``--from rank`` run) a finished slate
+    gets None: its rank uses the parent run's projections instead (R2).
+    """
+    if not with_projections or (newest_unless_finished and slate_finished(slate, run_time)):
+        return None
+    source_projs = get_latest_file(config.projs_dir, "NBA-Projs-*.csv")
+    projs_file = _snapshot_projections(source_projs, slate, slate_dir, run_time)
+    records.check_blend(pd.read_csv(projs_file))
+    return projs_file
+
+
+def prepare_slate_inputs(config, run_time, with_projections=True, newest_unless_finished=False):
     """Resolve tonight's slate and copy the run's inputs into its folder.
 
     Returns (config, slate, projs_file, slate_dir). With NBA_DATA_ROOT set,
     the returned config reads its DKEntries from the slate-folder copy and
     writes pools and ranked files to the slate folder; without it, config is
     unchanged, the slate is built in memory (or None) and slate_dir is None.
-    Without *with_projections* (a run starting at assemble or export) no
-    projections are copied and projs_file is None.
+    Without *with_projections* (a run starting at assemble or export), or
+    for a finished slate with *newest_unless_finished*, no projections are
+    copied and projs_file is None.
     """
-    source_projs = get_latest_file(config.projs_dir, "NBA-Projs-*.csv") if with_projections else None
     slate, slate_dir = load_or_write_slate(config, config.entries_path)
 
     if slate_dir:
@@ -49,14 +68,11 @@ def prepare_slate_inputs(config, run_time, with_projections=True):
             ranked_lineup_dir=slate_dir,
         )
 
-    projs_file = None
-    if with_projections:
-        projs_file = _snapshot_projections(source_projs, slate, slate_dir, run_time)
-        records.check_blend(pd.read_csv(projs_file))
+    projs_file = _newest_projections(config, slate, slate_dir, run_time, with_projections, newest_unless_finished)
     return config, slate, projs_file, slate_dir
 
 
-def use_slate_dir(config, slate_dir, run_time, with_projections=True):
+def use_slate_dir(config, slate_dir, run_time, with_projections=True, newest_unless_finished=False):
     """Like prepare_slate_inputs for an existing slate folder (``--slate-dir``).
 
     Uses the folder's Pre-L0-DKEntries.csv and slate.json; nothing but the
@@ -70,12 +86,20 @@ def use_slate_dir(config, slate_dir, run_time, with_projections=True):
             raise FileNotFoundError(f"{os.path.basename(path)} not found in {slate_dir}")
     slate = records.read_json(slate_path)
     config = replace(config, entries_path=entries, lineup_pool_dir=slate_dir, ranked_lineup_dir=slate_dir)
-    projs_file = None
-    if with_projections:
-        source_projs = get_latest_file(config.projs_dir, "NBA-Projs-*.csv")
-        projs_file = _snapshot_projections(source_projs, slate, slate_dir, run_time)
-        records.check_blend(pd.read_csv(projs_file))
+    projs_file = _newest_projections(config, slate, slate_dir, run_time, with_projections, newest_unless_finished)
     return config, slate, projs_file, slate_dir
+
+
+def parent_projections(config, record_dir: str, parent_record: dict) -> str:
+    """The parent run's projections copy, for a re-rank on a finished slate (R2)."""
+    name = (parent_record or {}).get("inputs", {}).get("projections", {}).get("file")
+    if not name:
+        raise FileNotFoundError("past slate: the parent run record names no projections file")
+    for directory in (record_dir, config.projs_dir):
+        path = os.path.join(directory, name)
+        if os.path.isfile(path):
+            return path
+    raise FileNotFoundError(f"past slate: the parent run's projections {name} not found in {record_dir}")
 
 
 def _arg(args, name, default=None):
@@ -167,16 +191,43 @@ def run_pipeline(args, run_time: Optional[datetime] = None):
     run_time = (run_time or datetime.now()).astimezone().replace(microsecond=0)
     try:
         stages = stages_between(from_stage, to_stage)
+        if _arg(args, "no_slate_folder"):
+            if _arg(args, "slate_dir"):
+                raise ValueError("--no-slate-folder can't be combined with --slate-dir")
+            # This run only: the legacy exports layout, nothing read from or written to the slates folder.
+            config = replace(config, data_root="")
+            print("No slate folder: using the legacy exports layout for this run.")
         with_projections = from_stage in ("generate", "rank")
+        rerank = from_stage == "rank"
         if _arg(args, "slate_dir"):
             config, slate, projs_file, slate_dir = use_slate_dir(
-                config, _arg(args, "slate_dir"), run_time, with_projections
+                config, _arg(args, "slate_dir"), run_time, with_projections, newest_unless_finished=rerank
             )
         else:
-            config, slate, projs_file, slate_dir = prepare_slate_inputs(config, run_time, with_projections)
+            config, slate, projs_file, slate_dir = prepare_slate_inputs(
+                config, run_time, with_projections, newest_unless_finished=rerank
+            )
         legacy = slate_dir is None
         record_dir = slate_dir or config.ranked_lineup_dir
         warn_ignored(args, stages, defaults)
+
+        pool_file = ranked_file = assembled_file = None
+        parent_record = None
+        if rerank:
+            pool_file, parent_record = find_input(config, args, "rank", record_dir, legacy)
+            # {} still marks a re-rank: engine params unknown, recorded as null.
+            parent_record = parent_record or {}
+            print(f"Pool: {os.path.basename(pool_file)}")
+            if projs_file is None:
+                # Finished slate: the newest export is another slate's (R2).
+                projs_file = parent_projections(config, record_dir, parent_record)
+                print(f"past slate: using {os.path.basename(projs_file)} from the parent run")
+            else:
+                _print_projections_rule(projs_file, parent_record)
+        elif from_stage == "assemble":
+            ranked_file, _ = find_input(config, args, "assemble", record_dir, legacy)
+        elif from_stage == "export":
+            assembled_file, _ = find_input(config, args, "export", record_dir, legacy)
 
         df_players = parse_dk_entries(config.entries_path)
         if with_projections:
@@ -186,19 +237,6 @@ def run_pipeline(args, run_time: Optional[datetime] = None):
         if eff.caps is not None:
             # Out-of-range values fail now, not after generate and rank.
             assembler.validate_settings(eff.caps)
-
-        pool_file = ranked_file = assembled_file = None
-        parent_record = None
-        if from_stage == "rank":
-            pool_file, parent_record = find_input(config, args, "rank", record_dir, legacy)
-            # {} still marks a re-rank: engine params unknown, recorded as null.
-            parent_record = parent_record or {}
-            print(f"Pool: {os.path.basename(pool_file)}")
-            _print_projections_rule(projs_file, parent_record)
-        elif from_stage == "assemble":
-            ranked_file, _ = find_input(config, args, "assemble", record_dir, legacy)
-        elif from_stage == "export":
-            assembled_file, _ = find_input(config, args, "export", record_dir, legacy)
     except (ValueError, KeyError, OSError) as e:
         # OSError covers FileNotFoundError and a Drive-locked copy (PermissionError).
         print(f"Error: {e}")

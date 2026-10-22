@@ -59,6 +59,21 @@ def warn_overrides_not_in_pool(df_lineups: pd.DataFrame, df_players: pd.DataFram
             )
 
 
+def check_projection_coverage(df_lineups: pd.DataFrame, df_players: pd.DataFrame) -> None:
+    """Raise if any player in the lineups has no projection (R2).
+
+    rank_lineups scores a missing player as 0, so a projections file from
+    another slate would otherwise give a meaningless ranking.
+    """
+    in_pool = pd.unique(df_lineups[list(ROSTER_SLOTS)].values.ravel())
+    projected = set(df_players["Name + ID"])
+    missing = [p for p in in_pool if pd.notna(p) and p not in projected]
+    if missing:
+        raise ValueError(
+            f"projections missing for {len(missing)} player(s) in the pool, first 5: {missing[:5]}"
+        )
+
+
 def rank_lineups(
     df_lineups: pd.DataFrame, df_players: pd.DataFrame, weights: Dict[str, float]
 ):
@@ -179,6 +194,7 @@ def run(
             print(f"Override: {o['name']} {o['field']} {o['from']:g} -> {o['to']:g}")
         if parent_record is not None:
             warn_overrides_not_in_pool(df_lineups, df_players, applied)
+        check_projection_coverage(df_lineups, df_players)
 
         # 3. Rank
         weights = {
