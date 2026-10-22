@@ -210,16 +210,23 @@ def read_json(path: str) -> dict:
         return json.load(f)
 
 
+# Under the GUI the run has no console, so Windows would open a new one for
+# each git call and it flashes on screen; CREATE_NO_WINDOW suppresses it.
+_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+
+
 def git_code_version(repo_root: str) -> Optional[str]:
     """Short commit hash of *repo_root*, with ``-dirty`` for uncommitted changes."""
     try:
         sha = subprocess.run(
             ["git", "rev-parse", "--short", "HEAD"],
             cwd=repo_root, capture_output=True, text=True, timeout=10, check=True,
+            creationflags=_NO_WINDOW,
         ).stdout.strip()
         dirty = subprocess.run(
             ["git", "status", "--porcelain", "--untracked-files=no"],
             cwd=repo_root, capture_output=True, text=True, timeout=10, check=True,
+            creationflags=_NO_WINDOW,
         ).stdout.strip()
     except (OSError, subprocess.SubprocessError):
         print("Warning: git unavailable; code_version not recorded.")
