@@ -30,9 +30,23 @@ OG_ANUNOBY = 44451272
 CT = ZoneInfo("America/Chicago")
 
 
-def parse(argv):
-    parser = argparse.ArgumentParser()
-    cli.add_pipeline_args(parser)
+class FakeGooeyParser(argparse.ArgumentParser):
+    """Accepts gooey_options like GooeyParser and keeps them by dest (Gooey is never imported)."""
+
+    def __init__(self):
+        super().__init__()
+        self.gooey_options = {}
+
+    def add_argument(self, *args, gooey_options=None, **kwargs):
+        action = super().add_argument(*args, **kwargs)
+        if gooey_options:
+            self.gooey_options[action.dest] = gooey_options
+        return action
+
+
+def parse(argv, gui=False):
+    parser = FakeGooeyParser() if gui else argparse.ArgumentParser()
+    cli.add_pipeline_args(parser, gui=gui)
     return parser.parse_args(argv)
 
 
@@ -68,9 +82,9 @@ class Night:
         pd.read_csv(RANKED_FIXTURE)[list(ROSTER_SLOTS)].to_csv(path, index=False)
         return path
 
-    def run(self, *argv):
+    def run(self, *argv, gui=False):
         self.clock += timedelta(minutes=1)
-        orchestrator.run_pipeline(parse(list(argv)), run_time=self.clock)
+        orchestrator.run_pipeline(parse(list(argv), gui=gui), run_time=self.clock)
         return self.clock
 
     def rank_record(self):
@@ -274,6 +288,28 @@ def test_ignored_flag_warns(night, capsys):
     assert "Warning: -pw ignored" in out
     assert "Warning: -u ignored: the pool already exists" in out
     assert night.assembly_record() is not None
+
+
+GUI_BOXES = ("-pw", "0.8", "-ow", "0.0", "-gw", "0.2")       # the weight boxes as they start
+
+
+def test_gui_weight_boxes_prefilled(monkeypatch, night, capsys):
+    """GUI weight boxes start at 0.8/0.0/0.2; a --from rank run uses what they show,
+    a cleared box inherits, and untouched boxes raise no ignored-flag warning."""
+    parser = FakeGooeyParser()
+    cli.add_pipeline_args(parser, gui=True)
+    assert {d: o["initial_value"] for d, o in parser.gooey_options.items()} == {
+        "proj_weight": 0.8, "own_weight": 0.0, "geo_weight": 0.2}
+    monkeypatch.setenv("GOOEY", "1")
+    night.run("-pw", "0.7", "-ow", "0.0", "-gw", "0.3", gui=True)
+    night.run("--from", "rank", "--to", "rank", *GUI_BOXES, gui=True)
+    assert _weights(night.rank_record()) == (0.8, 0.0, 0.2)
+    night.run("-pw", "0.7", "-ow", "0.0", "-gw", "0.3", gui=True)
+    night.run("--from", "rank", "--to", "rank", "-pw", "0.6", gui=True)    # -ow, -gw boxes cleared
+    assert _weights(night.rank_record()) == (0.6, 0.0, 0.3)
+    capsys.readouterr()
+    night.run("--from", "assemble", "--to", "assemble", *GUI_BOXES, gui=True)
+    assert "ignored" not in capsys.readouterr().out
 
 
 def test_effective_settings_block_names_sources(night, capsys):

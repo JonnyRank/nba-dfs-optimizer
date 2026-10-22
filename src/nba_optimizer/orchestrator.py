@@ -219,7 +219,9 @@ def run_pipeline(args, run_time: Optional[datetime] = None):
         print("===========================================")
         return
 
-    defaults = pipeline_defaults()
+    # Gooey sets GOOEY=1 in the run's environment; untouched pre-filled
+    # weight boxes then don't count as typed for the ignored-flag warnings.
+    defaults = pipeline_defaults(gui=os.environ.get("GOOEY") == "1")
     from_stage = _arg(args, "from_stage") or "generate"
     to_stage = _arg(args, "to_stage") or "export"
     # One instant supplies every stage's filenames, generated_at and the run ID.
