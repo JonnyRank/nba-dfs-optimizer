@@ -28,7 +28,10 @@
 |----------|-------------------|------------------------|
 | `src/nba_optimizer/engine.py` | Lineup generation, LP solving, parallel execution, time-based slotting | Ranking logic, CSV export formatting |
 | `src/nba_optimizer/ranker.py` | Scoring lineups by weighted rank metrics | Lineup generation, file export |
-| `src/nba_optimizer/exporter.py` | Mapping ranked lineups into DraftKings CSV template | Ranking, optimization |
+| `src/nba_optimizer/assembler.py` | Choosing the night's N entries from a ranked pool under exposure caps | Ranking, export |
+| `src/nba_optimizer/overrides.py` | Typed player settings: `NAME=VALUE`, player lookup, projection/ownership overrides | Ranking |
+| `src/nba_optimizer/settings.py` | `--from/--to` stage order and typed/inherited/default settings | Running stages |
+| `src/nba_optimizer/exporter.py` | Mapping an assembly (or ranked lineups) into DraftKings CSV template | Ranking, optimization |
 | `src/nba_optimizer/exposure_report.py` | Analyzing exported lineups for player exposure vs. ownership | Optimization, ranking |
 | `src/nba_optimizer/late_swapper.py` | Re-optimizing unlocked roster slots post-lock | Full lineup generation |
 | `src/nba_optimizer/config.py` | Constants (salary cap, roster size) and env-var path loading | Business logic |

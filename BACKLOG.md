@@ -39,7 +39,7 @@
 * **LLM Instructions**: Act as an Operations Research Data Scientist. The optimizer generates independent lineups in parallel. Detail 3 strategies for implementing global exposure caps in this architecture. Compare a pure LP global solve vs. sequential generation with dynamic probability updating. 
 
 ### [Research] Post-Generation Lineup Filtering for Exposure Caps
-* **Status**: Not Started
+* **Status**: Complete — absorbed by O-13 stage control: `assembler.py` selects the entries with a rank-sum ILP (greedy can't guarantee minimums); an impossible request fails with a diagnosis instead of a partial set
 * **Target Files**: `src/nba_optimizer/ranker.py`, `src/nba_optimizer/exporter.py`, `src/nba_optimizer/config.py`
 * **Context**: Unlike enforcing global MILP exposure constraints during generation, we want to restrict player exposures (e.g., max 30% for Player X) during the final selection phase. This means sequentially picking from the sorted, ranked pool of generated lineups and skipping any lineup that would push a player over their set maximum exposure limit.
 * **Acceptance Criteria**:

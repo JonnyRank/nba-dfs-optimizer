@@ -36,7 +36,7 @@ LINEUP_2 = ["A1 (1)", "A2 (2)", "A3 (3)", "A4 (4)", "B1 (11)", "B2 (12)", "A7 (7
 # projection 230, ownership 105.
 LINEUP_3 = ["A1 (1)", "A2 (2)", "A3 (3)", "A4 (4)", "A5 (5)", "Z0 (20)", "A7 (7)", "Ghost (99)"]
 
-# ranker.run() defaults (proj_weight=0.85, own_weight=0.0, geo_weight=0.15).
+# Weights for these characterization tests (the pre-O-13 standalone ranker defaults).
 DEFAULT_WEIGHTS = {"proj": 0.85, "own": 0.0, "geo": 0.15}
 
 

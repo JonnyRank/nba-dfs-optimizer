@@ -2,13 +2,14 @@ import argparse
 import os
 import traceback
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
 
 from . import records
 from .config import Config, ROSTER_SLOTS
+from .overrides import apply_override_list
 from .utils import get_latest_file, merge_player_pool, parse_dk_entries
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -21,6 +22,41 @@ def load_data(lineup_file: str, projs_file: str, cfg: Config) -> tuple[pd.DataFr
     df_players = parse_dk_entries(cfg.entries_path)
     df_merged = merge_player_pool(df_players, df_projs, how="inner", derive_time_game=True)
     return df_lineups, df_merged
+
+
+def effective_player_table(cfg: Config, ranked_file: str) -> Optional[pd.DataFrame]:
+    """The merged player pool a ranked file was scored on: its run record's
+    projections file with its recorded overrides applied. None if unknown.
+    """
+    path = records.run_record_path(ranked_file)
+    if not os.path.isfile(path):
+        return None
+    record = records.read_json(path)
+    projs_name = record.get("inputs", {}).get("projections", {}).get("file")
+    if not projs_name:
+        return None
+    candidates = [os.path.join(os.path.dirname(os.path.abspath(ranked_file)), projs_name),
+                  os.path.join(cfg.projs_dir, projs_name)]
+    projs_file = next((c for c in candidates if os.path.isfile(c)), None)
+    if not projs_file:
+        return None
+    df_players = merge_player_pool(
+        parse_dk_entries(cfg.entries_path), pd.read_csv(projs_file), how="inner"
+    )
+    df_players, _ = apply_override_list(df_players, record.get("overrides") or [])
+    return df_players
+
+
+def warn_overrides_not_in_pool(df_lineups: pd.DataFrame, df_players: pd.DataFrame, applied: List[dict]) -> None:
+    """Warn for each overridden player the existing pool doesn't contain (O-13 §6.4)."""
+    in_pool = set(pd.unique(df_lineups[list(ROSTER_SLOTS)].values.ravel()))
+    name_ids = df_players.set_index(df_players["ID"].astype(str))["Name + ID"]
+    for o in applied:
+        if name_ids.get(str(o["dk_id"])) not in in_pool:
+            print(
+                f"Warning: {o['name']} isn't in this pool (filtered out at generation); "
+                "run the full pipeline to include this player"
+            )
 
 
 def rank_lineups(
@@ -76,9 +112,9 @@ def rank_lineups(
 
 def run(
     cfg: Config,
-    proj_weight: float = 0.85,
-    own_weight: float = 0.0,
-    geo_weight: float = 0.15,
+    proj_weight: Optional[float] = None,
+    own_weight: Optional[float] = None,
+    geo_weight: Optional[float] = None,
     lineup_file: Optional[str] = None,
     projs_file: Optional[str] = None,
     num_lineups: Optional[int] = None,
@@ -87,6 +123,9 @@ def run(
     base_seed: Optional[int] = None,
     slate: Optional[dict] = None,
     run_time: Optional[datetime] = None,
+    overrides: Optional[List[dict]] = None,
+    parent_record: Optional[dict] = None,
+    inherited: Optional[List[str]] = None,
 ) -> str:
     """Rank the lineup pool and write its run record.
 
@@ -95,9 +134,9 @@ def run(
 
     Args:
         cfg: Pipeline configuration.
-        proj_weight: Weight applied to the projection rank.
-        own_weight: Weight applied to the total ownership rank.
-        geo_weight: Weight applied to the geomean ownership rank.
+        proj_weight, own_weight, geo_weight: Weights applied to the projection,
+            total ownership and geomean ownership ranks; None uses the
+            ``cfg`` default.
         lineup_file: Explicit path to a lineup-pool CSV. When omitted,
             the most recent file in ``cfg.lineup_pool_dir`` is used (standalone
             fallback behaviour).
@@ -109,6 +148,12 @@ def run(
         slate: Slate facts from ``slate.load_or_write_slate``; gives the
             slate ID, the slate date for the filename and the lock.
         run_time: The run's instant, shared by every stage's filenames.
+        overrides: Resolved ``{dk_id, name, field, to}`` projection/ownership
+            overrides, applied right after the player-pool merge.
+        parent_record: The latest run record on the pool, for a re-rank
+            (``--from rank``): its engine params are copied and
+            ``parent_run_id`` names the run that generated the pool.
+        inherited: Setting names taken from the previous run (recorded as is).
 
     Returns:
         Path to the written ranked-lineups CSV, or an empty string if the run
@@ -129,12 +174,17 @@ def run(
 
         # 2. Load and merge
         df_lineups, df_players = load_data(lineup_file, projs_file, cfg)
+        df_players, applied = apply_override_list(df_players, overrides or [])
+        for o in applied:
+            print(f"Override: {o['name']} {o['field']} {o['from']:g} -> {o['to']:g}")
+        if parent_record is not None:
+            warn_overrides_not_in_pool(df_lineups, df_players, applied)
 
         # 3. Rank
         weights = {
-            "proj": proj_weight,
-            "own": own_weight,
-            "geo": geo_weight,
+            "proj": cfg.proj_weight if proj_weight is None else proj_weight,
+            "own": cfg.own_weight if own_weight is None else own_weight,
+            "geo": cfg.geo_weight if geo_weight is None else geo_weight,
         }
         df_ranked = rank_lineups(df_lineups, df_players, weights)
 
@@ -172,13 +222,21 @@ def run(
             "min_unique": min_unique,
             "base_seed": base_seed,
         }
+        params_source = "cli" if None not in engine_params.values() else "partial"
+        if parent_record is not None:
+            # The pool's engine settings are the parent run's (O-13 §3.10).
+            engine_params = dict(parent_record.get("params") or {})
+            params_source = parent_record.get("params_source") or "partial"
         try:
             write_run_record(
                 cfg, output_file, lineup_file, projs_file, slate, run_time,
                 lineups_written=len(df_lineups),
                 weights=weights,
                 engine_params=engine_params,
-                params_source="cli" if None not in engine_params.values() else "partial",
+                params_source=params_source,
+                parent_record=parent_record,
+                overrides=applied,
+                inherited=inherited,
             )
         except Exception as e:
             print(f"Warning: run record not written: {e}")
@@ -202,6 +260,9 @@ def write_run_record(
     engine_params: Dict[str, Optional[float]],
     params_source: str,
     code_version: Optional[str] = "auto",
+    parent_record: Optional[dict] = None,
+    overrides: Optional[List[dict]] = None,
+    inherited: Optional[List[str]] = None,
 ) -> str:
     """Write the run record JSON next to *ranked_file* and return its path."""
     from .slate import lock_or_none
@@ -209,17 +270,25 @@ def write_run_record(
     slate_id = slate["slate_id"] if slate else None
     lock = lock_or_none(slate, run_time) if slate else None
     df_projs = pd.read_csv(projs_file)
+    projs_sha = records.sha256_file(projs_file)
+    parent_run_id = None
+    projections_rule = "latest"
+    if parent_record is not None:
+        # A re-rank's parent is the run that generated the pool.
+        parent_run_id = parent_record.get("parent_run_id") or parent_record.get("run_id")
+        parent_sha = parent_record.get("inputs", {}).get("projections", {}).get("sha256")
+        projections_rule = "parent" if parent_sha == projs_sha else "latest"
     payload = {
         "schema": records.SCHEMA_VERSION,
         "run_id": f"{slate_id}_{records.compact_ts(run_time)}" if slate_id else records.compact_ts(run_time),
         "slate_id": slate_id,
         "generated_at": records.iso_seconds(run_time),
         "lock": lock,
-        "parent_run_id": None,
+        "parent_run_id": parent_run_id,
         "inputs": {
             "projections": {
                 "file": os.path.basename(projs_file),
-                "sha256": records.sha256_file(projs_file),
+                "sha256": projs_sha,
                 "layout": records.projections_layout(df_projs),
                 "blend_check": records.check_blend(df_projs, warn=False),
             },
@@ -244,6 +313,9 @@ def write_run_record(
             "base_seed": engine_params.get("base_seed"),
         },
         "params_source": params_source,
+        "overrides": list(overrides or []),
+        "inherited": list(inherited or []),
+        "projections_rule": projections_rule,
         "code_version": records.git_code_version(REPO_ROOT) if code_version == "auto" else code_version,
     }
     path = records.run_record_path(ranked_file)
@@ -257,17 +329,13 @@ def main():
 
     parser = argparse.ArgumentParser(description="NBA DFS Lineup Sorter & Ranker")
     parser.add_argument(
-        "-pw",
-        "--proj_weight",
-        type=float,
-        default=0.85,
-        help="Weight for Projection Rank",
+        "-pw", "--proj_weight", type=float, default=None, help="Weight for Projection Rank (Default: 0.8)"
     )
     parser.add_argument(
-        "-ow", "--own_weight", type=float, default=0.0, help="Weight for Ownership Rank"
+        "-ow", "--own_weight", type=float, default=None, help="Weight for Ownership Rank (Default: 0.0)"
     )
     parser.add_argument(
-        "-gw", "--geo_weight", type=float, default=0.15, help="Weight for Geomean Rank"
+        "-gw", "--geo_weight", type=float, default=None, help="Weight for Geomean Rank (Default: 0.2)"
     )
     args = parser.parse_args()
 

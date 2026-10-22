@@ -15,6 +15,7 @@ import pandas as pd
 import pulp
 
 from .config import Config, ROSTER_SLOTS
+from .overrides import apply_override_list
 from .utils import get_latest_file, merge_player_pool, parse_dk_entries
 
 
@@ -397,6 +398,7 @@ def run(
     projs_file: Optional[str] = None,
     run_time: Optional[datetime] = None,
     slate_date: Optional[str] = None,
+    overrides: Optional[List[dict]] = None,
 ) -> str:
     """Run the lineup generation engine.
 
@@ -409,6 +411,8 @@ def run(
         projs_file: Explicit projections CSV; defaults to the latest in cfg.projs_dir.
         run_time: The run's instant, shared by every stage's filenames.
         slate_date: ``YYYY-MM-DD`` used in the pool filename (defaults to run_time's date).
+        overrides: Resolved projection/ownership overrides (O-13), applied
+            right after the player-pool merge.
 
     Returns:
         Path to the written lineup-pool CSV, or an empty string if the run
@@ -439,6 +443,7 @@ def run(
         print(f"Using projections: {os.path.basename(projs_file)}")
 
         df = load_data(projs_file, cfg.entries_path)
+        df, _ = apply_override_list(df, overrides or [])
         df = df[df["Projection"] >= cfg.min_projection]
         print(f"Loaded {len(df)} players with proj >= {cfg.min_projection}")
 

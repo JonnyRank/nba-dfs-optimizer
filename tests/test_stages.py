@@ -1,0 +1,310 @@
+"""Stage control (O-13): --from/--to runs, inherited settings and resets.
+
+Each test builds tonight's slate folder from the real 10/20 files: the
+pre-lock DKEntries, the L0 projections, and the engine replaced by a stub
+that writes the fixture's 100 lineups as the pool (no LP solves). Runs are
+spaced a minute apart before lock 0 (14:00 CT), so every artifact gets its
+own filename and the exporter writes L0 entry sets.
+"""
+
+import argparse
+import os
+import shutil
+from dataclasses import replace
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
+import pandas as pd
+import pytest
+
+from nba_optimizer import cli, engine, orchestrator, records
+from nba_optimizer.config import Config, ROSTER_SLOTS
+from nba_optimizer.settings import latest_record, resolve_settings
+
+NIGHT_DIR = os.path.join(os.path.dirname(__file__), "fixtures", "2026-10-20")
+RANKED_FIXTURE = os.path.join(NIGHT_DIR, "ranked-lineups-2026-10-20_135723.csv")
+PROJS_NAME = "NBA-Projs-2026-10-20_13-55-35.csv"
+JAYSON_TATUM = 44451207
+DYLAN_HARPER = 44451282
+OG_ANUNOBY = 44451272
+CT = ZoneInfo("America/Chicago")
+
+
+def parse(argv):
+    parser = argparse.ArgumentParser()
+    cli.add_pipeline_args(parser)
+    return parser.parse_args(argv)
+
+
+class Night:
+    """Tonight's inputs plus a run() that advances the clock a minute per call."""
+
+    def __init__(self, tmp_path, monkeypatch):
+        self.projs_dir = tmp_path / "projections"
+        self.projs_dir.mkdir()
+        shutil.copy(os.path.join(NIGHT_DIR, "L0-NBA-Projs-2026-10-20_13-55-35.csv"), self.projs_dir / PROJS_NAME)
+        downloads = tmp_path / "downloads"
+        downloads.mkdir()
+        shutil.copy(os.path.join(NIGHT_DIR, "Pre-L0-DKEntries.csv"), downloads / "DKEntries.csv")
+        self.cfg = Config(
+            entries_path=str(downloads / "DKEntries.csv"),
+            projs_dir=str(self.projs_dir),
+            base_dir=str(tmp_path / "exports"),
+            output_dir=str(downloads),
+            data_root=str(tmp_path / "slates"),
+        )
+        self.slate_dir = str(tmp_path / "slates" / "2026-10-20_classic_main")
+        self.engine_calls = 0
+        self.clock = datetime(2026, 10, 20, 13, 0, 0, tzinfo=CT)
+        monkeypatch.setattr(orchestrator, "load_config_from_env", lambda: replace(self.cfg))
+        monkeypatch.setattr(engine, "run", self._fake_engine)
+
+    def _fake_engine(self, cfg, run_time=None, slate_date=None, **kwargs):
+        self.engine_calls += 1
+        if cfg.seed is None:
+            cfg.seed = 12345
+        os.makedirs(cfg.lineup_pool_dir, exist_ok=True)
+        path = os.path.join(cfg.lineup_pool_dir, f"lineup-pool-{slate_date}_{run_time:%H%M%S}.csv")
+        pd.read_csv(RANKED_FIXTURE)[list(ROSTER_SLOTS)].to_csv(path, index=False)
+        return path
+
+    def run(self, *argv):
+        self.clock += timedelta(minutes=1)
+        orchestrator.run_pipeline(parse(list(argv)), run_time=self.clock)
+        return self.clock
+
+    def rank_record(self):
+        return latest_record(self.slate_dir, "rank")
+
+    def assembly_record(self):
+        return latest_record(self.slate_dir, "assemble")
+
+    def files(self, prefix):
+        return sorted(n for n in os.listdir(self.slate_dir) if n.startswith(prefix))
+
+    def write_projections(self, name, tatum):
+        df = pd.read_csv(self.projs_dir / PROJS_NAME)
+        df.loc[df["ID"] == JAYSON_TATUM, "Projection"] = tatum
+        df.to_csv(self.projs_dir / name, index=False)
+
+
+@pytest.fixture
+def night(tmp_path, monkeypatch):
+    return Night(tmp_path, monkeypatch)
+
+
+def _weights(record):
+    p = record["params"]
+    return p["proj_weight"], p["own_weight"], p["geo_weight"]
+
+
+def _overrides(record):
+    return {(o["dk_id"], o["field"]): o["to"] for o in record["overrides"]}
+
+
+def _caps(record):
+    s = record["settings"]
+    return ({c["dk_id"]: c["pct"] for c in s["max"]}, {c["dk_id"]: c["pct"] for c in s["min"]}, s["max_all"])
+
+
+def _slot_rows(path, n=None):
+    df = pd.read_csv(path)
+    if "Entry ID" in df.columns:
+        df = df[df["Entry ID"].notna()]
+    return df[list(ROSTER_SLOTS)].head(n).values.tolist()
+
+
+def test_full_run_unchanged(night):
+    """A full run fills the 40 entries with ranks 1-40 of its ranked file, as before O-13."""
+    night.run()
+    ranked = os.path.join(night.slate_dir, night.files("ranked-lineups-")[0].replace(".json", ".csv"))
+    export = os.path.join(night.slate_dir, night.files("upload-ready-DKEntries-")[0])
+
+    assert _slot_rows(export) == _slot_rows(ranked, 40)
+    assert night.engine_calls == 1
+    assert _weights(night.rank_record()) == (0.8, 0.0, 0.2)
+    assert night.assembly_record()["settings"] == {"max": [], "min": [], "max_all": None}
+
+
+def test_from_rank_skips_engine(night, monkeypatch):
+    night.run("-pw", "0.7", "-gw", "0.3")
+    first = night.rank_record()
+
+    def boom(*args, **kwargs):
+        raise AssertionError("engine ran")
+
+    monkeypatch.setattr(engine, "run", boom)
+    night.run("--from", "rank")
+    second = night.rank_record()
+
+    assert second["run_id"] != first["run_id"]
+    assert second["parent_run_id"] == first["run_id"]
+    assert second["pool_file"] == first["pool_file"]
+    assert second["params"]["base_seed"] == 12345 and second["params_source"] == "cli"
+    assert second["projections_rule"] == "parent"
+    # Same 40 lineups, so the slate folder reuses the identical copy; Downloads has both.
+    assert len([n for n in os.listdir(night.cfg.output_dir) if n.startswith("upload-ready-")]) == 2
+
+
+def test_settings_inherit_typed_wins_reset(night):
+    night.run("-pw", "0.7", "-ow", "0", "-gw", "0.3")
+    night.run("--from", "rank", "--to", "rank", "-pw", "0.6")
+    record = night.rank_record()
+    assert _weights(record) == (0.6, 0.0, 0.3)
+    assert record["inherited"] == ["own_weight", "geo_weight"]
+
+    night.run("--from", "rank", "--to", "rank", "-pw", "0.6", "--reset-settings")
+    record = night.rank_record()
+    assert _weights(record) == (0.6, 0.0, 0.2)
+    assert record["inherited"] == []
+
+    night.run("--from", "rank", "--to", "rank", "-gw", "0.3")
+    night.run("--to", "rank")
+    assert _weights(night.rank_record()) == (0.8, 0.0, 0.2)
+    assert night.rank_record()["inherited"] == []
+
+
+def test_caps_inherited_by_next_assemble(night):
+    night.run("--to", "rank")
+    night.run("--from", "assemble", "--to", "assemble", "--max", "OG Anunoby=50")
+    night.run("--from", "assemble", "--to", "assemble", "--min", "Karl-Anthony Towns=20")
+    record = night.assembly_record()
+
+    assert _caps(record) == ({OG_ANUNOBY: 50}, {44451218: 20}, None)
+    assert record["inherited"] == ["max"]
+
+
+def test_caps_cleared_by_reset(night):
+    night.run("--to", "rank")
+    night.run("--from", "assemble", "--to", "assemble", "--max", "OG Anunoby=50")
+    night.run("--from", "assemble", "--to", "assemble", "--reset-settings")
+
+    assert _caps(night.assembly_record()) == ({}, {}, None)
+    assert night.assembly_record()["solve"]["worst_rank"] == 40
+
+
+def test_override_carry_rule(night, capsys):
+    """Option (c): an inherited override lasts until the export changes that player."""
+    night.run("--to", "rank", "--proj", "Jayson Tatum=55")
+    with_55 = pd.read_csv(os.path.join(night.slate_dir, night.rank_record()["ranked_file"]))
+
+    night.run("--from", "rank", "--to", "rank")
+    record = night.rank_record()
+    assert _overrides(record) == {(JAYSON_TATUM, "Projection"): 55}
+    assert "overrides" in record["inherited"]
+
+    night.write_projections("NBA-Projs-2026-10-20_13-58-00.csv", tatum=52)
+    capsys.readouterr()
+    night.run("--from", "rank", "--to", "rank")
+    assert "Jayson Tatum override 55 dropped: newest export now says 52" in capsys.readouterr().out
+    record = night.rank_record()
+    assert record["overrides"] == [] and record["projections_rule"] == "latest"
+
+    with_52 = pd.read_csv(os.path.join(night.slate_dir, record["ranked_file"]))
+    tatum = f"Jayson Tatum ({JAYSON_TATUM})"
+    key = lambda df: {tuple(sorted(r[list(ROSTER_SLOTS)])): r["Total_Projection"] for _, r in df.iterrows()}
+    before, after = key(with_55), key(with_52)
+    diffs = {round(before[k] - after[k], 6) for k in before if tatum in k}
+    assert diffs == {3.0}
+
+
+def test_clear_overrides(night):
+    night.run("--to", "rank", "--proj", "Jayson Tatum=55; Dylan Harper=40")
+    night.run("--from", "rank", "--to", "rank", "--clear-overrides", "Jayson Tatum")
+    assert _overrides(night.rank_record()) == {(DYLAN_HARPER, "Projection"): 40}
+
+    night.run("--from", "rank", "--to", "rank", "--clear-overrides")
+    assert night.rank_record()["overrides"] == []
+
+    night.run("--from", "rank", "--to", "rank", "--proj", "Dylan Harper=40")
+    night.run("--from", "rank", "--to", "rank", "--clear-overrides", "--proj", "Jayson Tatum=55")
+    assert _overrides(night.rank_record()) == {(JAYSON_TATUM, "Projection"): 55}
+
+
+def test_clear_caps(night):
+    night.run("--to", "rank")
+    night.run("--from", "assemble", "--to", "assemble",
+              "--max", "Dylan Harper=100; OG Anunoby=50", "--max-all", "100")
+    night.run("--from", "assemble", "--to", "assemble", "--clear-caps", "Dylan Harper")
+    assert _caps(night.assembly_record()) == ({OG_ANUNOBY: 50}, {}, 100)
+
+    night.run("--from", "assemble", "--to", "assemble", "--clear-caps")
+    assert _caps(night.assembly_record()) == ({}, {}, None)
+
+
+def test_reset_settings_clears_everything(night):
+    night.run("-pw", "0.7", "-gw", "0.3", "--proj", "Jayson Tatum=55", "--max", "OG Anunoby=50")
+    night.run("--from", "rank", "--to", "assemble", "--reset-settings")
+
+    assert _weights(night.rank_record()) == (0.8, 0.0, 0.2)
+    assert night.rank_record()["overrides"] == []
+    assert _caps(night.assembly_record()) == ({}, {}, None)
+
+
+def test_from_export_uses_latest_assembly(night):
+    night.run("--to", "rank")
+    night.run("--from", "assemble", "--to", "assemble")
+    night.run("--from", "assemble", "--to", "assemble", "--max", "OG Anunoby=50")
+    latest = os.path.join(night.slate_dir, night.assembly_record()["assembled_file"])
+    night.run("--from", "export")
+
+    export = os.path.join(night.slate_dir, night.files("upload-ready-DKEntries-")[-1])
+    assert _slot_rows(export) == _slot_rows(latest)
+    entry_set = records.read_json(os.path.join(night.slate_dir, night.files("L0-entry-set-")[-1]))
+    assert entry_set["assembly_id"] == night.assembly_record()["assembly_id"]
+
+
+def test_from_after_to_errors(night, capsys):
+    night.run("--from", "export", "--to", "rank")
+    assert "--from export is after --to rank" in capsys.readouterr().out
+    assert not os.path.exists(night.slate_dir)
+
+
+def test_from_stage_without_prior_artifact_errors(night, capsys):
+    night.run("--from", "assemble")
+    out = capsys.readouterr().out
+    assert "--from assemble: no ranked file found in" in out and night.slate_dir in out
+
+
+def test_ignored_flag_warns(night, capsys):
+    night.run("--to", "rank")
+    capsys.readouterr()
+    night.run("--from", "assemble", "--to", "assemble", "-pw", "0.5", "-u", "2")
+    out = capsys.readouterr().out
+    assert "Warning: -pw ignored" in out
+    assert "Warning: -u ignored: the pool already exists" in out
+    assert night.assembly_record() is not None
+
+
+def test_effective_settings_block_names_sources(night, capsys):
+    night.run("--to", "rank", "-gw", "0.3")
+    capsys.readouterr()
+    night.run("--from", "rank", "--to", "rank", "-pw", "0.6")
+    out = capsys.readouterr().out
+    assert "Effective settings:" in out
+    assert "proj_weight = 0.6 (typed)" in out
+    assert "geo_weight = 0.3 (inherited from ranked-lineups-2026-10-20_130100.json)" in out
+
+
+def test_semicolon_lists():
+    from nba_optimizer.utils import parse_dk_entries
+
+    df_players = parse_dk_entries(os.path.join(NIGHT_DIR, "Pre-L0-DKEntries.csv"))
+    cfg = Config()
+    one = parse(["--from", "assemble", "--max", "Dylan Harper=80; Karl-Anthony Towns=20"])
+    two = parse(["--from", "assemble", "--max", "Dylan Harper=80", "--max", "Karl-Anthony Towns=20"])
+    caps = [resolve_settings(a, cfg, None, ["assemble"], df_players, 40).caps for a in (one, two)]
+    assert caps[0].max == caps[1].max == {DYLAN_HARPER: 80, 44451218: 20}
+
+
+def test_gui_and_cli_share_args():
+    """The GUI's parser gets every pipeline option (Gooey is never imported)."""
+    dests = []
+    for _ in range(2):
+        parser = argparse.ArgumentParser()
+        cli.add_pipeline_args(parser)
+        dests.append({a.dest for a in parser._actions} - {"help"})
+    assert dests[0] == dests[1]
+    assert {"from_stage", "to_stage", "proj", "own", "max_caps", "min_caps", "max_all",
+            "clear_overrides", "clear_caps", "reset_settings", "pool", "ranked", "assembled",
+            "slate_dir"} <= dests[0]

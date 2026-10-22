@@ -31,6 +31,11 @@ class Config:
     min_games: int = 2
     min_projection: float = 10.0
 
+    # --- RANKING WEIGHTS (the one source of defaults; O-13 §3.4) ---
+    proj_weight: float = 0.8
+    own_weight: float = 0.0
+    geo_weight: float = 0.2
+
     # --- DIRECTORY SETTINGS ---
     entries_path: str = "DKEntries.csv"
     projs_dir: str = "projections"
