@@ -17,7 +17,7 @@ Nightly capture (O-0) is in place.
 - `--proj/--own` overrides; assemble is a rank-sum ILP with `--max/--min/--max-all`, writing `assembled-lineups-*.csv/.json`.
 - Export takes the assembly and its entry set records `assembly_id`.
 - The Gooey GUI shares the same argument definitions.
-- A `--from rank` on a finished slate uses the parent run's projections; `--no-slate-folder` keeps an experiment out of the night's capture.
+- On a finished slate, `--from rank` uses the parent run's projections and a full run uses the folder's newest L0 copy; `--no-slate-folder` keeps an experiment out of the night's capture.
 
 ### Cloud sessions (Claude Code on the web)
 

@@ -1,3 +1,4 @@
+import glob
 import os
 from dataclasses import replace
 from datetime import datetime
@@ -28,30 +29,48 @@ def slate_finished(slate: Optional[dict], run_time: datetime) -> bool:
     return bool(slate) and lock_or_none(slate, run_time) is None
 
 
-def _newest_projections(config, slate, slate_dir, run_time, with_projections, newest_unless_finished):
-    """Snapshot of the newest export, or None when none is wanted.
+def latest_l0_projections(slate_dir: str) -> str:
+    """The slate folder's newest L0 projections copy: the last export before lock 0."""
+    copies = glob.glob(os.path.join(slate_dir, "L0-NBA-Projs-*.csv"))
+    if not copies:
+        raise FileNotFoundError(f"past slate: no L0-NBA-Projs-*.csv copy in {slate_dir}")
+    # Copies keep their source's modified time (snapshot_input uses copy2).
+    return max(copies, key=lambda p: (os.path.getmtime(p), os.path.basename(p)))
 
-    With *newest_unless_finished* (a ``--from rank`` run) a finished slate
-    gets None: its rank uses the parent run's projections instead (R2).
+
+def _newest_projections(config, slate, slate_dir, run_time, with_projections, rerank):
+    """Projections for the run, or None when none are wanted.
+
+    Normally a snapshot of the newest export in projs_dir. On a finished
+    slate the newest export belongs to another slate, so a re-rank gets None
+    (it uses the parent run's projections, R2) and a full run uses the
+    folder's newest L0 copy, keeping a regenerated pool to pre-lock-0 numbers.
     """
-    if not with_projections or (newest_unless_finished and slate_finished(slate, run_time)):
+    if not with_projections:
         return None
+    if slate_dir and slate_finished(slate, run_time):
+        if rerank:
+            return None
+        projs_file = latest_l0_projections(slate_dir)
+        print(f"past slate: using {os.path.basename(projs_file)}, the slate's last L0 projections")
+        records.check_blend(pd.read_csv(projs_file))
+        return projs_file
     source_projs = get_latest_file(config.projs_dir, "NBA-Projs-*.csv")
     projs_file = _snapshot_projections(source_projs, slate, slate_dir, run_time)
     records.check_blend(pd.read_csv(projs_file))
     return projs_file
 
 
-def prepare_slate_inputs(config, run_time, with_projections=True, newest_unless_finished=False):
+def prepare_slate_inputs(config, run_time, with_projections=True, rerank=False):
     """Resolve tonight's slate and copy the run's inputs into its folder.
 
     Returns (config, slate, projs_file, slate_dir). With NBA_DATA_ROOT set,
     the returned config reads its DKEntries from the slate-folder copy and
     writes pools and ranked files to the slate folder; without it, config is
     unchanged, the slate is built in memory (or None) and slate_dir is None.
-    Without *with_projections* (a run starting at assemble or export), or
-    for a finished slate with *newest_unless_finished*, no projections are
-    copied and projs_file is None.
+    Without *with_projections* (a run starting at assemble or export) no
+    projections are copied and projs_file is None; for a finished slate see
+    _newest_projections.
     """
     slate, slate_dir = load_or_write_slate(config, config.entries_path)
 
@@ -68,11 +87,11 @@ def prepare_slate_inputs(config, run_time, with_projections=True, newest_unless_
             ranked_lineup_dir=slate_dir,
         )
 
-    projs_file = _newest_projections(config, slate, slate_dir, run_time, with_projections, newest_unless_finished)
+    projs_file = _newest_projections(config, slate, slate_dir, run_time, with_projections, rerank)
     return config, slate, projs_file, slate_dir
 
 
-def use_slate_dir(config, slate_dir, run_time, with_projections=True, newest_unless_finished=False):
+def use_slate_dir(config, slate_dir, run_time, with_projections=True, rerank=False):
     """Like prepare_slate_inputs for an existing slate folder (``--slate-dir``).
 
     Uses the folder's Pre-L0-DKEntries.csv and slate.json; nothing but the
@@ -86,7 +105,7 @@ def use_slate_dir(config, slate_dir, run_time, with_projections=True, newest_unl
             raise FileNotFoundError(f"{os.path.basename(path)} not found in {slate_dir}")
     slate = records.read_json(slate_path)
     config = replace(config, entries_path=entries, lineup_pool_dir=slate_dir, ranked_lineup_dir=slate_dir)
-    projs_file = _newest_projections(config, slate, slate_dir, run_time, with_projections, newest_unless_finished)
+    projs_file = _newest_projections(config, slate, slate_dir, run_time, with_projections, rerank)
     return config, slate, projs_file, slate_dir
 
 
@@ -204,11 +223,11 @@ def run_pipeline(args, run_time: Optional[datetime] = None):
         rerank = from_stage == "rank"
         if _arg(args, "slate_dir"):
             config, slate, projs_file, slate_dir = use_slate_dir(
-                config, _arg(args, "slate_dir"), run_time, with_projections, newest_unless_finished=rerank
+                config, _arg(args, "slate_dir"), run_time, with_projections, rerank=rerank
             )
         else:
             config, slate, projs_file, slate_dir = prepare_slate_inputs(
-                config, run_time, with_projections, newest_unless_finished=rerank
+                config, run_time, with_projections, rerank=rerank
             )
         legacy = slate_dir is None
         record_dir = slate_dir or config.ranked_lineup_dir

@@ -413,3 +413,30 @@ def test_past_slate_warns_when_parent_projections_changed(night, capsys):
     capsys.readouterr()
     night.run("--from", "rank", "--to", "rank")
     assert f"Warning: {parent_projs} has changed since the parent run" in capsys.readouterr().out
+
+
+def test_past_slate_full_run_uses_latest_l0_copy(night, capsys):
+    """A full run on a finished slate uses the folder's newest L0 projections copy:
+    not the newer export in NBA_PROJS_DIR (another slate's) and not the later L1/L2 copies,
+    which carry news from after lock 0."""
+    night.run("--to", "rank")
+    src = os.path.join(night.slate_dir, "L0-NBA-Projs-2026-10-20_13-55-35.csv")
+    copies = {"L0-NBA-Projs-2026-10-20_13-59-41.csv": "2026-10-20T13:59:41-05:00",
+              "L2-NBA-Projs-2026-10-20_20-28-20.csv": "2026-10-20T20:28:20-05:00"}
+    os.utime(src, (datetime.fromisoformat("2026-10-20T13:55:35-05:00").timestamp(),) * 2)
+    for name, iso in copies.items():
+        shutil.copy(src, os.path.join(night.slate_dir, name))
+        ts = datetime.fromisoformat(iso).timestamp()
+        os.utime(os.path.join(night.slate_dir, name), (ts, ts))
+    night.write_projections("NBA-Projs-2026-10-21_16-00-00.csv", tatum=52)
+
+    night.clock = datetime(2026, 10, 21, 0, 30, tzinfo=CT)  # after the 9:30 PM ET lock
+    capsys.readouterr()
+    night.run("--to", "rank")
+
+    out = capsys.readouterr().out
+    assert "past slate: using L0-NBA-Projs-2026-10-20_13-59-41.csv, the slate's last L0 projections" in out
+    record = night.rank_record()
+    assert record["inputs"]["projections"]["file"] == "L0-NBA-Projs-2026-10-20_13-59-41.csv"
+    assert record["parent_run_id"] is None
+    assert not [n for n in os.listdir(night.slate_dir) if "2026-10-21_16-00-00" in n]
