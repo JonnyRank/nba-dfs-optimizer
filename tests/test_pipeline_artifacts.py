@@ -396,3 +396,71 @@ def test_exporter_skips_entry_set_after_last_lock(tmp_path):
 
     assert os.path.isfile(export)
     assert not [n for n in os.listdir(slate_dir) if "-entry-set-" in n]
+
+
+# ---------------------------------------------------------------------------
+# Stage control (O-13): assemblies, entry sets and default weights
+# ---------------------------------------------------------------------------
+
+
+def test_export_entry_set_links_assembly(tmp_path):
+    """Exporting an assembly: entry set carries assembly_id and run_id, ranks are Final_Rank, 20/20 split."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    from nba_optimizer import assembler, exporter, records
+    from nba_optimizer.assembler import AssembleSettings
+
+    pre_lock = datetime(2026, 10, 20, 13, 57, 23, tzinfo=ZoneInfo("America/Chicago")).astimezone()
+    cfg, slate_dir, ranked, run_time = _opening_night_run(tmp_path, pre_lock)
+    # OG Anunoby (44451272) capped at 50%: the 40 are no longer ranks 1-40.
+    assembled = assembler.run(cfg, ranked, AssembleSettings(n_entries=40, max={44451272: 50}), run_time=run_time)
+    export = exporter.run(cfg, assembled_file=assembled, run_time=run_time)
+
+    assembly = records.read_json(assembled[:-4] + ".json")
+    entry_set = records.read_json(os.path.join(slate_dir, f"L0-entry-set-{run_time:%Y%m%dT%H%M%S}.json"))
+    assert entry_set["assembly_id"] == assembly["assembly_id"]
+    assert entry_set["run_id"] == records.read_json(ranked[:-4] + ".json")["run_id"] == assembly["run_id"]
+
+    entries = entry_set["entries"]
+    df_assembled = pd.read_csv(assembled)
+    assert [e["pre_lock_rank"] for e in entries] == df_assembled["Final_Rank"].tolist()
+    assert entries[-1]["pre_lock_rank"] > 40
+    assert {e["contest_id"] for e in entries[:20]} == {196456024}
+    assert {e["contest_id"] for e in entries[20:]} == {196456031}
+    assert [e["entry_id"] for e in entries] == records.read_json(os.path.join(slate_dir, "slate.json"))["entry_ids"]
+    assert os.path.isfile(export)
+
+
+def test_export_after_lock_0_writes_no_entry_set(tmp_path, capsys):
+    """Stages are pre-lock tools: an export between lock 0 and lock 1 writes the CSV only (§3.13)."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    from nba_optimizer import exporter
+
+    pre_lock = datetime(2026, 10, 20, 13, 57, 23, tzinfo=ZoneInfo("America/Chicago")).astimezone()
+    cfg, slate_dir, ranked, _ = _opening_night_run(tmp_path, pre_lock)
+    after_l0 = datetime(2026, 10, 20, 15, 0, 0, tzinfo=ZoneInfo("America/Chicago")).astimezone()
+    export = exporter.run(cfg, ranked_file=ranked, run_time=after_l0)
+
+    assert os.path.isfile(export)
+    assert not [n for n in os.listdir(slate_dir) if "-entry-set-" in n]
+    assert "late swaps are captured by nba-dfs-capture finalize / record" in capsys.readouterr().out
+
+
+def test_ranker_standalone_default_weights(tmp_path, monkeypatch):
+    """python -m nba_optimizer.ranker ranks with the Config defaults 0.8/0/0.2."""
+    import sys
+    from nba_optimizer import ranker, records
+
+    cfg = _make_config(tmp_path)
+    _build_lineup_pool_csv(os.path.join(cfg.lineup_pool_dir, "lineup-pool-2026-01-01_120000.csv"))
+    _build_projs_csv(os.path.join(cfg.projs_dir, "NBA-Projs-2026-01-01.csv"))
+    _build_dkentries_csv(cfg.entries_path)
+    monkeypatch.setattr("nba_optimizer.config.load_config_from_env", lambda: cfg)
+    monkeypatch.setattr(sys, "argv", ["ranker"])
+
+    ranker.main()
+
+    [record] = [n for n in os.listdir(cfg.ranked_lineup_dir) if n.endswith(".json")]
+    params = records.read_json(os.path.join(cfg.ranked_lineup_dir, record))["params"]
+    assert (params["proj_weight"], params["own_weight"], params["geo_weight"]) == (0.8, 0.0, 0.2)

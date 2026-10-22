@@ -10,6 +10,15 @@ Nightly capture (O-0) is in place.
 - **Engine:** it's seeded with `--seed`.
 - **Backfill:** 2026-10-20 has been backfilled.
 
+### Stage control (O-13)
+
+- `nba-dfs-optimizer --from {rank,assemble,export} [--to …]` reruns part of the pipeline on tonight's slate folder.
+- Settings carry forward. Typed overrides last until the export changes that player. Clear them with `--clear-overrides`, `--clear-caps` or `--reset-settings`.
+- `--proj/--own` overrides; assemble is a rank-sum ILP with `--max/--min/--max-all`, writing `assembled-lineups-*.csv/.json`.
+- Export takes the assembly and its entry set records `assembly_id`.
+- The Gooey GUI shares the same argument definitions.
+- On a finished slate, `--from rank` uses the parent run's projections and a full run uses the folder's newest L0 copy; `--no-slate-folder` keeps an experiment out of the night's capture.
+
 ### Cloud sessions (Claude Code on the web)
 
 - A `SessionStart` hook (`.claude/hooks/session-start.sh`, matcher `startup|resume`) runs only when `CLAUDE_CODE_REMOTE=true` and is a no-op locally.

@@ -39,7 +39,7 @@
 * **LLM Instructions**: Act as an Operations Research Data Scientist. The optimizer generates independent lineups in parallel. Detail 3 strategies for implementing global exposure caps in this architecture. Compare a pure LP global solve vs. sequential generation with dynamic probability updating. 
 
 ### [Research] Post-Generation Lineup Filtering for Exposure Caps
-* **Status**: Not Started
+* **Status**: Complete — absorbed by O-13 stage control: `assembler.py` selects the entries with a rank-sum ILP (greedy can't guarantee minimums); an impossible request fails with a diagnosis instead of a partial set
 * **Target Files**: `src/nba_optimizer/ranker.py`, `src/nba_optimizer/exporter.py`, `src/nba_optimizer/config.py`
 * **Context**: Unlike enforcing global MILP exposure constraints during generation, we want to restrict player exposures (e.g., max 30% for Player X) during the final selection phase. This means sequentially picking from the sorted, ranked pool of generated lineups and skipping any lineup that would push a player over their set maximum exposure limit.
 * **Acceptance Criteria**:
@@ -211,6 +211,24 @@
 * **Acceptance Criteria**:
   * [ ] Add a test with a DataFrame that has both `Team` and `TeamAbbrev` columns, where `Team` is NaN for at least one row, and assert that `_attach_game_column` fills from `TeamAbbrev` for that row.
 * **LLM Instructions**: Add `test_attach_game_column_team_and_teamabbrev_coexistence` to `tests/test_utils.py`. Build a DataFrame with both columns — one row where `Team` is present, one where it is `NaN` — and verify `_attach_game_column` resolves each row correctly via the `.where(notna())` cascade (`late_swapper.py:34-35`).
+
+### [Implement] `--projs FILE` to choose the projections file explicitly
+* **Status**: Not Started
+* **Target Files**: `src/nba_optimizer/cli.py`, `src/nba_optimizer/orchestrator.py`, `src/nba_optimizer/settings.py`, `tests/test_stages.py`
+* **Context**: Since O-13 (PR #66), the projections file is always picked automatically:
+  * a full run or `--from rank` on an open slate: the newest export in `NBA_PROJS_DIR`;
+  * `--from rank` on a finished slate: the parent run's copy (R2);
+  * a full run on a finished slate: the folder's newest `L0-NBA-Projs-*` copy.
+
+  There's no way to name a different file, for example a hand-edited export, an L1 copy for a backtest, or a file outside `NBA_PROJS_DIR`. The original O-13 spec ruled such a flag out ("There's no flag to reuse an older file"), so this needs a spec decision first.
+* **Acceptance Criteria**:
+  * [ ] `--projs FILE` is added through `cli.add_pipeline_args`, so the Gooey GUI shows it too. It wins over every automatic choice above.
+  * [ ] The run prints the file used, and the run record names it (`inputs.projections.file` + `sha256`). It's copied into the slate folder with the existing O-0 rules (`records.snapshot_input`, no overwrite), and `check_blend` runs on it.
+  * [ ] It applies only when generate or rank runs. On `--from assemble`/`--from export` it warns as ignored (`settings.warn_ignored`).
+  * [ ] Inherited overrides still follow the carry rule, compared against the named file's values.
+  * [ ] The coverage check (every pool player has a projection) still fails a mismatched file.
+  * [ ] Tests in `tests/test_stages.py`: the named file beats the newest export and the past-slate rules; the record and the copy are right; the flag is ignored on `--from assemble`.
+* **LLM Instructions**: Act as a senior Python engineer. Add the argument in `cli.add_pipeline_args`. Have `orchestrator.run_pipeline` pass it to `prepare_slate_inputs` / `use_slate_dir` so `_newest_projections` returns its snapshot before any automatic choice, and make the `--from rank` past-slate branch skip `parent_projections` when it's set. Add `"projs"` to `FLAG_LABELS` and to the generate/rank-only flags in `settings.warn_ignored`. Follow the existing `Night` fixture pattern in `tests/test_stages.py`.
 
 ---
 

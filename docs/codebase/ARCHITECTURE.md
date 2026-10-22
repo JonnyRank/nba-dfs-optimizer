@@ -23,7 +23,10 @@ DKEntries.csv + NBA-Projs-*.csv
 [Ranker] ── score by weighted projection/ownership ranks ──► ranked-lineups-{timestamp}.csv
        │
        ▼
-[Exporter] ── map top N lineups into DK template ──► upload-ready-DKEntries-{timestamp}.csv
+[Assembler] ── rank-sum ILP under --max/--min/--max-all ──► assembled-lineups-{timestamp}.csv/.json
+       │
+       ▼
+[Exporter] ── map the assembly into DK template in Entry_Order ──► upload-ready-DKEntries-{timestamp}.csv
        │
        ▼
 [Exposure Report] ── calculate player exposure vs. projected ownership ──► console output
@@ -38,6 +41,8 @@ DKEntries.csv (with locked players) + NBA-Projs-*.csv
 ```
 
 **Nightly capture (O-0):** with `NBA_DATA_ROOT` set, the orchestrator resolves the slate (`slate.load_or_write_slate`), writes `slate.json` once, copies the DKEntries and projections it read into `<NBA_DATA_ROOT>/<slate_id>/`, and points the pool/ranked outputs there. One run instant names every output; filenames use the slate date. The ranker writes a run-record JSON next to the ranked CSV, and the exporter writes an `L<k>-entry-set-*.json` (copying the upload-ready file into the slate folder). After the last lock, `nba-dfs-capture finalize` (`capture.py`) classifies the night's files by content, assigns them to locks by modified time, verifies each lock's entry set against the final DKEntries, and writes `finalize.json` + `slate-entries.csv`. Contest standings are copied in as delivered: a `contest-standings-*.zip` from Downloads has its single CSV streamed into the slate folder (the zip is only read), and a zip with other files is skipped with a warning. The engine is seeded (`--seed`): lineup j draws from `SeedSequence(base_seed, spawn_key=(j,))`, and candidates are sorted by j before the `min_unique` filter, so a seed reproduces the pool regardless of worker scheduling. When `--seed` is omitted, `engine.run` draws a seed and writes it back to `cfg.seed`; the orchestrator reads it from there to pass `base_seed` to the ranker's run record. Without `NBA_DATA_ROOT` (legacy layout) the run record and entry set are written next to their CSVs in `exports/` and the output folder. A run after a slate's last lock writes no entry set.
+
+**Stage control (O-13):** `nba-dfs-optimizer --from {generate,rank,assemble,export} --to …` runs a slice of generate → rank → assemble → export. A `--from` stage reads the newest artifact of the stage before it from the slate folder by its record's `generated_at` (`--pool/--ranked/--assembled` override; `--slate-dir` works on a past slate; legacy layout falls back to latest-file lookup). `settings.resolve_settings` resolves weights, `--proj/--own` overrides (`overrides.py`) and caps with precedence typed > inherited from the latest record of that stage > `Config` default, and prints an `Effective settings` block; a full run never inherits. An inherited override carries while the newest export still has its recorded `from` value. `assembler.py` picks N lineups minimising the sum of `Final_Rank` (PuLP + HiGHS); infeasible requests fail with the culprit constraints and write nothing; the diagnosis reuses the one built model, relaxing one constraint's bound per re-solve. On a finished slate the newest export is another slate's, so a `--from rank` ranks with the parent run's projections copy and a full run uses the folder's newest `L0-NBA-Projs-*` copy (pre-lock-0 numbers, no later news; this includes a full run on tonight's slate after its last lock, which fails if no run happened before lock 0), and every rank fails if any pool player lacks a projection. `--no-slate-folder` makes one run use the legacy layout even with `NBA_DATA_ROOT` set. The re-rank's run record adds `parent_run_id`, `overrides`, `inherited`, `projections_rule`; the export's L0 entry set adds `assembly_id`. The exporter writes an entry set only at lock 0 (computed from `slate.json` at the export's own time). `cli.add_pipeline_args` defines the arguments once for the CLI and the Gooey GUI.
 
 1. **Data Loading:** Engine reads DKEntries.csv (player pool with salaries, positions, game info) and merges with projection CSV on player ID.
 2. **Parallel Generation:** One `ProcessPoolExecutor` whose workers receive the player pool once via `initializer` (`_init_worker`) and build a persistent HiGHS `LineupModel` once per worker. Workers then solve and slot lineups in batches (`_generate_batch`), applying random noise to projections and re-solving the same model with only the objective swapped, and return row positions + slotted names.
@@ -54,6 +59,9 @@ DKEntries.csv (with locked players) + NBA-Projs-*.csv
 | `utils.py` | File discovery, ID/time parsing, ragged CSV reading, shared player-pool loading (`parse_dk_entries`, `merge_player_pool`) | Optimization or ranking | `src/nba_optimizer/utils.py` |
 | `engine.py` | LP model construction, parallel solving, slot optimization | Ranking, export | `src/nba_optimizer/engine.py` |
 | `ranker.py` | Lineup scoring, weighted rank calculation | Lineup generation | `src/nba_optimizer/ranker.py` |
+| `assembler.py` | Selecting the N entries from a ranked pool under exposure caps (rank-sum ILP), infeasibility diagnosis, assembly record | Scoring, export | `src/nba_optimizer/assembler.py` |
+| `overrides.py` | `NAME=VALUE` parsing, player lookup by DK ID/name, projection/ownership overrides | Ranking | `src/nba_optimizer/overrides.py` |
+| `settings.py` | Stage order, typed/inherited/default setting resolution, ignored-flag warnings | Running stages | `src/nba_optimizer/settings.py` |
 | `exporter.py` | DK template parsing, lineup-to-entry mapping | Scoring | `src/nba_optimizer/exporter.py` |
 | `exposure_report.py` | Post-export analytics, leverage calculation, flexible file resolution via `_resolve_entries_file()` | Everything else | `src/nba_optimizer/exposure_report.py` |
 | `late_swapper.py` | Lock detection, constrained re-optimization, batch solving | Full lineup generation | `src/nba_optimizer/late_swapper.py` |

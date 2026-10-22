@@ -47,15 +47,30 @@ def _resolve_entries_file(cfg: Config, entries_file: Optional[str] = None) -> st
     return max(candidates, key=os.path.getmtime)
 
 
-def run(cfg: Config, top_x: int = 25, entries_file: Optional[str] = None):
+def run(
+    cfg: Config,
+    top_x: int = 25,
+    entries_file: Optional[str] = None,
+    df_players: Optional[pd.DataFrame] = None,
+):
+    """Print exposures of *entries_file* against projected ownership.
+
+    With *df_players* (the effective, overridden player table the lineups
+    were ranked on) ownership comes from it; otherwise from the latest
+    projections file.
+    """
     try:
         # 1. Locate latest files
         entries_file = _resolve_entries_file(cfg, entries_file)
-        projs_file = get_latest_file(cfg.projs_dir, "NBA-Projs-*.csv", use_mtime=True)
+        if df_players is None:
+            projs_file = get_latest_file(cfg.projs_dir, "NBA-Projs-*.csv", use_mtime=True)
+            df_projs = pd.read_csv(projs_file)
+        else:
+            df_projs = df_players
 
         # 2. Parse Projections for Ownership
-        df_projs = pd.read_csv(projs_file)
-        df_projs["ID"] = df_projs["ID"].astype(str)
+        df_projs = df_projs.copy()
+        df_projs["ID"] = df_projs["ID"].astype(str).str.split(".").str[0]
         # Create a dictionary mapping ID to Projected Ownership
         own_dict = df_projs.set_index("ID")["Own_Proj"].to_dict()
 

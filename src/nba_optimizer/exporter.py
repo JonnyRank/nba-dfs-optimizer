@@ -11,19 +11,28 @@ from .config import Config, ROSTER_SLOTS, STANDARD_EXPORT_PREFIX
 from .utils import get_latest_file, read_ragged_csv
 
 
-def run(cfg: Config, ranked_file: Optional[str] = None, run_time: Optional[datetime] = None) -> str:
-    """Export top-ranked lineups into a DraftKings-compatible CSV.
+def run(
+    cfg: Config,
+    assembled_file: Optional[str] = None,
+    ranked_file: Optional[str] = None,
+    run_time: Optional[datetime] = None,
+) -> str:
+    """Export lineups into a DraftKings-compatible CSV.
 
-    After the CSV, writes the entry-set candidate for the run's lock (L0 for a
-    pre-lock run). When the ranked file sits in a slate folder (it has a
-    slate.json), the upload-ready CSV is copied there and the entry set is
-    written there; otherwise the entry set goes next to the CSV.
+    With *assembled_file* the DKEntries rows are filled in its Entry_Order;
+    otherwise with the top-ranked lineups of *ranked_file*. After the CSV,
+    writes the L0 entry-set candidate for a pre-lock run. When the ranked
+    file sits in a slate folder (it has a slate.json), the upload-ready CSV
+    is copied there and the entry set is written there; otherwise the entry
+    set goes next to the CSV.
 
     Args:
         cfg: Pipeline configuration.
-        ranked_file: Explicit path to a ranked-lineups CSV. When omitted, the
-            most recent file in ``cfg.ranked_lineup_dir`` is used (standalone
-            fallback behaviour).
+        assembled_file: An ``assembled-lineups-*.csv`` (O-13); wins over
+            *ranked_file*, which is then read from its record.
+        ranked_file: Explicit path to a ranked-lineups CSV. When neither is
+            given, the most recent file in ``cfg.ranked_lineup_dir`` is used
+            (standalone fallback behaviour).
         run_time: The run's instant, shared by every stage's filenames.
 
     Returns:
@@ -44,12 +53,20 @@ def run(cfg: Config, ranked_file: Optional[str] = None, run_time: Optional[datet
         entry_count = valid_mask.sum()
         print(f"Detected {entry_count} valid entry slots.")
 
-        # 3. Load ranked lineups — use explicit path when provided, otherwise fall
-        #    back to latest-file discovery (standalone / direct module invocation).
-        if not ranked_file:
-            ranked_file = get_latest_file(cfg.ranked_lineup_dir, "ranked-lineups-*.csv")
-        print(f"Using ranked lineups from: {os.path.basename(ranked_file)}")
-        df_ranked = pd.read_csv(ranked_file)
+        # 3. Load lineups — an assembly in entry order, else the ranked file's
+        #    top rows (explicit path, or latest-file discovery when standalone).
+        assembly = {}
+        if assembled_file:
+            assembly = _read_assembly_record(assembled_file)
+            if assembly.get("ranked_file"):
+                ranked_file = os.path.join(os.path.dirname(os.path.abspath(assembled_file)), assembly["ranked_file"])
+            print(f"Using assembled lineups from: {os.path.basename(assembled_file)}")
+            df_ranked = pd.read_csv(assembled_file).sort_values("Entry_Order").reset_index(drop=True)
+        else:
+            if not ranked_file:
+                ranked_file = get_latest_file(cfg.ranked_lineup_dir, "ranked-lineups-*.csv")
+            print(f"Using ranked lineups from: {os.path.basename(ranked_file)}")
+            df_ranked = pd.read_csv(ranked_file)
 
         if len(df_ranked) < entry_count:
             print(
@@ -76,8 +93,8 @@ def run(cfg: Config, ranked_file: Optional[str] = None, run_time: Optional[datet
 
         # 5. Save the combined file
         run_time = (run_time or datetime.now()).astimezone()
-        run_record = _read_run_record(ranked_file)
-        slate_id = run_record.get("slate_id")
+        run_record = _read_run_record(ranked_file) if ranked_file else {}
+        slate_id = run_record.get("slate_id") or assembly.get("slate_id")
         slate_date = slate_id[:10] if slate_id else run_time.strftime("%Y-%m-%d")
         # Same "<Type>-" prefix as the ranked file on non-main slates (slate_id ends in _classic_<type>).
         slate_type = slate_id.rsplit("_", 1)[-1] if slate_id else "main"
@@ -93,7 +110,10 @@ def run(cfg: Config, ranked_file: Optional[str] = None, run_time: Optional[datet
         print(f"Successfully exported {fill_count} lineups to {output_file}")
 
         try:
-            write_export_entry_set(output_file, ranked_file, run_record, run_time)
+            write_export_entry_set(
+                output_file, ranked_file or assembled_file, run_record, run_time,
+                assembly_id=assembly.get("assembly_id"),
+            )
         except Exception as e:
             print(f"Warning: entry set not written: {e}")
         return output_file
@@ -115,28 +135,47 @@ def _read_run_record(ranked_file: str) -> dict:
         return {}
 
 
+def _read_assembly_record(assembled_file: str) -> dict:
+    path = os.path.splitext(assembled_file)[0] + ".json"
+    if not os.path.isfile(path):
+        print(f"Warning: no assembly record next to {os.path.basename(assembled_file)}.")
+        return {}
+    return records.read_json(path)
+
+
 def write_export_entry_set(
-    export_file: str, ranked_file: str, run_record: dict, run_time: datetime
+    export_file: str, ranked_file: str, run_record: dict, run_time: datetime,
+    assembly_id: Optional[str] = None,
 ) -> str:
-    """Write the optimizer entry-set candidate for *export_file*; return its path.
+    """Write the optimizer L0 entry-set candidate for *export_file*; return its path.
 
-    Writes nothing (returns "") when the run record has no lock: either the
-    run was after the slate's last lock, or no slate facts were available
-    (e.g. a mid-night DKEntries in the legacy layout), so the lock is unknown.
+    The lock is the export's own: from the slate folder's slate.json at
+    *run_time* when there is one, else the run record's. Writes nothing
+    (returns "") unless that is lock 0: after lock 0, late swaps are captured
+    by ``nba-dfs-capture finalize`` / ``record`` (O-13 §3.13); with no slate
+    facts (e.g. a mid-night DKEntries in the legacy layout) the lock is unknown.
     """
-    from .slate import SLATE_FILE
-
-    lock = run_record.get("lock")
-    if lock is None:
-        reason = "run is after the slate's last lock" if run_record.get("slate_id") else "no slate facts for this run"
-        print(f"Warning: {reason}; no entry set written.")
-        return ""
+    from .slate import SLATE_FILE, lock_or_none
 
     slate_dir = os.path.dirname(os.path.abspath(ranked_file))
-    if os.path.isfile(os.path.join(slate_dir, SLATE_FILE)):
+    in_slate_dir = os.path.isfile(os.path.join(slate_dir, SLATE_FILE))
+    slate = records.read_json(os.path.join(slate_dir, SLATE_FILE)) if in_slate_dir else None
+    lock = lock_or_none(slate, run_time) if slate else run_record.get("lock")
+    if lock != 0:
+        if lock is not None:
+            reason = f"run is after lock 0 (before lock {lock})"
+        elif slate or run_record.get("slate_id"):
+            reason = "run is after the slate's last lock"
+        else:
+            reason = "no slate facts for this run"
+        print(f"Warning: {reason}; no entry set written.")
+        if slate or run_record.get("slate_id"):
+            print("Reminder: late swaps are captured by nba-dfs-capture finalize / record.")
+        return ""
+
+    if slate:
         lineups_file = records.snapshot_input(export_file, slate_dir, os.path.basename(export_file))
         target_dir = slate_dir
-        slate = records.read_json(os.path.join(slate_dir, SLATE_FILE))
         entry_order = slate.get("entry_ids")
     else:
         lineups_file = os.path.basename(export_file)
@@ -155,6 +194,7 @@ def write_export_entry_set(
         run_id=run_record.get("run_id"),
         rank_map=records.rank_map_from_ranked(ranked_file),
         entry_order=entry_order,
+        assembly_id=assembly_id,
     )
     path = records.write_entry_set(target_dir, payload)
     print(f"Entry set: {os.path.basename(path)} ({len(payload['entries'])} entries)")

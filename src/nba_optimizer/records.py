@@ -437,8 +437,12 @@ def make_entry_set(
     status: str = "recorded",
     rank_map: Optional[Dict[str, int]] = None,
     entry_order: Optional[List[str]] = None,
+    assembly_id: Optional[str] = None,
 ) -> dict:
-    """Build an entry-set payload from a parsed lineup file."""
+    """Build an entry-set payload from a parsed lineup file.
+
+    *assembly_id* (O-13) is included only for an export made from an assembly.
+    """
     rank_map = rank_map or {}
     ts = compact_ts(created_at)
     df = df_lineups
@@ -460,7 +464,7 @@ def make_entry_set(
             "lineup": lineup,
             "pre_lock_rank": rank_map.get(key),
         })
-    return {
+    payload = {
         "schema": SCHEMA_VERSION,
         "entry_set_id": f"{slate_id}_L{lock}_{ts}" if slate_id else f"L{lock}_{ts}",
         "slate_id": slate_id,
@@ -474,6 +478,9 @@ def make_entry_set(
         "status": status,
         "entries": entries,
     }
+    if assembly_id is not None:
+        payload["assembly_id"] = assembly_id
+    return payload
 
 
 def entry_set_filename(payload: dict) -> str:
