@@ -1,16 +1,31 @@
 import argparse
 
+from .config import Config
 from .orchestrator import run_pipeline
 from .settings import STAGES
 from .slate import SLATE_TYPES
 
+WEIGHT_DESTS = ("proj_weight", "own_weight", "geo_weight")
 
-def add_pipeline_args(parser) -> None:
+
+def add_pipeline_args(parser, gui: bool = False) -> None:
     """Define the pipeline arguments once for the CLI and the Gooey GUI (O-13 §3.12).
 
     Works with argparse.ArgumentParser and GooeyParser. Repeatable arguments
     also accept a ';'-separated list, since a GUI text box holds one value.
+    With *gui* (a GooeyParser) the weight boxes are pre-filled with their
+    defaults and a --from rank run uses what they show. The argparse default
+    stays None, so a cleared box (left off the command) still inherits.
     """
+    if gui:
+        weight_help = "on a --from rank run, clear the box to inherit the last rank's"
+    else:
+        weight_help = "or inherited on a --from run"
+
+    def prefill(name):
+        # A string, so the box shows 0.0 rather than treating it as empty.
+        return {"gooey_options": {"initial_value": str(getattr(Config, name))}} if gui else {}
+
     parser.add_argument(
         "--late_swap",
         action="store_true",
@@ -70,21 +85,24 @@ def add_pipeline_args(parser) -> None:
         "--proj_weight",
         type=float,
         default=None,
-        help="Weight for Projection Rank (Default: 0.8, or inherited on a --from run)",
+        help=f"Weight for Projection Rank (Default: {Config.proj_weight}, {weight_help})",
+        **prefill("proj_weight"),
     )
     parser.add_argument(
         "-ow",
         "--own_weight",
         type=float,
         default=None,
-        help="Weight for Ownership Rank (Default: 0.0, or inherited on a --from run)",
+        help=f"Weight for Ownership Rank (Default: {Config.own_weight}, {weight_help})",
+        **prefill("own_weight"),
     )
     parser.add_argument(
         "-gw",
         "--geo_weight",
         type=float,
         default=None,
-        help="Weight for Geomean Rank (Default: 0.2, or inherited on a --from run)",
+        help=f"Weight for Geomean Rank (Default: {Config.geo_weight}, {weight_help})",
+        **prefill("geo_weight"),
     )
     parser.add_argument(
         "--proj",
@@ -190,11 +208,18 @@ def add_pipeline_args(parser) -> None:
     )
 
 
-def pipeline_defaults() -> dict:
-    """Each pipeline argument's default, keyed by dest."""
+def pipeline_defaults(gui: bool = False) -> dict:
+    """Each pipeline argument's default, keyed by dest.
+
+    With *gui* the weights take the values their boxes start with, so an
+    untouched box doesn't count as typed for the ignored-flag warnings.
+    """
     parser = argparse.ArgumentParser()
     add_pipeline_args(parser)
-    return vars(parser.parse_args([]))
+    defaults = vars(parser.parse_args([]))
+    if gui:
+        defaults.update({name: getattr(Config, name) for name in WEIGHT_DESTS})
+    return defaults
 
 
 def main():
