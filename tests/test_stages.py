@@ -84,7 +84,7 @@ class Night:
 
     def run(self, *argv, gui=False):
         self.clock += timedelta(minutes=1)
-        orchestrator.run_pipeline(parse(list(argv), gui=gui), run_time=self.clock)
+        orchestrator.run_pipeline(parse(list(argv), gui=gui), run_time=self.clock, gui=gui)
         return self.clock
 
     def rank_record(self):
@@ -293,14 +293,13 @@ def test_ignored_flag_warns(night, capsys):
 GUI_BOXES = ("-pw", "0.8", "-ow", "0.0", "-gw", "0.2")       # the weight boxes as they start
 
 
-def test_gui_weight_boxes_prefilled(monkeypatch, night, capsys):
+def test_gui_weight_boxes_prefilled(night, capsys):
     """GUI weight boxes start at 0.8/0.0/0.2; a --from rank run uses what they show,
     a cleared box inherits, and untouched boxes raise no ignored-flag warning."""
     parser = FakeGooeyParser()
     cli.add_pipeline_args(parser, gui=True)
     assert {d: o["initial_value"] for d, o in parser.gooey_options.items()} == {
-        "proj_weight": 0.8, "own_weight": 0.0, "geo_weight": 0.2}
-    monkeypatch.setenv("GOOEY", "1")
+        "proj_weight": "0.8", "own_weight": "0.0", "geo_weight": "0.2"}
     night.run("-pw", "0.7", "-ow", "0.0", "-gw", "0.3", gui=True)
     night.run("--from", "rank", "--to", "rank", *GUI_BOXES, gui=True)
     assert _weights(night.rank_record()) == (0.8, 0.0, 0.2)
@@ -310,6 +309,10 @@ def test_gui_weight_boxes_prefilled(monkeypatch, night, capsys):
     capsys.readouterr()
     night.run("--from", "assemble", "--to", "assemble", *GUI_BOXES, gui=True)
     assert "ignored" not in capsys.readouterr().out
+    night.run("--from", "assemble", "--to", "assemble", "-pw", "0.6", "-ow", "0.0", "-gw", "0.2", gui=True)
+    out = capsys.readouterr().out
+    assert "Warning: -pw ignored" in out
+    assert "-ow ignored" not in out and "-gw ignored" not in out
 
 
 def test_effective_settings_block_names_sources(night, capsys):

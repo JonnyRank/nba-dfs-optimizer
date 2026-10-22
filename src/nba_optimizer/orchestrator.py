@@ -190,11 +190,13 @@ def _assembly_ranked_file(assembled_file: str) -> Optional[str]:
     return os.path.join(os.path.dirname(os.path.abspath(assembled_file)), name) if name else None
 
 
-def run_pipeline(args, run_time: Optional[datetime] = None):
+def run_pipeline(args, run_time: Optional[datetime] = None, gui: bool = False):
     """Run the stages generate -> rank -> assemble -> export between --from and --to.
 
     *args* may be any namespace with the cli.add_pipeline_args fields;
     missing ones take their defaults, so a GUI can call this directly.
+    With *gui*, untouched pre-filled weight boxes don't count as typed for
+    the ignored-flag warnings.
     """
     from .cli import pipeline_defaults
 
@@ -219,9 +221,7 @@ def run_pipeline(args, run_time: Optional[datetime] = None):
         print("===========================================")
         return
 
-    # Gooey sets GOOEY=1 in the run's environment; untouched pre-filled
-    # weight boxes then don't count as typed for the ignored-flag warnings.
-    defaults = pipeline_defaults(gui=os.environ.get("GOOEY") == "1")
+    defaults = pipeline_defaults(gui=gui)
     from_stage = _arg(args, "from_stage") or "generate"
     to_stage = _arg(args, "to_stage") or "export"
     # One instant supplies every stage's filenames, generated_at and the run ID.

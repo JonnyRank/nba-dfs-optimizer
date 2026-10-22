@@ -23,7 +23,8 @@ def add_pipeline_args(parser, gui: bool = False) -> None:
         weight_help = "or inherited on a --from run"
 
     def prefill(name):
-        return {"gooey_options": {"initial_value": getattr(Config, name)}} if gui else {}
+        # A string, so the box shows 0.0 rather than treating it as empty.
+        return {"gooey_options": {"initial_value": str(getattr(Config, name))}} if gui else {}
 
     parser.add_argument(
         "--late_swap",

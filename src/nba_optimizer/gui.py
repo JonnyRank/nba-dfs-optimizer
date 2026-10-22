@@ -18,7 +18,7 @@ from .orchestrator import run_pipeline
 def main():
     parser = GooeyParser(description="NBA DFS Optimizer - Main Orchestrator")
     add_pipeline_args(parser, gui=True)
-    run_pipeline(parser.parse_args())
+    run_pipeline(parser.parse_args(), gui=True)
 
 
 if __name__ == "__main__":
