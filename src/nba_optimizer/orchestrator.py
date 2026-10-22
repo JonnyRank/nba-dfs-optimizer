@@ -183,6 +183,9 @@ def run_pipeline(args, run_time: Optional[datetime] = None):
             df_players = merge_player_pool(df_players, pd.read_csv(projs_file), how="inner")
         n_entries = len(records.read_lineup_file(config.entries_path)) if "assemble" in stages else None
         eff = resolve_settings(args, config, record_dir, stages, df_players, n_entries)
+        if eff.caps is not None:
+            # Out-of-range values fail now, not after generate and rank.
+            assembler.validate_settings(eff.caps)
 
         pool_file = ranked_file = assembled_file = None
         parent_record = None

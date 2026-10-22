@@ -308,3 +308,27 @@ def test_gui_and_cli_share_args():
     assert {"from_stage", "to_stage", "proj", "own", "max_caps", "min_caps", "max_all",
             "clear_overrides", "clear_caps", "reset_settings", "pool", "ranked", "assembled",
             "slate_dir"} <= dests[0]
+
+
+def test_bad_cap_value_fails_before_generate(night, capsys):
+    """An out-of-range percentage is rejected before the engine runs; nothing is generated."""
+    night.run("--max-all", "600")
+    assert "0-100" in capsys.readouterr().out
+    assert night.engine_calls == 0
+    assert night.files("lineup-pool-") == []
+
+
+def test_clear_caps_by_name_for_player_not_in_pool(tmp_path):
+    """An inherited cap on a player missing from tonight's pool can still be cleared by name."""
+    from nba_optimizer.utils import parse_dk_entries
+
+    records.write_json_atomic(str(tmp_path / "assembled-lineups-2026-10-20_130000.json"), {
+        "generated_at": "2026-10-20T13:00:00-05:00",
+        "settings": {"max": [{"dk_id": 999, "name": "Ghost Player", "pct": 50, "count": 20},
+                             {"dk_id": OG_ANUNOBY, "name": "OG Anunoby", "pct": 50, "count": 20}],
+                     "min": [], "max_all": None},
+    })
+    df_players = parse_dk_entries(os.path.join(NIGHT_DIR, "Pre-L0-DKEntries.csv"))
+    args = parse(["--from", "assemble", "--clear-caps", "Ghost Player"])
+    caps = resolve_settings(args, Config(), str(tmp_path), ["assemble"], df_players, 40).caps
+    assert caps.max == {OG_ANUNOBY: 50}

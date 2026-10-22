@@ -134,3 +134,14 @@ def test_assemble_writes_csv_and_record(tmp_path):
     assert record["skipped_above_worst"] == 69 - 40
     anunoby = next(e for e in record["exposures"] if e["dk_id"] == OG_ANUNOBY)
     assert anunoby == {"dk_id": OG_ANUNOBY, "name": "OG Anunoby", "count": 20, "pct": 50.0}
+
+
+def test_own_max_replaces_max_all():
+    """--max-all 50 with --max "Dylan Harper=100": Harper (in all 100 lineups) stays at 40 of 40,
+    while the blanket cap binds on everyone else (Ausar Thompson is in 25 of the top 40)."""
+    result = assemble(_ranked(), AssembleSettings(n_entries=40, max={DYLAN_HARPER: 100}, max_all=50))
+    by_id = {e["dk_id"]: e["count"] for e in result.exposures}
+
+    assert by_id[DYLAN_HARPER] == 40
+    assert by_id[44451275] == 20
+    assert all(count <= 20 for dk_id, count in by_id.items() if dk_id != DYLAN_HARPER)

@@ -117,7 +117,7 @@ def add_pipeline_args(parser) -> None:
         dest="max_all",
         type=float,
         default=None,
-        help="Max exposure PCT for every player (a player's own --max replaces it)",
+        help="Max exposure PCT for every player (a player's own --max replaces it; --min doesn't)",
     )
     parser.add_argument(
         "--clear-overrides",
@@ -125,7 +125,7 @@ def add_pipeline_args(parser) -> None:
         nargs="?",
         const="all",
         default=None,
-        help='Drop inherited --proj/--own overrides: "all" or ";"-separated players',
+        help='Drop inherited --proj/--own overrides: "all" (type it in the GUI) or ";"-separated players',
     )
     parser.add_argument(
         "--clear-caps",
@@ -133,7 +133,7 @@ def add_pipeline_args(parser) -> None:
         nargs="?",
         const="all",
         default=None,
-        help='Drop inherited --max/--min caps: "all" (also --max-all) or ";"-separated players',
+        help='Drop inherited --max/--min caps: "all" (type it in the GUI; also drops --max-all) or ";"-separated players',
     )
     parser.add_argument(
         "--reset-settings",
@@ -144,12 +144,12 @@ def add_pipeline_args(parser) -> None:
     parser.add_argument(
         "--pool",
         default=None,
-        help="Lineup pool CSV for --from rank (Default: the latest run record's pool)",
+        help="Lineup pool CSV for --from rank (Default: the latest run record's pool; settings still inherit from the latest run)",
     )
     parser.add_argument(
         "--ranked",
         default=None,
-        help="Ranked lineups CSV for --from assemble (Default: the latest ranked file)",
+        help="Ranked lineups CSV for --from assemble (Default: the latest ranked file; caps still inherit from the latest assembly)",
     )
     parser.add_argument(
         "--assembled",

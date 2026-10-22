@@ -150,6 +150,27 @@ def warn_ignored(args, stages: List[str], defaults: Dict[str, object]) -> None:
         print(f"Warning: {FLAG_LABELS.get(name, name)} ignored: {why}.")
 
 
+def _clear_ids(targets: List[str], inherited: Dict[int, str], df_players, what: str) -> set:
+    """DK IDs to clear: each name is matched against the inherited entries first
+    (so a player missing from tonight's export can still be cleared), then the pool.
+    """
+    df_inherited = pd.DataFrame({"ID": [str(k) for k in inherited], "Name": list(inherited.values())})
+    ids = set()
+    for t in targets:
+        error = "nothing inherited"
+        for df in (df_inherited, df_players):
+            if df is None or df.empty:
+                continue
+            try:
+                ids.add(resolve_player(t, df)[0])
+                break
+            except ValueError as e:
+                error = e
+        else:
+            print(f"Warning: --clear-{what} {t!r} matched no inherited {what} ({error}); nothing cleared for it.")
+    return ids
+
+
 def _src(rec_path: Optional[str]) -> str:
     return f"inherited from {os.path.basename(rec_path)}"
 
@@ -175,7 +196,7 @@ def _resolve_overrides(args, df_players, rank_rec, rank_path, out: EffectiveSett
     if targets == []:
         inherited = []
     elif targets:
-        drop = {resolve_player(t, df_players)[0] for t in targets}
+        drop = _clear_ids(targets, {int(o["dk_id"]): o["name"] for o in inherited}, df_players, "overrides")
         inherited = [o for o in inherited if int(o["dk_id"]) not in drop]
 
     kept = {}
@@ -220,8 +241,8 @@ def _resolve_caps(args, df_players, n_entries: int, asm_rec, asm_path, out: Effe
         caps.max, caps.min, caps.max_all = {}, {}, None
         sources.clear()
     elif targets:
-        for t in targets:
-            dk_id = resolve_player(t, df_players)[0]
+        for dk_id in _clear_ids(targets, {k: caps.names.get(k, str(k)) for k in {**caps.max, **caps.min}},
+                                df_players, "caps"):
             caps.max.pop(dk_id, None)
             caps.min.pop(dk_id, None)
 
