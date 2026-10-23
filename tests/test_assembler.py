@@ -303,3 +303,13 @@ def test_diagnosis_timeout_is_reported_not_ruled_out(monkeypatch):
         assemble(_ranked(), AssembleSettings(n_entries=40, max={OG_ANUNOBY: 50}, min_unique=0))
     assert "couldn't check within 10 s" in str(exc.value) and "OG Anunoby max 50%" in str(exc.value)
     assert "no single constraint" not in str(exc.value)
+
+
+def test_real_time_limit_maps_to_timelimit():
+    """A real HiGHS solve cut off before any solution is TimeLimit with no rows (not PuLP's "Optimal")."""
+    df = assembler._sorted_pool(_ranked())
+    sets = assembler._player_sets(df)
+    settings = AssembleSettings(n_entries=40, min={KARL_ANTHONY_TOWNS: 20})
+    model = assembler.build_model(sets, df["Final_Rank"].tolist(), 40, assembler._constraints(settings, {}))
+    outcome = assembler.solve_model(model, time_limit=1e-6)
+    assert outcome.status == "TimeLimit" and outcome.chosen == [] and outcome.proven is False
