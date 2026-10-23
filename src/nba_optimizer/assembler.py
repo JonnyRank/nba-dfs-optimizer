@@ -1,10 +1,13 @@
 """Assemble the night's entries from a ranked pool under exposure caps (O-13).
 
-A small integer program: pick exactly N lineups, minimising the sum of
-their Final_Rank, with each player's count bounded by the --max/--min/
---max-all settings. With no settings the optimum is ranks 1..N.
+First -u/--min_unique walks the pool in rank order and drops any lineup too
+similar to a better-ranked one still in (O-14). Then a small integer program
+picks exactly N of the survivors, minimising the sum of their Final_Rank,
+with each player's count bounded by the --max/--min/--max-all settings.
+With no caps or floors the answer is the first N survivors and no solver runs.
 """
 
+import itertools
 import math
 import os
 import time
@@ -22,6 +25,8 @@ from .utils import extract_player_id
 ASSEMBLED_PREFIX = "assembled-lineups"
 # Re-solving once per dropped constraint is cheap (< 2 s each) up to this many.
 MAX_DIAGNOSE_CONSTRAINTS = 20
+# Every solve, including each diagnosis re-solve, stops here (O-14 §3.6).
+SOLVE_SECONDS = 10
 
 
 @dataclass
@@ -31,6 +36,7 @@ class AssembleSettings:
     min: Dict[int, float] = field(default_factory=dict)
     max_all: Optional[float] = None
     names: Dict[int, str] = field(default_factory=dict)
+    min_unique: int = Config.min_unique
 
 
 @dataclass
@@ -40,6 +46,8 @@ class AssembleResult:
     solve: dict
     kept_top_n: int
     skipped_above_worst: int
+    min_unique_removed: int = 0
+    pool_size: int = 0
 
 
 def max_count(pct: float, n: int) -> int:
@@ -55,6 +63,25 @@ def _player_sets(df_ranked: pd.DataFrame) -> List[set]:
         {int(pid) for pid in (extract_player_id(row[s]) for s in ROSTER_SLOTS) if pid}
         for _, row in df_ranked.iterrows()
     ]
+
+
+def unique_survivors(sets: List[set], min_unique: int,
+                     roster_size: int = len(ROSTER_SLOTS)) -> List[int]:
+    """Row positions (in the given order, i.e. Final_Rank order) kept by the walk-down:
+    a row is dropped when it shares >= roster_size + 1 - min_unique players with an
+    earlier kept row. All rows when min_unique <= 0.
+    """
+    if min_unique <= 0:
+        return list(range(len(sets)))
+    # Two lineups share >= size players exactly when they share a size-player subset.
+    size = roster_size + 1 - min_unique
+    taken, keep = set(), []
+    for i, players in enumerate(sets):
+        subs = list(itertools.combinations(sorted(players), size))
+        if not any(sub in taken for sub in subs):
+            keep.append(i)
+            taken.update(subs)
+    return keep
 
 
 def _names_from_pool(df_ranked: pd.DataFrame) -> Dict[int, str]:
@@ -139,46 +166,73 @@ def build_model(sets: List[set], ranks: List[int], n: int, constraints: List[dic
     return AssembleModel(prob=prob, x=x, n=n, constraints=built)
 
 
-def solve_model(model: AssembleModel):
-    """(status, chosen row positions) for the model as it stands."""
+@dataclass
+class SolveOutcome:
+    status: str        # "Optimal" (proven), "TimeLimit", "Infeasible", or another solver status
+    chosen: List[int]  # [] unless exactly N rows
+    proven: bool       # prob.sol_status == pulp.LpSolutionOptimal
+
+
+def _timed_out(prob: pulp.LpProblem) -> bool:
+    """HiGHS stopped at its time limit (PuLP maps a limit with nothing found to Not Solved)."""
+    highs = getattr(prob, "solverModel", None)
+    if highs is None:
+        return False
+    import highspy
+
+    return highs.getModelStatus() == highspy.HighsModelStatus.kTimeLimit
+
+
+def solve_model(model: AssembleModel, time_limit: float = SOLVE_SECONDS) -> SolveOutcome:
+    """Solve the model as it stands, stopping after *time_limit* seconds."""
     # Default threads: see the comment above engine.LineupModel.__init__.
-    model.prob.solve(pulp.HiGHS(msg=False))
-    status = pulp.LpStatus[model.prob.status]
-    if status != "Optimal":
-        return status, []
-    return status, [i for i, xi in enumerate(model.x) if (xi.value() or 0) > 0.5]
+    model.prob.solve(pulp.HiGHS(msg=False, timeLimit=time_limit))
+    # PuLP reports a HiGHS time limit as LpStatus "Optimal"; only sol_status says it isn't proven.
+    proven = model.prob.sol_status == pulp.LpSolutionOptimal
+    if proven:
+        status = "Optimal"
+    elif model.prob.sol_status == pulp.LpSolutionIntegerFeasible or _timed_out(model.prob):
+        status = "TimeLimit"
+    else:
+        status = pulp.LpStatus[model.prob.status]
+    chosen = []
+    if status in ("Optimal", "TimeLimit"):
+        chosen = [i for i, xi in enumerate(model.x) if (xi.value() or 0) > 0.5]
+        if len(chosen) != model.n:
+            chosen = []
+    return SolveOutcome(status=status, chosen=chosen, proven=proven)
 
 
-def _relaxed_feasible(model: AssembleModel, c: dict) -> bool:
+def _relaxed_solve(model: AssembleModel, c: dict) -> SolveOutcome:
     """Solve with *c* moved to a non-binding bound (a max to N, a min to 0), then restore it."""
     loose = model.n if c["kind"] in ("max", "max_all") else 0
     for row in c["rows"]:
         row.changeRHS(loose)
     try:
-        status, _ = solve_model(model)
+        return solve_model(model)
     finally:
         for row in c["rows"]:
             row.changeRHS(c["count"])
-    return status == "Optimal"
 
 
 def _sorted_pool(df_ranked: pd.DataFrame) -> pd.DataFrame:
     return df_ranked.sort_values("Final_Rank", kind="stable").reset_index(drop=True)
 
 
-def _precheck(df_ranked: pd.DataFrame, settings: AssembleSettings, sets: List[set], pool_names) -> List[str]:
-    n, size = settings.n_entries, len(df_ranked)
+def _precheck_floors(settings: AssembleSettings, sets: List[set], full_sets: List[set], pool_names) -> List[str]:
+    """Floors the survivors (*sets*) can't meet, noting when the full pool would meet one."""
+    n, size = settings.n_entries, len(sets)
     problems = []
-    if n > size:
-        problems.append(f"{n} entries but the pool has only {size} lineups")
     for dk_id, pct in settings.min.items():
         need = min_count(pct, n)
         have = sum(dk_id in s for s in sets)
         if have < need:
-            problems.append(
-                f"{_name(settings, pool_names, dk_id)} min {fmt_pct(pct)}% (>={need} of {n}): "
-                f"in {have} of {size} lineups, need {need}"
-            )
+            problem = (f"{_name(settings, pool_names, dk_id)} min {fmt_pct(pct)}% (>={need} of {n}): "
+                       f"in {have} of {size} lineups, need {need}")
+            have_full = sum(dk_id in s for s in full_sets)
+            if have_full >= need:
+                problem += f" ({have_full} of the full pool before min_unique {settings.min_unique})"
+            problems.append(problem)
     return problems
 
 
@@ -200,17 +254,18 @@ def _diagnose(model: AssembleModel, sets: List[set]) -> List[str]:
     """Culprits found by relaxing one constraint at a time in the already-built *model* (R1)."""
     if len(model.constraints) > MAX_DIAGNOSE_CONSTRAINTS:
         return ["infeasible; remove constraints to find the conflict"]
-    found = [_culprit_reason(c, sets, model.n) for c in model.constraints if _relaxed_feasible(model, c)]
+    found, unknown = [], []
+    for c in model.constraints:
+        outcome = _relaxed_solve(model, c)
+        if outcome.chosen:
+            found.append(_culprit_reason(c, sets, model.n))
+        elif outcome.status == "TimeLimit":
+            # Found nothing within the limit: not a culprit, but not ruled out either.
+            unknown.append(c["label"])
+    if unknown:
+        found.append(f"couldn't check within {SOLVE_SECONDS:g} s whether removing one of these "
+                     f"alone would fix it: {'; '.join(unknown)}")
     return found or ["infeasible; no single constraint is the cause, remove constraints to find the conflict"]
-
-
-def diagnose_infeasible(df_ranked: pd.DataFrame, settings: AssembleSettings) -> List[str]:
-    """Constraints whose removal alone makes the program feasible, with a reason each (§3.8)."""
-    df = _sorted_pool(df_ranked)
-    sets = _player_sets(df)
-    model = build_model(sets, df["Final_Rank"].astype(int).tolist(), settings.n_entries,
-                        _constraints(settings, _names_from_pool(df)))
-    return _diagnose(model, sets)
 
 
 def validate_settings(settings: AssembleSettings) -> None:
@@ -222,34 +277,103 @@ def validate_settings(settings: AssembleSettings) -> None:
         raise ValueError(f"exposure percentages must be within 0-100, got {[fmt_pct(p) for p in bad]}")
     if settings.n_entries <= 0:
         raise ValueError("no entries to assemble (DKEntries has no entry rows)")
+    if not 0 <= settings.min_unique <= len(ROSTER_SLOTS):
+        raise ValueError(f"min_unique must be 0-{len(ROSTER_SLOTS)}, got {settings.min_unique}")
+
+
+def selection_violations(chosen_sets: List[set], settings: AssembleSettings) -> List[str]:
+    """[] when there are N lineups, every pair shares <= 8 - u players (u >= 1), and all caps and floors hold."""
+    n, u = settings.n_entries, settings.min_unique
+    problems = []
+    if len(chosen_sets) != n:
+        problems.append(f"{len(chosen_sets)} lineups selected, need {n}")
+    if u >= 1:
+        most = len(ROSTER_SLOTS) - u
+        for a, b in itertools.combinations(range(len(chosen_sets)), 2):
+            if len(chosen_sets[a] & chosen_sets[b]) > most:
+                problems.append(f"entries {a + 1} and {b + 1} share more than {most} players")
+    counts: Dict[int, int] = {}
+    for players in chosen_sets:
+        for pid in players:
+            counts[pid] = counts.get(pid, 0) + 1
+    for dk_id, pct in settings.max.items():
+        if counts.get(dk_id, 0) > max_count(pct, n):
+            problems.append(f"{_name(settings, {}, dk_id)} over its max")
+    for dk_id, pct in settings.min.items():
+        if counts.get(dk_id, 0) < min_count(pct, n):
+            problems.append(f"{_name(settings, {}, dk_id)} under its min")
+    if settings.max_all is not None:
+        cap = max_count(settings.max_all, n)
+        problems += [f"{_name(settings, {}, pid)} over max-all" for pid, c in counts.items()
+                     if pid not in settings.max and c > cap]
+    return problems
+
+
+def _infeasible(reasons: List[str]) -> ValueError:
+    return ValueError("assemble infeasible:\n  " + "\n  ".join(reasons))
 
 
 def assemble(df_ranked: pd.DataFrame, settings: AssembleSettings) -> AssembleResult:
-    """Pick N lineups minimising the rank sum under the exposure settings.
+    """Pick N lineups minimising the rank sum under min_unique and the exposure settings.
 
     Raises ValueError, naming the culprit constraints, when the request is
     infeasible; never returns a partial set.
     """
     validate_settings(settings)
-    df = _sorted_pool(df_ranked)
-    sets = _player_sets(df)
-    pool_names = _names_from_pool(df)
-    n = settings.n_entries
+    df_full = _sorted_pool(df_ranked)
+    full_sets = _player_sets(df_full)
+    pool_names = _names_from_pool(df_full)
+    n, u = settings.n_entries, settings.min_unique
+    if n > len(df_full):
+        raise _infeasible([f"{n} entries but the pool has only {len(df_full)} lineups"])
 
-    problems = _precheck(df, settings, sets, pool_names)
+    # Walk-down (O-14 §3.3): of two lineups that are too similar, the better-ranked stays.
+    keep = unique_survivors(full_sets, u)
+    removed = len(df_full) - len(keep)
+    if len(keep) < n:
+        raise ValueError(f"min_unique {u}: only {len(keep)} of the pool's {len(df_full)} lineups "
+                         f"are that different (need {n}); lower -u")
+    df = df_full.iloc[keep].reset_index(drop=True)
+    sets = [full_sets[i] for i in keep]
+
+    problems = _precheck_floors(settings, sets, full_sets, pool_names)
     if problems:
-        raise ValueError("assemble infeasible:\n  " + "\n  ".join(problems))
+        raise _infeasible(problems)
 
     ranks = df["Final_Rank"].astype(int).tolist()
     constraints = _constraints(settings, pool_names)
-    started = time.perf_counter()
-    model = build_model(sets, ranks, n, constraints)
-    status, chosen = solve_model(model)
-    seconds = time.perf_counter() - started
-    if status != "Optimal":
-        # The diagnosis reuses this model rather than rebuilding it per attempt.
-        reasons = _diagnose(model, sets) if status == "Infeasible" else [f"solver status {status}"]
-        raise ValueError("assemble infeasible:\n  " + "\n  ".join(reasons))
+    if not constraints:
+        # No caps or floors: the optimum is the first N survivors.
+        chosen, method, status, proven, seconds = list(range(n)), "top_n", "Optimal", True, 0.0
+    else:
+        method = "ilp"
+        started = time.perf_counter()
+        model = build_model(sets, ranks, n, constraints)
+        outcome = solve_model(model)
+        seconds = time.perf_counter() - started
+        status, chosen, proven = outcome.status, outcome.chosen, outcome.proven
+        if status == "Infeasible":
+            # The diagnosis reuses this model rather than rebuilding it per attempt.
+            reasons = _diagnose(model, sets)
+            if removed > 0:
+                full_model = build_model(full_sets, df_full["Final_Rank"].astype(int).tolist(), n, constraints)
+                if solve_model(full_model).chosen:
+                    # The walk-down keeps the better-ranked lineup, so this says "try a lower -u",
+                    # not "-u and these caps can't both be met".
+                    reasons.append(f"min_unique {u}: removes {removed} of {len(df_full)} lineups; "
+                                   "these caps are feasible without it (try a lower -u)")
+            raise _infeasible(reasons)
+        if status == "TimeLimit" and not chosen:
+            raise ValueError(f"assemble: no solution found in {SOLVE_SECONDS:g} s; loosen caps or lower -u")
+        if not chosen:
+            raise _infeasible([f"solver status {status}"])
+        if status == "TimeLimit":
+            print(f"Warning: solver hit its {SOLVE_SECONDS:g} s limit; using its best solution so far "
+                  f"(rank sum {sum(ranks[i] for i in chosen)}). Not proven optimal.")
+
+    violations = selection_violations([sets[i] for i in chosen], settings)
+    if violations:
+        raise RuntimeError("assemble selection breaks its own rules: " + "; ".join(violations))
 
     df_sel = df.iloc[chosen].sort_values("Final_Rank", kind="stable").reset_index(drop=True)
     df_sel.insert(0, "Entry_Order", range(1, len(df_sel) + 1))
@@ -264,18 +388,23 @@ def assemble(df_ranked: pd.DataFrame, settings: AssembleSettings) -> AssembleRes
     ]
     worst = int(df_sel["Final_Rank"].max())
     selected = set(df_sel["Final_Rank"].astype(int))
+    # Against the full pool's ranks, so both min_unique and the caps count.
+    full_ranks = df_full["Final_Rank"].astype(int).tolist()
     return AssembleResult(
         df_selected=df_sel,
         exposures=exposures,
-        solve={"status": status, "objective_rank_sum": int(df_sel["Final_Rank"].sum()),
+        solve={"status": status, "method": method, "proven_optimal": proven,
+               "objective_rank_sum": int(df_sel["Final_Rank"].sum()),
                "seconds": round(seconds, 2), "worst_rank": worst},
-        kept_top_n=sum(1 for r in ranks[:n] if r in selected),
-        skipped_above_worst=sum(1 for r in ranks if r < worst and r not in selected),
+        kept_top_n=sum(1 for r in full_ranks[:n] if r in selected),
+        skipped_above_worst=sum(1 for r in full_ranks if r < worst and r not in selected),
+        min_unique_removed=removed,
+        pool_size=len(df_full),
     )
 
 
 def settings_payload(settings: AssembleSettings, pool_names: Optional[Dict[int, str]] = None) -> dict:
-    """The record's ``settings`` block: each cap with the count it becomes."""
+    """The record's ``settings`` block: each cap with the count it becomes, plus min_unique."""
     pool_names = pool_names or {}
     n = settings.n_entries
     return {
@@ -284,6 +413,7 @@ def settings_payload(settings: AssembleSettings, pool_names: Optional[Dict[int, 
         "min": [{"dk_id": k, "name": _name(settings, pool_names, k), "pct": v, "count": min_count(v, n)}
                 for k, v in settings.min.items()],
         "max_all": settings.max_all,
+        "min_unique": settings.min_unique,
     }
 
 
@@ -296,6 +426,14 @@ def print_summary(result: AssembleResult, settings: AssembleSettings) -> None:
         print(f"  min {c['name']}: {fmt_pct(c['pct'])}% of {n} -> at least {c['count']}")
     if settings.max_all is not None:
         print(f"  max-all: {fmt_pct(settings.max_all)}% of {n} -> at most {max_count(settings.max_all, n)} per player")
+    u, removed, size = settings.min_unique, result.min_unique_removed, result.pool_size
+    if u <= 0:
+        print(f"  min_unique: {u} (duplicates allowed)")
+    elif u == 1:
+        print(f"  min_unique: 1 -> removed {removed} exact duplicates of {size}")
+    else:
+        print(f"  min_unique: {u} -> any two entries share at most {len(ROSTER_SLOTS) - u} players; "
+              f"removed {removed} of {size}")
     by_id = {e["dk_id"]: e for e in result.exposures}
     for dk_id in list(settings.max) + [k for k in settings.min if k not in settings.max]:
         e = by_id.get(dk_id)
@@ -305,7 +443,12 @@ def print_summary(result: AssembleResult, settings: AssembleSettings) -> None:
     if settings.max_all is not None and result.exposures:
         top = result.exposures[0]
         print(f"  most exposed: {top['name']} {top['count']}/{n}")
-    print(f"Solve: {result.solve['status']} in {result.solve['seconds']:.1f} s")
+    if result.solve["method"] == "top_n":
+        print(f"Selection: top {n} after min_unique (no caps)")
+    elif result.solve["status"] == "TimeLimit":
+        print(f"Solve: TimeLimit after {SOLVE_SECONDS:g} s; best solution found (not proven optimal)")
+    else:
+        print(f"Solve: {result.solve['status']} in {result.solve['seconds']:.1f} s")
     print(f"Worst selected rank: {result.solve['worst_rank']}; {result.kept_top_n} of ranks 1-{n} kept")
 
 
@@ -358,6 +501,7 @@ def run(
         "n_entries": settings.n_entries,
         "settings": settings_payload(settings, _names_from_pool(df_ranked)),
         "inherited": list(inherited or []),
+        "min_unique_removed": result.min_unique_removed,
         "solve": result.solve,
         "exposures": result.exposures,
         "skipped_above_worst": result.skipped_above_worst,

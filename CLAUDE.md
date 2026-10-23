@@ -19,6 +19,11 @@ Nightly capture (O-0) is in place.
 - The Gooey GUI shares the same argument definitions.
 - On a finished slate, `--from rank` uses the parent run's projections and a full run uses the folder's newest L0 copy; `--no-slate-folder` keeps an experiment out of the night's capture.
 
+### Uniqueness at assemble (O-14)
+
+- The engine writes every generated lineup. `-u/--min_unique` is applied at assemble by walking the ranked pool: of two lineups sharing more than 8−u players, the better-ranked stays. The O-13 caps ILP then picks from the survivors; with no caps it takes the top N without a solver.
+- The solver has a 10 s limit and reports `proven_optimal`. `-u` carries forward like the caps; the GUI box is pre-filled with 1.
+
 ### Cloud sessions (Claude Code on the web)
 
 - A `SessionStart` hook (`.claude/hooks/session-start.sh`, matcher `startup|resume`) runs only when `CLAUDE_CODE_REMOTE=true` and is a no-op locally.

@@ -131,6 +131,8 @@ def test_assemble_writes_csv_and_record(tmp_path):
     assert record["ranked_file"] == os.path.basename(RANKED)
     assert record["settings"]["max"] == [{"dk_id": OG_ANUNOBY, "name": "OG Anunoby", "pct": 50, "count": 20}]
     assert record["solve"]["worst_rank"] == 69
+    assert record["solve"]["method"] == "ilp" and record["solve"]["proven_optimal"] is True
+    assert record["settings"]["min_unique"] == 1 and record["min_unique_removed"] == 0
     assert record["skipped_above_worst"] == 69 - 40
     anunoby = next(e for e in record["exposures"] if e["dk_id"] == OG_ANUNOBY)
     assert anunoby == {"dk_id": OG_ANUNOBY, "name": "OG Anunoby", "count": 20, "pct": 50.0}
@@ -168,3 +170,146 @@ def test_diagnose_builds_model_once(monkeypatch):
     assert len(builds) == 1
     culprits = str(exc.value).splitlines()[1:]
     assert len(culprits) == 1 and culprits[0].strip().startswith("Dylan Harper max 80%")
+
+
+# --- min_unique at assemble (O-14) --------------------------------------------
+# Numbers verified against the fixture with PuLP 3.3 + HiGHS on 2026-10-22/23.
+
+
+def _with_copy_of_rank_1() -> pd.DataFrame:
+    """The fixture with a copy of rank 1 inserted as rank 2, renumbered 1..101."""
+    df = _ranked()
+    df = pd.concat([df.iloc[[0]], df], ignore_index=True)
+    df["Final_Rank"] = range(1, len(df) + 1)
+    return df
+
+
+def _selected_sets(result) -> list:
+    return [{extract_player_id(row[s]) for s in ROSTER_SLOTS} for _, row in result.df_selected.iterrows()]
+
+
+def _max_shared(sets) -> int:
+    return max(len(a & b) for i, a in enumerate(sets) for b in sets[i + 1:])
+
+
+def test_unique_survivors_match_pairwise_walk():
+    """The subset lookup keeps exactly what comparing each row with every earlier kept row keeps."""
+    sets = assembler._player_sets(_ranked())
+    for u in range(1, 6):
+        naive = []
+        for i, players in enumerate(sets):
+            if all(len(players & sets[k]) <= 8 - u for k in naive):
+                naive.append(i)
+        assert assembler.unique_survivors(sets, u) == naive
+    assert assembler.unique_survivors(sets, 0) == list(range(100))
+
+
+def test_walkdown_drops_worse_copy_of_duplicate():
+    """Of two identical lineups the better-ranked stays; the copy at rank 2 goes."""
+    result = assemble(_with_copy_of_rank_1(), AssembleSettings(n_entries=40, min_unique=1))
+    assert result.df_selected["Final_Rank"].tolist() == [1] + list(range(3, 42))
+    assert result.min_unique_removed == 1
+    assert result.kept_top_n == 39 and result.skipped_above_worst == 1
+    assert result.solve["method"] == "top_n"
+
+
+def test_min_unique_zero_allows_duplicates():
+    result = assemble(_with_copy_of_rank_1(), AssembleSettings(n_entries=40, min_unique=0))
+    assert result.df_selected["Final_Rank"].tolist() == list(range(1, 41))
+
+
+def test_min_unique_2_fixture():
+    result = assemble(_ranked(), AssembleSettings(n_entries=40, min_unique=2))
+    assert result.min_unique_removed == 4
+    assert result.df_selected["Final_Rank"].tolist() == list(range(1, 41))
+
+
+def test_min_unique_3_fixture():
+    result = assemble(_ranked(), AssembleSettings(n_entries=40, min_unique=3))
+    ranks = result.df_selected["Final_Rank"].tolist()
+    assert result.min_unique_removed == 54
+    assert result.solve["objective_rank_sum"] == 1472 and result.solve["worst_rank"] == 84
+    assert result.kept_top_n == 23 and result.skipped_above_worst == 44
+    assert ranks[:2] == [1, 2]
+    assert _max_shared(_selected_sets(result)) <= 5
+
+
+def test_no_caps_skips_solver(monkeypatch):
+    def no_solve(*args, **kwargs):
+        raise AssertionError("solver called")
+
+    monkeypatch.setattr(assembler, "build_model", no_solve)
+    result = assemble(_ranked(), AssembleSettings(n_entries=40, min_unique=1))
+    assert result.df_selected["Final_Rank"].tolist() == list(range(1, 41))
+
+
+def test_min_unique_too_few_survivors(tmp_path):
+    cfg = Config(ranked_lineup_dir=str(tmp_path))
+    with pytest.raises(ValueError) as exc:
+        assembler.run(cfg, RANKED, AssembleSettings(n_entries=40, min_unique=4))
+    assert "min_unique 4" in str(exc.value) and "17" in str(exc.value)
+    assert os.listdir(tmp_path) == []
+
+
+def test_min_unique_blocks_cap_names_min_unique():
+    """Anunoby's 50% cap fits the full pool but not the 46 lineups left at -u 3."""
+    with pytest.raises(ValueError) as exc:
+        assemble(_ranked(), AssembleSettings(n_entries=40, max={OG_ANUNOBY: 50}, min_unique=3))
+    assert "OG Anunoby" in str(exc.value) and "min_unique 3" in str(exc.value)
+    assemble(_ranked(), AssembleSettings(n_entries=40, max={OG_ANUNOBY: 50}, min_unique=0))
+
+
+def test_floor_precheck_reports_full_pool():
+    with pytest.raises(ValueError) as exc:
+        assemble(_ranked(), AssembleSettings(n_entries=40, min={KARL_ANTHONY_TOWNS: 50}, min_unique=3))
+    assert "in 15 of 46 lineups, need 20" in str(exc.value)
+    assert "31 of the full pool" in str(exc.value)
+
+
+@pytest.mark.parametrize("u", [9, -1])
+def test_min_unique_out_of_range(u):
+    with pytest.raises(ValueError, match="0-8"):
+        assemble(_ranked(), AssembleSettings(n_entries=40, min_unique=u))
+
+
+def test_time_limit_uses_incumbent(monkeypatch, capsys):
+    """At the limit a valid N-lineup incumbent is used, flagged as not proven optimal."""
+    settings = AssembleSettings(n_entries=40, min={KARL_ANTHONY_TOWNS: 20}, min_unique=1)
+    proven = assemble(_ranked(), settings)
+    assert proven.solve["worst_rank"] == 47 and proven.kept_top_n == 35
+    rows = [r - 1 for r in proven.df_selected["Final_Rank"]]   # -u 1 removes nothing: row = rank - 1
+
+    monkeypatch.setattr(assembler, "solve_model", lambda model, **kw: assembler.SolveOutcome("TimeLimit", rows, False))
+    capsys.readouterr()
+    result = assemble(_ranked(), settings)
+    assert result.df_selected["Final_Rank"].tolist() == proven.df_selected["Final_Rank"].tolist()
+    assert result.solve["status"] == "TimeLimit" and result.solve["proven_optimal"] is False
+    assert result.solve["method"] == "ilp"
+    assert "Warning: solver hit its 10 s limit" in capsys.readouterr().out
+
+
+def test_time_limit_no_solution_fails(monkeypatch):
+    monkeypatch.setattr(assembler, "solve_model", lambda model, **kw: assembler.SolveOutcome("TimeLimit", [], False))
+    with pytest.raises(ValueError, match="no solution found in 10 s"):
+        assemble(_ranked(), AssembleSettings(n_entries=40, min={KARL_ANTHONY_TOWNS: 20}))
+
+
+def test_diagnosis_timeout_is_reported_not_ruled_out(monkeypatch):
+    """A relaxed re-solve that finds nothing in the limit is reported as unchecked, not as 'no single cause'."""
+    outcomes = iter([assembler.SolveOutcome("Infeasible", [], False)])
+    monkeypatch.setattr(assembler, "solve_model",
+                        lambda model, **kw: next(outcomes, assembler.SolveOutcome("TimeLimit", [], False)))
+    with pytest.raises(ValueError) as exc:
+        assemble(_ranked(), AssembleSettings(n_entries=40, max={OG_ANUNOBY: 50}, min_unique=0))
+    assert "couldn't check within 10 s" in str(exc.value) and "OG Anunoby max 50%" in str(exc.value)
+    assert "no single constraint" not in str(exc.value)
+
+
+def test_real_time_limit_maps_to_timelimit():
+    """A real HiGHS solve cut off before any solution is TimeLimit with no rows (not PuLP's "Optimal")."""
+    df = assembler._sorted_pool(_ranked())
+    sets = assembler._player_sets(df)
+    settings = AssembleSettings(n_entries=40, min={KARL_ANTHONY_TOWNS: 20})
+    model = assembler.build_model(sets, df["Final_Rank"].tolist(), 40, assembler._constraints(settings, {}))
+    outcome = assembler.solve_model(model, time_limit=1e-6)
+    assert outcome.status == "TimeLimit" and outcome.chosen == [] and outcome.proven is False

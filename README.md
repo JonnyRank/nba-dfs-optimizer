@@ -14,7 +14,7 @@ A high-performance optimization pipeline designed to generate, rank, and export 
 
 The project follows a modular pipeline orchestrated by the `nba-dfs-optimizer` command (or `scripts/run_optimizer.py` wrapper):
 
-1.  **Engine (`engine.py`):** Generates a pool of candidate lineups in parallel using randomness to explore the solution space while ensuring uniqueness.
+1.  **Engine (`engine.py`):** Generates a pool of candidate lineups in parallel using randomness to explore the solution space.
 2.  **Ranker (`ranker.py`):** Scores the generated pool based on user-defined weights for projections and ownership.
 3.  **Exporter (`exporter.py`):** Maps the top-ranked lineups into a DraftKings-compatible template and saves it to your folder of choice.
 4.  **Exposure Report (`exposure_report.py`):** Analyzes the exported lineups to calculate player exposures, projected ownership, and leverage.
@@ -60,7 +60,7 @@ nba-dfs-optimizer -n 2000 -mp 12 -r 0.25 -pw 0.8 -gw 0.2 -t 25
 | Long Flag | Short Flag | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `--num_lineups` | `-n` | 2500 | Total lineups to generate and export. |
-| `--min_unique` | `-u` | 1 | Minimum unique players between every lineup. |
+| `--min_unique` | `-u` | 1 | Minimum unique players between exported lineups (applied when selecting entries). |
 | `--min_projection` | `-mp` | 10.0 | Minimum projection for a player to be considered. |
 | `--min_salary` | `-ms` | 49500 | Minimum salary for a lineup. |
 | `--randomness` | `-r` | 0.25 | Random variance applied to projections (0.0 to 1.0). |

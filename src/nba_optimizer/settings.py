@@ -25,10 +25,10 @@ RECORD_PATTERNS = {"rank": "ranked-lineups-*.json", "assemble": "assembled-lineu
 WEIGHT_NAMES = (("proj_weight", "proj"), ("own_weight", "own"), ("geo_weight", "geo"))
 
 # Flags that only matter when a given stage runs (§6.1). Values are the arg dests.
-GENERATE_FLAGS = ("num_lineups", "randomness", "min_unique", "min_salary", "min_projection", "seed")
+GENERATE_FLAGS = ("num_lineups", "randomness", "min_salary", "min_projection", "seed")
 RANK_FLAGS = ("proj_weight", "own_weight", "geo_weight")
 OVERRIDE_FLAGS = ("proj", "own")
-CAP_FLAGS = ("max_caps", "min_caps", "max_all", "clear_caps")
+CAP_FLAGS = ("max_caps", "min_caps", "max_all", "clear_caps", "min_unique")
 EXPORT_FLAGS = ("top_x",)
 FLAG_LABELS = {
     "num_lineups": "-n", "randomness": "-r", "min_unique": "-u", "min_salary": "-ms",
@@ -269,6 +269,16 @@ def _resolve_caps(args, df_players, n_entries: int, asm_rec, asm_path, out: Effe
             out.lines.append(f"  {kind} {caps.names.get(dk_id, dk_id)} = {fmt_pct(pct)}% ({sources[(kind, dk_id)]})")
     if caps.max_all is not None:
         out.lines.append(f"  max_all = {fmt_pct(caps.max_all)}% ({sources[('max_all', None)]})")
+
+    # -u carries forward like the caps, but --clear-caps leaves it alone (O-14 §3.9).
+    if _arg(args, "min_unique") is not None:
+        caps.min_unique, source = int(_arg(args, "min_unique")), "typed"
+    elif settings.get("min_unique") is not None:
+        caps.min_unique, source = int(settings["min_unique"]), _src(asm_path)
+        out.assemble_inherited.append("min_unique")
+    else:
+        caps.min_unique, source = Config.min_unique, "default"
+    out.lines.append(f"  min_unique = {caps.min_unique} ({source})")
 
 
 def _live_keys(caps: AssembleSettings) -> set:

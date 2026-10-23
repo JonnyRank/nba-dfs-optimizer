@@ -328,7 +328,7 @@ def _opening_night_run(tmp_path, run_time=None):
     ranked = ranker.run(
         cfg, proj_weight=0.8, own_weight=0.0, geo_weight=0.2,
         lineup_file=pool, projs_file=projs,
-        num_lineups=2500, randomness=0.25, min_unique=1, base_seed=987654321,
+        num_lineups=2500, randomness=0.25, base_seed=987654321,
         slate=slate, run_time=run_time,
     )
     return cfg, slate_dir, ranked, run_time
@@ -353,7 +353,9 @@ def test_ranker_writes_run_record(tmp_path):
         os.path.join(NIGHT_DIR, "Pre-L0-DKEntries.csv"))
     assert len(record["inputs"]["projections"]["sha256"]) == 64
     params = record["params"]
-    assert None not in params.values()
+    # -u applies at assemble (O-14); the assembly record holds it.
+    assert params["min_unique"] is None
+    assert None not in {k: v for k, v in params.items() if k != "min_unique"}.values()
     assert isinstance(params["base_seed"], int) and params["base_seed"] == 987654321
     assert params["lineups_written"] == 100
 
@@ -464,3 +466,24 @@ def test_ranker_standalone_default_weights(tmp_path, monkeypatch):
     [record] = [n for n in os.listdir(cfg.ranked_lineup_dir) if n.endswith(".json")]
     params = records.read_json(os.path.join(cfg.ranked_lineup_dir, record))["params"]
     assert (params["proj_weight"], params["own_weight"], params["geo_weight"]) == (0.8, 0.0, 0.2)
+
+
+def test_exporter_without_assembly_skips_duplicate_lineups(tmp_path):
+    """Exporting straight from a ranked file (no assembly) never uploads the same lineup twice:
+    a copy of rank 1 at rank 2 is skipped, so the 40 entries are ranks 1, 3..41."""
+    from nba_optimizer import exporter
+
+    df = pd.read_csv(os.path.join(NIGHT_DIR, "ranked-lineups-2026-10-20_135723.csv"))
+    df = pd.concat([df.iloc[[0]], df], ignore_index=True)
+    df["Final_Rank"] = range(1, len(df) + 1)
+    ranked = str(tmp_path / "ranked-lineups-2026-10-20_135723.csv")
+    df.to_csv(ranked, index=False)
+    cfg = Config(entries_path=os.path.join(NIGHT_DIR, "Pre-L0-DKEntries.csv"),
+                 output_dir=str(tmp_path / "out"), base_dir=str(tmp_path / "exports"))
+    os.makedirs(cfg.output_dir)
+
+    export = exporter.run(cfg, ranked_file=ranked)
+    df_out = pd.read_csv(export)
+    rows = df_out[df_out["Entry ID"].notna()][list(ROSTER_SLOTS)].values.tolist()
+    expected = df.iloc[[0] + list(range(2, 41))][list(ROSTER_SLOTS)].values.tolist()
+    assert rows == expected

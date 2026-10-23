@@ -36,6 +36,9 @@ class Config:
     own_weight: float = 0.0
     geo_weight: float = 0.2
 
+    # --- ASSEMBLY (O-14) --- one source of the default
+    min_unique: int = 1
+
     # --- DIRECTORY SETTINGS ---
     entries_path: str = "DKEntries.csv"
     projs_dir: str = "projections"

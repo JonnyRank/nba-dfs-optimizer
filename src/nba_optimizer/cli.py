@@ -6,6 +6,8 @@ from .settings import STAGES
 from .slate import SLATE_TYPES
 
 WEIGHT_DESTS = ("proj_weight", "own_weight", "geo_weight")
+# GUI boxes that start filled with their Config default.
+PREFILLED_DESTS = WEIGHT_DESTS + ("min_unique",)
 
 
 def add_pipeline_args(parser, gui: bool = False) -> None:
@@ -13,14 +15,16 @@ def add_pipeline_args(parser, gui: bool = False) -> None:
 
     Works with argparse.ArgumentParser and GooeyParser. Repeatable arguments
     also accept a ';'-separated list, since a GUI text box holds one value.
-    With *gui* (a GooeyParser) the weight boxes are pre-filled with their
-    defaults and a --from rank run uses what they show. The argparse default
+    With *gui* (a GooeyParser) the weight and -u boxes are pre-filled with
+    their defaults and a --from run uses what they show. The argparse default
     stays None, so a cleared box (left off the command) still inherits.
     """
     if gui:
         weight_help = "on a --from rank run, clear the box to inherit the last rank's"
+        unique_help = "; on a --from run, clear the box to inherit the last assembly's"
     else:
         weight_help = "or inherited on a --from run"
+        unique_help = ", or inherited on a --from run"
 
     def prefill(name):
         # A string, so the box shows 0.0 rather than treating it as empty.
@@ -63,8 +67,9 @@ def add_pipeline_args(parser, gui: bool = False) -> None:
         "-u",
         "--min_unique",
         type=int,
-        default=1,
-        help="Min unique players between lineups (Default: 1)",
+        default=None,
+        help=f"Min unique players between exported lineups (Default: {Config.min_unique}{unique_help})",
+        **prefill("min_unique"),
     )
     parser.add_argument(
         "-ms",
@@ -211,14 +216,14 @@ def add_pipeline_args(parser, gui: bool = False) -> None:
 def pipeline_defaults(gui: bool = False) -> dict:
     """Each pipeline argument's default, keyed by dest.
 
-    With *gui* the weights take the values their boxes start with, so an
-    untouched box doesn't count as typed for the ignored-flag warnings.
+    With *gui* the pre-filled boxes (weights, -u) take the values they start
+    with, so an untouched box doesn't count as typed for the ignored-flag warnings.
     """
     parser = argparse.ArgumentParser()
     add_pipeline_args(parser)
     defaults = vars(parser.parse_args([]))
     if gui:
-        defaults.update({name: getattr(Config, name) for name in WEIGHT_DESTS})
+        defaults.update({name: getattr(Config, name) for name in PREFILLED_DESTS})
     return defaults
 
 
