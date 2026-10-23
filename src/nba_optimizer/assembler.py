@@ -268,15 +268,6 @@ def _diagnose(model: AssembleModel, sets: List[set]) -> List[str]:
     return found or ["infeasible; no single constraint is the cause, remove constraints to find the conflict"]
 
 
-def diagnose_infeasible(df_ranked: pd.DataFrame, settings: AssembleSettings) -> List[str]:
-    """Constraints whose removal alone makes the program feasible, with a reason each (§3.8)."""
-    df = _sorted_pool(df_ranked)
-    sets = _player_sets(df)
-    model = build_model(sets, df["Final_Rank"].astype(int).tolist(), settings.n_entries,
-                        _constraints(settings, _names_from_pool(df)))
-    return _diagnose(model, sets)
-
-
 def validate_settings(settings: AssembleSettings) -> None:
     pcts = list(settings.max.values()) + list(settings.min.values())
     if settings.max_all is not None:

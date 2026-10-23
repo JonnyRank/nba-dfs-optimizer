@@ -45,6 +45,7 @@ PROJS_MEMBERSHIP_MIN = 0.5
 RUN_TS_RE = re.compile(r"(\d{4}-\d{2}-\d{2})_(\d{6})")
 
 # §3.18: the settings Jonny confirmed for runs that predate run records.
+# min_unique stays 1: before O-14 the engine applied it. Newer run records hold null.
 RECONSTRUCTED_ENGINE_PARAMS = {"num_lineups": 2500, "randomness": 0.25, "min_unique": 1, "base_seed": None}
 RECONSTRUCTED_WEIGHTS = {"proj": 0.8, "own": 0.0, "geo": 0.2}
 
