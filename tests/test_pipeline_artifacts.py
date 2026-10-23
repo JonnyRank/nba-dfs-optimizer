@@ -466,3 +466,24 @@ def test_ranker_standalone_default_weights(tmp_path, monkeypatch):
     [record] = [n for n in os.listdir(cfg.ranked_lineup_dir) if n.endswith(".json")]
     params = records.read_json(os.path.join(cfg.ranked_lineup_dir, record))["params"]
     assert (params["proj_weight"], params["own_weight"], params["geo_weight"]) == (0.8, 0.0, 0.2)
+
+
+def test_exporter_without_assembly_skips_duplicate_lineups(tmp_path):
+    """Exporting straight from a ranked file (no assembly) never uploads the same lineup twice:
+    a copy of rank 1 at rank 2 is skipped, so the 40 entries are ranks 1, 3..41."""
+    from nba_optimizer import exporter
+
+    df = pd.read_csv(os.path.join(NIGHT_DIR, "ranked-lineups-2026-10-20_135723.csv"))
+    df = pd.concat([df.iloc[[0]], df], ignore_index=True)
+    df["Final_Rank"] = range(1, len(df) + 1)
+    ranked = str(tmp_path / "ranked-lineups-2026-10-20_135723.csv")
+    df.to_csv(ranked, index=False)
+    cfg = Config(entries_path=os.path.join(NIGHT_DIR, "Pre-L0-DKEntries.csv"),
+                 output_dir=str(tmp_path / "out"), base_dir=str(tmp_path / "exports"))
+    os.makedirs(cfg.output_dir)
+
+    export = exporter.run(cfg, ranked_file=ranked)
+    df_out = pd.read_csv(export)
+    rows = df_out[df_out["Entry ID"].notna()][list(ROSTER_SLOTS)].values.tolist()
+    expected = df.iloc[[0] + list(range(2, 41))][list(ROSTER_SLOTS)].values.tolist()
+    assert rows == expected

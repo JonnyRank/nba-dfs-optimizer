@@ -7,6 +7,7 @@ from typing import Optional
 import pandas as pd
 
 from . import records
+from .assembler import _player_sets, unique_survivors
 from .config import Config, ROSTER_SLOTS, STANDARD_EXPORT_PREFIX
 from .utils import get_latest_file, read_ragged_csv
 
@@ -66,7 +67,14 @@ def run(
             if not ranked_file:
                 ranked_file = get_latest_file(cfg.ranked_lineup_dir, "ranked-lineups-*.csv")
             print(f"Using ranked lineups from: {os.path.basename(ranked_file)}")
-            df_ranked = pd.read_csv(ranked_file)
+            df_ranked = pd.read_csv(ranked_file).sort_values("Final_Rank", kind="stable").reset_index(drop=True)
+            # The pool keeps exact duplicates (O-14) and -u normally applies at
+            # assemble; without an assembly, still never upload the same lineup twice.
+            keep = unique_survivors(_player_sets(df_ranked), Config.min_unique)
+            if len(keep) < len(df_ranked):
+                print(f"No assembly: removed {len(df_ranked) - len(keep)} exact duplicates "
+                      f"(min_unique {Config.min_unique})")
+                df_ranked = df_ranked.iloc[keep].reset_index(drop=True)
 
         if len(df_ranked) < entry_count:
             print(
