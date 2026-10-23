@@ -135,7 +135,6 @@ def run(
     projs_file: Optional[str] = None,
     num_lineups: Optional[int] = None,
     randomness: Optional[float] = None,
-    min_unique: Optional[int] = None,
     base_seed: Optional[int] = None,
     slate: Optional[dict] = None,
     run_time: Optional[datetime] = None,
@@ -158,9 +157,11 @@ def run(
             fallback behaviour).
         projs_file: Explicit path to a projections CSV. When omitted,
             the most recent file in ``cfg.projs_dir`` is used.
-        num_lineups, randomness, min_unique, base_seed: Engine settings to
+        num_lineups, randomness, base_seed: Engine settings to
             record. When all are given (orchestrated run) ``params_source``
             is ``cli``; otherwise ``partial`` with unknowns as ``null``.
+            ``params.min_unique`` is recorded as ``null``: -u applies at
+            assemble (O-14), and the assembly record holds it.
         slate: Slate facts from ``slate.load_or_write_slate``; gives the
             slate ID, the slate date for the filename and the lock.
         run_time: The run's instant, shared by every stage's filenames.
@@ -236,7 +237,6 @@ def run(
         engine_params = {
             "num_lineups": num_lineups,
             "randomness": randomness,
-            "min_unique": min_unique,
             "base_seed": base_seed,
         }
         params_source = "cli" if None not in engine_params.values() else "partial"

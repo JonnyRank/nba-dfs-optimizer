@@ -74,6 +74,7 @@ class Night:
         monkeypatch.setattr(engine, "run", self._fake_engine)
 
     def _fake_engine(self, cfg, run_time=None, slate_date=None, **kwargs):
+        assert "min_unique" not in kwargs        # -u applies at assemble (O-14)
         self.engine_calls += 1
         if cfg.seed is None:
             cfg.seed = 12345
@@ -137,7 +138,7 @@ def test_full_run_unchanged(night):
     assert _slot_rows(export) == _slot_rows(ranked, 40)
     assert night.engine_calls == 1
     assert _weights(night.rank_record()) == (0.8, 0.0, 0.2)
-    assert night.assembly_record()["settings"] == {"max": [], "min": [], "max_all": None}
+    assert night.assembly_record()["settings"] == {"max": [], "min": [], "max_all": None, "min_unique": 1}
 
 
 def test_from_rank_skips_engine(night, monkeypatch):
@@ -185,7 +186,7 @@ def test_caps_inherited_by_next_assemble(night):
     record = night.assembly_record()
 
     assert _caps(record) == ({OG_ANUNOBY: 50}, {44451218: 20}, None)
-    assert record["inherited"] == ["max"]
+    assert record["inherited"] == ["max", "min_unique"]
 
 
 def test_caps_cleared_by_reset(night):
@@ -286,11 +287,14 @@ def test_ignored_flag_warns(night, capsys):
     night.run("--from", "assemble", "--to", "assemble", "-pw", "0.5", "-u", "2")
     out = capsys.readouterr().out
     assert "Warning: -pw ignored" in out
-    assert "Warning: -u ignored: the pool already exists" in out
-    assert night.assembly_record() is not None
+    assert "-u ignored" not in out
+    assert night.assembly_record()["settings"]["min_unique"] == 2
+
+    night.run("--from", "rank", "--to", "rank", "-u", "2")
+    assert "Warning: -u ignored: its stage doesn't run" in capsys.readouterr().out
 
 
-GUI_BOXES = ("-pw", "0.8", "-ow", "0.0", "-gw", "0.2")       # the weight boxes as they start
+GUI_BOXES = ("-pw", "0.8", "-ow", "0.0", "-gw", "0.2", "-u", "1")   # the pre-filled boxes as they start
 
 
 def test_gui_weight_boxes_prefilled(night, capsys):
@@ -299,7 +303,7 @@ def test_gui_weight_boxes_prefilled(night, capsys):
     parser = FakeGooeyParser()
     cli.add_pipeline_args(parser, gui=True)
     assert {d: o["initial_value"] for d, o in parser.gooey_options.items()} == {
-        "proj_weight": "0.8", "own_weight": "0.0", "geo_weight": "0.2"}
+        "proj_weight": "0.8", "own_weight": "0.0", "geo_weight": "0.2", "min_unique": "1"}
     night.run("-pw", "0.7", "-ow", "0.0", "-gw", "0.3", gui=True)
     night.run("--from", "rank", "--to", "rank", *GUI_BOXES, gui=True)
     assert _weights(night.rank_record()) == (0.8, 0.0, 0.2)
@@ -313,6 +317,70 @@ def test_gui_weight_boxes_prefilled(night, capsys):
     out = capsys.readouterr().out
     assert "Warning: -pw ignored" in out
     assert "-ow ignored" not in out and "-gw ignored" not in out
+
+
+def _shared(path):
+    """Most players any two of the file's lineups share."""
+    sets = [set(r) for r in _slot_rows(path)]
+    return max(len(a & b) for i, a in enumerate(sets) for b in sets[i + 1:])
+
+
+def test_min_unique_inherited_by_next_assemble(night, capsys):
+    """-u carries forward like the caps; --reset-settings and a full run go back to 1."""
+    night.run("--to", "rank")
+    night.run("--from", "assemble", "--to", "assemble", "-u", "2")
+    capsys.readouterr()
+    # A non-binding cap that still sends the run through the solver.
+    night.run("--from", "assemble", "--to", "assemble", "--max-all", "100")
+    record = night.assembly_record()
+    assert record["settings"]["min_unique"] == 2
+    assert "min_unique" in record["inherited"]
+    assert record["solve"]["method"] == "ilp"
+    assert "min_unique = 2 (inherited from assembled-lineups-" in capsys.readouterr().out
+
+    night.run("--from", "assemble", "--to", "assemble", "--reset-settings")
+    assert night.assembly_record()["settings"]["min_unique"] == 1
+    night.run("--from", "assemble", "--to", "assemble", "-u", "2")
+    night.run("--to", "assemble")
+    assert night.assembly_record()["settings"]["min_unique"] == 1
+
+
+def test_clear_caps_keeps_min_unique(night):
+    night.run("--to", "rank")
+    night.run("--from", "assemble", "--to", "assemble", "-u", "2", "--max", "OG Anunoby=50")
+    night.run("--from", "assemble", "--to", "assemble", "--clear-caps")
+    record = night.assembly_record()
+    assert _caps(record) == ({}, {}, None)
+    assert record["settings"]["min_unique"] == 2 and "min_unique" in record["inherited"]
+
+
+def test_gui_cleared_min_unique_box_inherits(night):
+    """A -u box left as shown is sent as typed; only a cleared box inherits."""
+    night.run("-u", "2", gui=True)
+    night.run("--from", "assemble", "--to", "assemble", *GUI_BOXES[:6], gui=True)    # -u box cleared
+    assert night.assembly_record()["settings"]["min_unique"] == 2
+    night.run("--from", "assemble", "--to", "assemble", *GUI_BOXES, gui=True)        # -u box as shown
+    assert night.assembly_record()["settings"]["min_unique"] == 1
+
+
+def test_bad_min_unique_fails_before_generate(night, capsys):
+    night.run("-u", "9")
+    assert "0-8" in capsys.readouterr().out
+    assert night.engine_calls == 0
+    assert night.files("lineup-pool-") == []
+
+
+def test_full_run_min_unique_applies_at_assemble(night):
+    """The pool keeps all 100 lineups; -u 3 leaves 41 survivors and the 40 entries share <= 5 players."""
+    night.run("-u", "3")
+    pool = os.path.join(night.slate_dir, night.files("lineup-pool-")[0])
+    assert len(pd.read_csv(pool)) == 100
+    record = night.assembly_record()
+    assert record["settings"]["min_unique"] == 3
+    assert record["min_unique_removed"] == 59
+    export = os.path.join(night.slate_dir, night.files("upload-ready-DKEntries-")[0])
+    assert len(_slot_rows(export)) == 40
+    assert _shared(export) <= 5
 
 
 def test_effective_settings_block_names_sources(night, capsys):

@@ -350,3 +350,17 @@ def test_engine_seed_reproducible():
     assert [j for j, _, _ in whole] == list(range(6))
     assert split == whole
     assert [p for _, p, _ in other] != [p for _, p, _ in whole]
+
+
+def test_engine_run_keeps_duplicates(tmp_path, monkeypatch):
+    """With no noise every solve is the same lineup, and all 6 stay in the pool (-u applies at assemble)."""
+    night = os.path.join(FIXTURES_DIR, "2026-10-20")
+    monkeypatch.setattr(engine.multiprocessing, "cpu_count", lambda: 2)
+    cfg = Config(entries_path=os.path.join(night, "Pre-L0-DKEntries.csv"),
+                 lineup_pool_dir=str(tmp_path), seed=1)
+    pool = engine.run(cfg, num_lineups=6, randomness=0.0,
+                      projs_file=os.path.join(night, "L0-NBA-Projs-2026-10-20_13-55-35.csv"))
+
+    rows = pd.read_csv(pool)[list(ROSTER_SLOTS)].values.tolist()
+    assert len(rows) == 6
+    assert all(row == rows[0] for row in rows)

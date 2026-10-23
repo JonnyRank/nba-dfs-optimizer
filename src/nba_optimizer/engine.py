@@ -394,7 +394,6 @@ def run(
     cfg: Config,
     num_lineups: int = 2500,
     randomness: float = 0.25,
-    min_unique: int = 1,
     projs_file: Optional[str] = None,
     run_time: Optional[datetime] = None,
     slate_date: Optional[str] = None,
@@ -420,7 +419,7 @@ def run(
     """
     print("Starting NBA DFS Optimizer (Parallel Mode)...")
     print(
-        f"Settings: {num_lineups} lineups, {randomness * 100:.0f}% randomness, {min_unique} min unique, {cfg.min_projection} min proj"
+        f"Settings: {num_lineups} lineups, {randomness * 100:.0f}% randomness, {cfg.min_projection} min proj"
     )
 
     # Check if randomness is 0
@@ -446,12 +445,6 @@ def run(
         df, _ = apply_override_list(df, overrides or [])
         df = df[df["Projection"] >= cfg.min_projection]
         print(f"Loaded {len(df)} players with proj >= {cfg.min_projection}")
-
-        # DEPRECATED - randomness of 0.25 renders duplicates mathematically improbable
-        # Strategy: Generate more than needed to account for duplicates/overlap
-        # target_lineups = num_lineups
-        # oversample_factor = 1 if min_unique > 1 else 1.25
-        # target_lineups = int(target_lineups * oversample_factor)
 
         target_lineups = num_lineups
 
@@ -521,36 +514,15 @@ def run(
             print("Error: no lineups were generated; aborting.")
             return ""
 
-        # Completion order varies run to run; filter in lineup-index order so
+        # Completion order varies run to run; write in lineup-index order so
         # the same seed reproduces the same pool.
         candidates.sort(key=lambda c: c[0])
 
-        # Filter for Uniqueness / Min Unique (lineups arrive already slotted)
-        final_lineups = []
-        selected_indices_list = []
-        duplicates_removed = 0
-
-        print("Filtering candidates for uniqueness...")
-        for _, positions, slotted in candidates:
-            if len(final_lineups) >= target_lineups:
-                break
-
-            indices = set(positions)
-            is_valid = True
-            for prev_indices in selected_indices_list:
-                overlap = len(indices.intersection(prev_indices))
-                if overlap > (cfg.roster_size - min_unique):
-                    is_valid = False
-                    duplicates_removed += 1
-                    break
-
-            if is_valid:
-                final_lineups.append(slotted)
-                selected_indices_list.append(indices)
-
-        print(f"Duplicates removed (min_unique constraint): {duplicates_removed}")
-
-        print(f"Final valid lineups slotted and selected: {len(final_lineups)}")
+        # Every solved lineup goes into the pool (lineups arrive already
+        # slotted); -u/--min_unique is applied at assemble (O-14).
+        final_lineups = [slotted for _, _, slotted in candidates]
+        duplicates = len(candidates) - len({frozenset(positions) for _, positions, _ in candidates})
+        print(f"Exact duplicates kept in pool: {duplicates} (-u applies at assemble)")
 
         # Save
         if not os.path.exists(cfg.lineup_pool_dir):
@@ -581,7 +553,6 @@ def main():
     parser = argparse.ArgumentParser(description="NBA DFS Optimization Engine (Parallel)")
     parser.add_argument("-n", "--num_lineups", type=int, default=2500, help="Number of lineups to generate (Default: 2500)")
     parser.add_argument("-r", "--randomness", type=float, default=0.25, help="Randomness factor 0.0-1.0 (Default: 0.25)")
-    parser.add_argument("-u", "--min_unique", type=int, default=1, help="Min unique players between lineups (Default: 1)")
     parser.add_argument("-ms", "--min_salary", type=int, default=49500, help="Min salary for a lineup (Default: 49500)")
     parser.add_argument("-mp", "--min_projection", type=float, default=10.0, help="Min projection for a player to be considered (Default: 10.0)")
     parser.add_argument("--seed", type=int, default=None, help="Base seed (Default: draw a fresh one)")
@@ -594,7 +565,6 @@ def main():
         cfg,
         num_lineups=args.num_lineups,
         randomness=args.randomness,
-        min_unique=args.min_unique,
     )
 
 

@@ -328,7 +328,7 @@ def _opening_night_run(tmp_path, run_time=None):
     ranked = ranker.run(
         cfg, proj_weight=0.8, own_weight=0.0, geo_weight=0.2,
         lineup_file=pool, projs_file=projs,
-        num_lineups=2500, randomness=0.25, min_unique=1, base_seed=987654321,
+        num_lineups=2500, randomness=0.25, base_seed=987654321,
         slate=slate, run_time=run_time,
     )
     return cfg, slate_dir, ranked, run_time
@@ -353,7 +353,9 @@ def test_ranker_writes_run_record(tmp_path):
         os.path.join(NIGHT_DIR, "Pre-L0-DKEntries.csv"))
     assert len(record["inputs"]["projections"]["sha256"]) == 64
     params = record["params"]
-    assert None not in params.values()
+    # -u applies at assemble (O-14); the assembly record holds it.
+    assert params["min_unique"] is None
+    assert None not in {k: v for k, v in params.items() if k != "min_unique"}.values()
     assert isinstance(params["base_seed"], int) and params["base_seed"] == 987654321
     assert params["lineups_written"] == 100
 
