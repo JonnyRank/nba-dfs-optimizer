@@ -292,3 +292,14 @@ def test_time_limit_no_solution_fails(monkeypatch):
     monkeypatch.setattr(assembler, "solve_model", lambda model, **kw: assembler.SolveOutcome("TimeLimit", [], False))
     with pytest.raises(ValueError, match="no solution found in 10 s"):
         assemble(_ranked(), AssembleSettings(n_entries=40, min={KARL_ANTHONY_TOWNS: 20}))
+
+
+def test_diagnosis_timeout_is_reported_not_ruled_out(monkeypatch):
+    """A relaxed re-solve that finds nothing in the limit is reported as unchecked, not as 'no single cause'."""
+    outcomes = iter([assembler.SolveOutcome("Infeasible", [], False)])
+    monkeypatch.setattr(assembler, "solve_model",
+                        lambda model, **kw: next(outcomes, assembler.SolveOutcome("TimeLimit", [], False)))
+    with pytest.raises(ValueError) as exc:
+        assemble(_ranked(), AssembleSettings(n_entries=40, max={OG_ANUNOBY: 50}, min_unique=0))
+    assert "couldn't check within 10 s" in str(exc.value) and "OG Anunoby max 50%" in str(exc.value)
+    assert "no single constraint" not in str(exc.value)

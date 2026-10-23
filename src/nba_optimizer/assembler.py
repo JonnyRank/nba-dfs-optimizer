@@ -203,20 +203,16 @@ def solve_model(model: AssembleModel, time_limit: float = SOLVE_SECONDS) -> Solv
     return SolveOutcome(status=status, chosen=chosen, proven=proven)
 
 
-def _relaxed_feasible(model: AssembleModel, c: dict) -> bool:
-    """Solve with *c* moved to a non-binding bound (a max to N, a min to 0), then restore it.
-
-    An attempt that finds no N-lineup solution within the limit doesn't count as feasible.
-    """
+def _relaxed_solve(model: AssembleModel, c: dict) -> SolveOutcome:
+    """Solve with *c* moved to a non-binding bound (a max to N, a min to 0), then restore it."""
     loose = model.n if c["kind"] in ("max", "max_all") else 0
     for row in c["rows"]:
         row.changeRHS(loose)
     try:
-        outcome = solve_model(model)
+        return solve_model(model)
     finally:
         for row in c["rows"]:
             row.changeRHS(c["count"])
-    return bool(outcome.chosen)
 
 
 def _sorted_pool(df_ranked: pd.DataFrame) -> pd.DataFrame:
@@ -258,7 +254,17 @@ def _diagnose(model: AssembleModel, sets: List[set]) -> List[str]:
     """Culprits found by relaxing one constraint at a time in the already-built *model* (R1)."""
     if len(model.constraints) > MAX_DIAGNOSE_CONSTRAINTS:
         return ["infeasible; remove constraints to find the conflict"]
-    found = [_culprit_reason(c, sets, model.n) for c in model.constraints if _relaxed_feasible(model, c)]
+    found, unknown = [], []
+    for c in model.constraints:
+        outcome = _relaxed_solve(model, c)
+        if outcome.chosen:
+            found.append(_culprit_reason(c, sets, model.n))
+        elif outcome.status == "TimeLimit":
+            # Found nothing within the limit: not a culprit, but not ruled out either.
+            unknown.append(c["label"])
+    if unknown:
+        found.append(f"couldn't check within {SOLVE_SECONDS:g} s whether removing one of these "
+                     f"alone would fix it: {'; '.join(unknown)}")
     return found or ["infeasible; no single constraint is the cause, remove constraints to find the conflict"]
 
 
@@ -361,8 +367,10 @@ def assemble(df_ranked: pd.DataFrame, settings: AssembleSettings) -> AssembleRes
             if removed > 0:
                 full_model = build_model(full_sets, df_full["Final_Rank"].astype(int).tolist(), n, constraints)
                 if solve_model(full_model).chosen:
+                    # The walk-down keeps the better-ranked lineup, so this says "try a lower -u",
+                    # not "-u and these caps can't both be met".
                     reasons.append(f"min_unique {u}: removes {removed} of {len(df_full)} lineups; "
-                                   "these caps are feasible without it")
+                                   "these caps are feasible without it (try a lower -u)")
             raise _infeasible(reasons)
         if status == "TimeLimit" and not chosen:
             raise ValueError(f"assemble: no solution found in {SOLVE_SECONDS:g} s; loosen caps or lower -u")
