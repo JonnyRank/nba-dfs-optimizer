@@ -36,7 +36,8 @@
 | `src/nba_optimizer/late_swapper.py` | Re-optimizing unlocked roster slots post-lock | Full lineup generation |
 | `src/nba_optimizer/config.py` | Constants (salary cap, roster size) and env-var path loading | Business logic |
 | `src/nba_optimizer/utils.py` | Shared utilities: file lookup, ID extraction, CSV parsing, time parsing | Module-specific logic |
-| `src/nba_optimizer/slate.py` | Slate facts, `slate.json`, lock numbering, slate-folder lookup | Optimization |
+| `src/nba_optimizer/inputs.py` | Per-slate-type projections and DKEntries picking, ID checks (O-15) | Writing outputs |
+| `src/nba_optimizer/slate.py` | Slate facts, `slate.json`, lock numbering, slate-folder lookup and guard | Optimization |
 | `src/nba_optimizer/records.py` | Run records, entry sets, file classification, blend check, copy helpers | Optimization, ranking |
 | `src/nba_optimizer/capture.py` | `nba-dfs-capture` CLI: nightly finalize and manual record | Lineup generation |
 | `scripts/` | Orchestration, argument parsing, user-facing entry points | Core optimization logic |

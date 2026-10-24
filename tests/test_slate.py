@@ -12,7 +12,7 @@ from nba_optimizer.records import read_json
 from nba_optimizer.slate import build_slate, load_or_write_slate, lock_for_time, team_game_lock
 from nba_optimizer.utils import parse_dk_entries
 
-from conftest import OPENING_NIGHT_DIR
+from conftest import OPENING_NIGHT_DIR, make_twin
 
 PRE_L0 = os.path.join(OPENING_NIGHT_DIR, "Pre-L0-DKEntries.csv")
 CT = ZoneInfo("America/Chicago")
@@ -96,3 +96,32 @@ def test_find_slate_dir_prefers_finished_slate_over_unlocked_one(tmp_path):
     assert find_slate_dir(cfg, noon) == last_night
     after_tonights_lock0 = datetime(2026, 10, 21, 18, 30, tzinfo=CT)
     assert find_slate_dir(cfg, after_tonights_lock0) == tonight
+
+
+def _folder_state(folder):
+    return {n: os.path.getmtime(os.path.join(folder, n)) for n in sorted(os.listdir(folder))}
+
+
+def test_folder_guard_existing_folder(tmp_path):
+    """O-15: the main DKEntries can't run in an existing night folder built from the night twin;
+    the folder's files are left as they were."""
+    twin = make_twin(PRE_L0, str(tmp_path / "DKEntries-Night.csv"))
+    cfg = Config(data_root=str(tmp_path / "slates"), slate_type="night")
+    _, night_dir = load_or_write_slate(cfg, twin)
+    assert os.path.basename(night_dir) == "2026-10-20_classic_night"
+    before = _folder_state(night_dir)
+
+    with pytest.raises(ValueError, match="match only 0 of 125 players in 2026-10-20_classic_night's"):
+        load_or_write_slate(cfg, PRE_L0)
+    assert _folder_state(night_dir) == before
+
+
+def test_folder_guard_sibling(tmp_path):
+    """Creating a night folder from the main slate's DKEntries names the main folder and creates nothing."""
+    slates = tmp_path / "slates"
+    load_or_write_slate(Config(data_root=str(slates)), PRE_L0)
+
+    with pytest.raises(ValueError, match=r"these DKEntries are 2026-10-20_classic_main's \(125 of 125 players\); "
+                                         "set the slate type to main or choose the night DKEntries"):
+        load_or_write_slate(Config(data_root=str(slates), slate_type="night"), PRE_L0)
+    assert not os.path.exists(slates / "2026-10-20_classic_night")

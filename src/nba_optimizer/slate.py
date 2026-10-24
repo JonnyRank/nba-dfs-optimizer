@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 
 import pandas as pd
 
-from .config import Config
+from .config import SLATE_TYPES, Config  # noqa: F401  (SLATE_TYPES re-exported)
 from .records import (
     SCHEMA_VERSION,
     read_json,
@@ -17,12 +17,13 @@ from .records import (
     snapshot_input,
     write_json_atomic,
 )
+from .inputs import MATCH_MIN, id_match, player_ids
 from .utils import parse_dk_entries
 
 ET = ZoneInfo("America/New_York")
 SLATE_FILE = "slate.json"
 PRE_L0_ENTRIES = "Pre-L0-DKEntries.csv"
-SLATE_TYPES = ("main", "early", "turbo", "afternoon", "night", "late")
+CLASSIC_SEP = "_classic_"            # slate_id = <slate_date>_classic_<slate_type>
 GAME_INFO_RE = re.compile(r"^([A-Za-z]{2,4})@([A-Za-z]{2,4}) (\d{2}/\d{2}/\d{4} \d{2}:\d{2}[AP]M) ET$")
 
 
@@ -89,7 +90,7 @@ def build_slate(entries_file: str, slate_type: str) -> dict:
 
     return {
         "schema": SCHEMA_VERSION,
-        "slate_id": f"{slate_date}_classic_{slate_type}",
+        "slate_id": f"{slate_date}{CLASSIC_SEP}{slate_type}",
         "slate_date": slate_date,
         "slate_type": slate_type,
         "source_file": name,
@@ -205,6 +206,7 @@ def load_or_write_slate(cfg: Config, entries_file: str) -> Tuple[Optional[dict],
             raise ValueError(f"first run of the night needs a pre-lock DKEntries ({error})")
 
     path = os.path.join(slate_dir, SLATE_FILE)
+    check_slate_folder(cfg, entries_file, slate_dir, creating=not os.path.isfile(path))
     if os.path.isfile(path):
         slate = read_json(path)
         _warn_on_drift(slate, entries_file)
@@ -219,6 +221,76 @@ def load_or_write_slate(cfg: Config, entries_file: str) -> Tuple[Optional[dict],
     return fresh, slate_dir
 
 
+def _folder_match(ids, slate_dir: str):
+    """(share, matched, n) of *ids* in slate_dir's Pre-L0-DKEntries.csv, or None without one."""
+    pre_l0 = os.path.join(slate_dir, PRE_L0_ENTRIES)
+    if not os.path.isfile(pre_l0):
+        return None
+    share = id_match(ids, player_ids(pre_l0))
+    return share, round(share * len(ids)), len(ids)
+
+
+def check_slate_folder(cfg: Config, entries_file: str, slate_dir: str, creating: bool) -> None:
+    """Decision-6 guard: the DKEntries must be *slate_dir*'s slate, not a sibling's.
+
+    An existing folder needs MATCH_MIN of the DKEntries' player IDs in its
+    Pre-L0-DKEntries.csv; a folder about to be created needs no other folder
+    of the same slate date to match. Raises ValueError before anything is written.
+    """
+    ids = player_ids(entries_file)
+    slate_id = os.path.basename(os.path.normpath(slate_dir))
+    own = None if creating else _folder_match(ids, slate_dir)
+    if own is not None and own[0] >= MATCH_MIN:
+        return
+    date_prefix = slate_id.split(CLASSIC_SEP)[0] + CLASSIC_SEP
+    siblings = sorted(
+        n for n in os.listdir(cfg.data_root)
+        if n.startswith(date_prefix) and n != slate_id and os.path.isdir(os.path.join(cfg.data_root, n))
+    ) if os.path.isdir(cfg.data_root) else []
+    for name in siblings:
+        found = _folder_match(ids, os.path.join(cfg.data_root, name))
+        if found and found[0] >= MATCH_MIN:
+            other_type = name[len(date_prefix):]
+            raise ValueError(
+                f"these DKEntries are {name}'s ({found[1]} of {found[2]} players); "
+                f"set the slate type to {other_type} or choose the {cfg.slate_type} DKEntries"
+            )
+    if own is not None:
+        raise ValueError(
+            f"these DKEntries match only {own[1]} of {own[2]} players in {slate_id}'s {PRE_L0_ENTRIES}; "
+            f"check the slate type or choose the {cfg.slate_type} DKEntries"
+        )
+
+
+def finished_slate_dir(cfg: Config, entries_file: str, when: datetime) -> Optional[str]:
+    """The finished cfg.slate_type folder whose Pre-L0-DKEntries holds these DKEntries' players, or None.
+
+    Newest first. Lets a re-run on last night's slate through once the
+    projections folder holds the next slate's exports (the past-slate rules
+    never use those).
+    """
+    if not cfg.data_root or not os.path.isdir(cfg.data_root):
+        return None
+    try:
+        ids = player_ids(entries_file)
+    except (ValueError, OSError):
+        return None
+    suffix = f"{CLASSIC_SEP}{cfg.slate_type}"
+    for name in sorted(os.listdir(cfg.data_root), reverse=True):
+        slate_dir = os.path.join(cfg.data_root, name)
+        path = os.path.join(slate_dir, SLATE_FILE)
+        if not name.endswith(suffix) or not os.path.isfile(path):
+            continue
+        try:
+            finished = lock_or_none(read_json(path), when) is None
+        except (ValueError, KeyError, IndexError, OSError):
+            continue
+        found = _folder_match(ids, slate_dir) if finished else None
+        if found and found[0] >= MATCH_MIN:
+            return slate_dir
+    return None
+
+
 def _existing_slate_dir(cfg: Config, entries_file: str) -> Optional[str]:
     """Locate tonight's slate folder from a post-lock DKEntries file."""
     try:
@@ -227,7 +299,7 @@ def _existing_slate_dir(cfg: Config, entries_file: str) -> Optional[str]:
         games = {}
     if games:
         date = min(games.values()).date().isoformat()
-        candidate = os.path.join(cfg.data_root, f"{date}_classic_{cfg.slate_type}")
+        candidate = os.path.join(cfg.data_root, f"{date}{CLASSIC_SEP}{cfg.slate_type}")
         if os.path.isfile(os.path.join(candidate, SLATE_FILE)):
             return candidate
     try:

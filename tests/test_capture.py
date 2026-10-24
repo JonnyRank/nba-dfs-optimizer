@@ -15,8 +15,11 @@ import pandas as pd
 import pytest
 
 from nba_optimizer import capture, records
+from nba_optimizer import config as config_mod
+from nba_optimizer.config import Config
+from nba_optimizer.slate import load_or_write_slate
 
-from conftest import set_mtime
+from conftest import make_twin, set_mtime
 
 SLATE_ID = "2026-10-20_classic_main"
 NEXT_MORNING = datetime.fromisoformat("2026-10-21T09:00:00-05:00")
@@ -329,3 +332,82 @@ def test_standings_from_zip(opening_night, tmp_path, capsys):
     payload = _finalize(opening_night, slate_dir)
     assert len([n for n in os.listdir(slate_dir) if n.startswith("contest-standings-196456024")]) == 1
     assert payload["standings"].count("contest-standings-196456024.csv") == 1
+
+
+# --- Alternate slates (O-15) ---
+
+
+def _write_slate(root, slate_id, starts):
+    d = root / slate_id
+    d.mkdir(parents=True)
+    records.write_json_atomic(str(d / "slate.json"), {
+        "slate_id": slate_id, "slate_date": slate_id[:10], "slate_type": slate_id.rsplit("_", 1)[-1],
+        "locks": [{"lock": k, "start": s, "games": []} for k, s in enumerate(starts)],
+    })
+    return str(d)
+
+
+def _two_slate_night(root):
+    """10/19 main, 10/20 main (3:00-9:30 PM ET) and a 10/20 night slate whose lock 0 is 2 h later."""
+    _write_slate(root, "2026-10-19_classic_main", ["2026-10-19T19:00:00-04:00"])
+    main = _write_slate(root, SLATE_ID, ["2026-10-20T15:00:00-04:00", "2026-10-20T21:30:00-04:00"])
+    night = _write_slate(root, "2026-10-20_classic_night", ["2026-10-20T17:00:00-04:00", "2026-10-20T22:00:00-04:00"])
+    return main, night
+
+
+def test_finalize_targets_all_slates_of_date(tmp_path):
+    """Next morning, finalize's targets are every 10/20 slate folder in lock-0 order, not 10/19's."""
+    main, night = _two_slate_night(tmp_path)
+    cfg = Config(data_root=str(tmp_path))
+    assert capture.finalize_targets(cfg, NEXT_MORNING) == [main, night]
+
+
+def test_finalize_main_loops_with_type_folders(tmp_path, monkeypatch, capsys):
+    """`finalize` with no arguments runs once per slate, each searching its own type's projections folder."""
+    main, night = _two_slate_night(tmp_path / "slates")
+    cfg = Config(data_root=str(tmp_path / "slates"), projs_dir=str(tmp_path / "projections"),
+                 downloads_dir=str(tmp_path / "downloads"))
+    calls = []
+    monkeypatch.setattr(config_mod, "load_config_from_env", lambda: cfg)
+    monkeypatch.setattr(capture, "finalize", lambda slate_dir, search_dirs, **kw: calls.append(
+        (slate_dir, search_dirs, kw["slate_type"])))
+
+    assert capture.main(["finalize"]) == 0
+    assert calls == [
+        (main, [cfg.downloads_dir, cfg.projs_dir], "main"),
+        (night, [cfg.downloads_dir, cfg.projs_dir + "-night"], "night"),
+    ]
+    out = capsys.readouterr().out
+    assert out.index(f"=== {SLATE_ID} ===") < out.index("=== 2026-10-20_classic_night ===")
+
+    # One slate failing doesn't stop the next; the exit code reports it.
+    def fail_main(slate_dir, search_dirs, **kw):
+        calls.append(slate_dir)
+        if slate_dir == main:
+            raise ValueError("main chain broken")
+
+    calls.clear()
+    monkeypatch.setattr(capture, "finalize", fail_main)
+    assert capture.main(["finalize"]) == 1
+    assert calls == [main, night]
+    assert "Error: main chain broken" in capsys.readouterr().out
+
+
+def test_record_picks_folder_by_ids(opening_night, tmp_path):
+    """With two 10/20 slates, `record` picks the folder whose Pre-L0 DKEntries holds the file's players."""
+    slates = tmp_path / "slates"
+    load_or_write_slate(Config(data_root=str(slates)), str(opening_night / "Pre-L0-DKEntries.csv"))
+    twin_entries = make_twin(str(opening_night / "Pre-L0-DKEntries.csv"), str(tmp_path / "DKEntries-Night.csv"))
+    _, night_dir = load_or_write_slate(Config(data_root=str(slates), slate_type="night"), twin_entries)
+    cfg = Config(data_root=str(slates))
+
+    twin_upload = make_twin(str(opening_night / "upload-ready-DKEntries-2026-10-20_135723.csv"),
+                            str(tmp_path / "upload-ready-DKEntries-Night-2026-10-20_135723.csv"))
+    assert capture._record_slate_dir(cfg, twin_upload) == night_dir
+    assert capture._record_slate_dir(cfg, str(opening_night / "upload-ready-DKEntries-2026-10-20_135723.csv")) \
+        == str(slates / SLATE_ID)
+
+    other = tmp_path / "NBA-Projs-2026-10-20_12-00-00.csv"
+    pd.DataFrame({"ID": [1, 2, 3], "Projection": [30.0, 20.0, 10.0], "Own_Proj": [10.0, 5.0, 1.0]}).to_csv(other, index=False)
+    with pytest.raises(ValueError, match="pass --slate-dir"):
+        capture._record_slate_dir(cfg, str(other))

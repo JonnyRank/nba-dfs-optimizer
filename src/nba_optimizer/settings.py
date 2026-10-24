@@ -141,6 +141,9 @@ def warn_ignored(args, stages: List[str], defaults: Dict[str, object]) -> None:
     for flag, stage in (("pool", "rank"), ("ranked", "assemble"), ("assembled", "export")):
         if _arg(args, flag) and from_stage != stage:
             ignored.append(flag)
+    if _arg(args, "slate_dir") and _arg(args, "entries"):
+        # The slate type's mismatch is warned about in orchestrator.use_slate_dir, which reads slate.json.
+        print("Warning: --entries ignored: --slate-dir uses the folder's Pre-L0-DKEntries.csv.")
     for name in ignored:
         why = "the pool already exists" if name in GENERATE_FLAGS else "its stage doesn't run"
         if name == "reset_settings":

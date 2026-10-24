@@ -1,6 +1,6 @@
 import argparse
 
-from .config import Config
+from .config import Config, downloads_dir_from_env
 from .orchestrator import run_pipeline
 from .settings import STAGES
 from .slate import SLATE_TYPES
@@ -25,6 +25,20 @@ def add_pipeline_args(parser, gui: bool = False) -> None:
     else:
         weight_help = "or inherited on a --from run"
         unique_help = ", or inherited on a --from run"
+
+    if gui:
+        entries_help = "DKEntries file. Leave blank to use the newest matching download"
+        # Reads NBA_DOWNLOADS_DIR (loading .env) while the parser is built: GUI only.
+        entries_widget = {
+            "widget": "FileChooser",
+            "gooey_options": {"default_dir": downloads_dir_from_env(), "wildcard": "CSV files (*.csv)|*.csv"},
+        }
+    else:
+        entries_help = (
+            "DKEntries file (Default: the newest DKEntries*.csv download from the last 24 h "
+            "whose players match the slate type's projections)"
+        )
+        entries_widget = {}
 
     def prefill(name):
         # A string, so the box shows 0.0 rather than treating it as empty.
@@ -110,6 +124,53 @@ def add_pipeline_args(parser, gui: bool = False) -> None:
         **prefill("geo_weight"),
     )
     parser.add_argument(
+        "-t",
+        "--top_x",
+        type=int,
+        default=25,
+        help="Display only top X exposed players (0 for all)",
+    )
+    parser.add_argument(
+        "--slate-type",
+        dest="slate_type",
+        choices=SLATE_TYPES,
+        default="main",
+        help="Slate type: picks the projections folder and names the slate folder (Default: main)",
+    )
+    parser.add_argument(
+        "--entries",
+        dest="entries",
+        default=None,
+        help=entries_help,
+        **entries_widget,
+    )
+    parser.add_argument(
+        "--no-slate-folder",
+        dest="no_slate_folder",
+        action="store_true",
+        help="This run only: ignore NBA_DATA_ROOT and use the legacy exports layout (for experiments)",
+    )
+    parser.add_argument(
+        "--slate-dir",
+        dest="slate_dir",
+        default=None,
+        help="Slate folder to work in, e.g. a past slate (uses its Pre-L0-DKEntries.csv)",
+    )
+    parser.add_argument(
+        "--max",
+        dest="max_caps",
+        action="append",
+        default=None,
+        help='Max exposure "PLAYER=PCT" (percent of entries); repeat or separate with ";"',
+    )
+    parser.add_argument(
+        "--max-all",
+        dest="max_all",
+        type=float,
+        default=None,
+        help="Max exposure PCT for every player (a player's own --max replaces it; --min doesn't)",
+    )
+    parser.add_argument(
         "--proj",
         action="append",
         default=None,
@@ -122,25 +183,11 @@ def add_pipeline_args(parser, gui: bool = False) -> None:
         help='Ownership override "PLAYER=VALUE"; repeat or separate with ";"',
     )
     parser.add_argument(
-        "--max",
-        dest="max_caps",
-        action="append",
-        default=None,
-        help='Max exposure "PLAYER=PCT" (percent of entries); repeat or separate with ";"',
-    )
-    parser.add_argument(
         "--min",
         dest="min_caps",
         action="append",
         default=None,
         help='Min exposure "PLAYER=PCT" (percent of entries); repeat or separate with ";"',
-    )
-    parser.add_argument(
-        "--max-all",
-        dest="max_all",
-        type=float,
-        default=None,
-        help="Max exposure PCT for every player (a player's own --max replaces it; --min doesn't)",
     )
     parser.add_argument(
         "--clear-overrides",
@@ -178,32 +225,6 @@ def add_pipeline_args(parser, gui: bool = False) -> None:
         "--assembled",
         default=None,
         help="Assembled lineups CSV for --from export (Default: the latest assembly)",
-    )
-    parser.add_argument(
-        "--slate-dir",
-        dest="slate_dir",
-        default=None,
-        help="Slate folder to work in, e.g. a past slate (uses its Pre-L0-DKEntries.csv)",
-    )
-    parser.add_argument(
-        "--no-slate-folder",
-        dest="no_slate_folder",
-        action="store_true",
-        help="This run only: ignore NBA_DATA_ROOT and use the legacy exports layout (for experiments)",
-    )
-    parser.add_argument(
-        "-t",
-        "--top_x",
-        type=int,
-        default=25,
-        help="Display only top X exposed players (0 for all)",
-    )
-    parser.add_argument(
-        "--slate-type",
-        dest="slate_type",
-        choices=SLATE_TYPES,
-        default="main",
-        help="Slate type used in the slate folder name (Default: main)",
     )
     parser.add_argument(
         "--seed",

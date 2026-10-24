@@ -294,3 +294,12 @@ def test_run_preserves_locks_and_min_games(tmp_path):
         final_games = {game_by_id.get(pid) for pid in ids}
         final_games.discard(None)
         assert len(final_games) >= Config().min_games
+
+
+def test_late_swap_output_name():
+    """O-15: a non-main slate's late swap gets the exporter's "<Type>-" prefix; main is unchanged."""
+    from datetime import datetime
+
+    when = datetime(2026, 10, 23, 20, 49, 17)
+    assert late_swapper.late_swap_output_name("night", when) == "late-swap-entries-Night-2026-10-23_204917.csv"
+    assert late_swapper.late_swap_output_name("main", when) == "late-swap-entries-2026-10-23_204917.csv"

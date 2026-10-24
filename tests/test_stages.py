@@ -21,9 +21,12 @@ from nba_optimizer import cli, engine, orchestrator, records
 from nba_optimizer.config import Config, ROSTER_SLOTS
 from nba_optimizer.settings import latest_record, resolve_settings
 
+from conftest import make_twin
+
 NIGHT_DIR = os.path.join(os.path.dirname(__file__), "fixtures", "2026-10-20")
 RANKED_FIXTURE = os.path.join(NIGHT_DIR, "ranked-lineups-2026-10-20_135723.csv")
 PROJS_NAME = "NBA-Projs-2026-10-20_13-55-35.csv"
+NIGHT_PROJS_NAME = "NBA-Projs-Night-2026-10-20_13-56-00.csv"
 JAYSON_TATUM = 44451207
 DYLAN_HARPER = 44451282
 OG_ANUNOBY = 44451272
@@ -31,16 +34,19 @@ CT = ZoneInfo("America/Chicago")
 
 
 class FakeGooeyParser(argparse.ArgumentParser):
-    """Accepts gooey_options like GooeyParser and keeps them by dest (Gooey is never imported)."""
+    """Accepts gooey_options and widget= like GooeyParser and keeps them by dest (Gooey is never imported)."""
 
     def __init__(self):
         super().__init__()
         self.gooey_options = {}
+        self.widgets = {}
 
-    def add_argument(self, *args, gooey_options=None, **kwargs):
+    def add_argument(self, *args, gooey_options=None, widget=None, **kwargs):
         action = super().add_argument(*args, **kwargs)
         if gooey_options:
             self.gooey_options[action.dest] = gooey_options
+        if widget:
+            self.widgets[action.dest] = widget
         return action
 
 
@@ -51,36 +57,51 @@ def parse(argv, gui=False):
 
 
 class Night:
-    """Tonight's inputs plus a run() that advances the clock a minute per call."""
+    """Tonight's inputs plus a run() that advances the clock a minute per call.
+
+    Alongside the main slate's files sits a night slate (O-15): the "night
+    twin" of the same files (same games, every DK player ID + 10,000,000) in
+    a projections-night folder and as the newer download DKEntries (1).csv.
+    """
 
     def __init__(self, tmp_path, monkeypatch):
         self.projs_dir = tmp_path / "projections"
         self.projs_dir.mkdir()
         shutil.copy(os.path.join(NIGHT_DIR, "L0-NBA-Projs-2026-10-20_13-55-35.csv"), self.projs_dir / PROJS_NAME)
-        downloads = tmp_path / "downloads"
-        downloads.mkdir()
-        shutil.copy(os.path.join(NIGHT_DIR, "Pre-L0-DKEntries.csv"), downloads / "DKEntries.csv")
+        self.night_projs_dir = tmp_path / "projections-night"
+        self.night_projs_dir.mkdir()
+        make_twin(os.path.join(NIGHT_DIR, "L0-NBA-Projs-2026-10-20_13-55-35.csv"),
+                  self.night_projs_dir / NIGHT_PROJS_NAME)
+        self.downloads = tmp_path / "downloads"
+        self.downloads.mkdir()
+        shutil.copy(os.path.join(NIGHT_DIR, "Pre-L0-DKEntries.csv"), self.downloads / "DKEntries.csv")
+        self.twin_entries = make_twin(os.path.join(NIGHT_DIR, "Pre-L0-DKEntries.csv"),
+                                      str(self.downloads / "DKEntries (1).csv"))
+        self.twin_ranked = make_twin(RANKED_FIXTURE, str(tmp_path / "twin-ranked.csv"))
         self.cfg = Config(
-            entries_path=str(downloads / "DKEntries.csv"),
+            entries_path=str(self.downloads / "DKEntries.csv"),
             projs_dir=str(self.projs_dir),
             base_dir=str(tmp_path / "exports"),
-            output_dir=str(downloads),
+            output_dir=str(self.downloads),
             data_root=str(tmp_path / "slates"),
+            downloads_dir=str(self.downloads),     # never the developer's ~/Downloads
         )
         self.slate_dir = str(tmp_path / "slates" / "2026-10-20_classic_main")
+        self.night_slate_dir = str(tmp_path / "slates" / "2026-10-20_classic_night")
         self.engine_calls = 0
         self.clock = datetime(2026, 10, 20, 13, 0, 0, tzinfo=CT)
         monkeypatch.setattr(orchestrator, "load_config_from_env", lambda: replace(self.cfg))
         monkeypatch.setattr(engine, "run", self._fake_engine)
 
-    def _fake_engine(self, cfg, run_time=None, slate_date=None, **kwargs):
+    def _fake_engine(self, cfg, run_time=None, slate_date=None, projs_file=None, **kwargs):
         assert "min_unique" not in kwargs        # -u applies at assemble (O-14)
         self.engine_calls += 1
         if cfg.seed is None:
             cfg.seed = 12345
         os.makedirs(cfg.lineup_pool_dir, exist_ok=True)
         path = os.path.join(cfg.lineup_pool_dir, f"lineup-pool-{slate_date}_{run_time:%H%M%S}.csv")
-        pd.read_csv(RANKED_FIXTURE)[list(ROSTER_SLOTS)].to_csv(path, index=False)
+        twin = projs_file and os.path.basename(projs_file).startswith("L0-NBA-Projs-Night-")
+        pd.read_csv(self.twin_ranked if twin else RANKED_FIXTURE)[list(ROSTER_SLOTS)].to_csv(path, index=False)
         return path
 
     def run(self, *argv, gui=False):
@@ -302,7 +323,7 @@ def test_gui_weight_boxes_prefilled(night, capsys):
     a cleared box inherits, and untouched boxes raise no ignored-flag warning."""
     parser = FakeGooeyParser()
     cli.add_pipeline_args(parser, gui=True)
-    assert {d: o["initial_value"] for d, o in parser.gooey_options.items()} == {
+    assert {d: o["initial_value"] for d, o in parser.gooey_options.items() if "initial_value" in o} == {
         "proj_weight": "0.8", "own_weight": "0.0", "geo_weight": "0.2", "min_unique": "1"}
     night.run("-pw", "0.7", "-ow", "0.0", "-gw", "0.3", gui=True)
     night.run("--from", "rank", "--to", "rank", *GUI_BOXES, gui=True)
@@ -557,3 +578,138 @@ def test_latest_l0_copy_uses_export_time_in_name(tmp_path):
         ts = datetime.fromisoformat(iso).timestamp()
         os.utime(tmp_path / name, (ts, ts))
     assert os.path.basename(orchestrator.latest_l0_projections(str(tmp_path))) == "L0-NBA-Projs-2026-10-20_13-59-41.csv"
+
+
+# --- Alternate slates (O-15) ---
+
+
+def _tree_state(folder):
+    return {n: os.path.getmtime(os.path.join(folder, n)) for n in sorted(os.listdir(folder))}
+
+
+def test_night_slate_full_run(night, capsys):
+    """--slate-type night with DKEntries blank: the night projections and the night download
+    (auto-picked past the main one), its own slate folder and upload file, main untouched."""
+    night.run()
+    main_before = _tree_state(night.slate_dir)
+    capsys.readouterr()
+
+    night.run("--slate-type", "night")
+
+    out = capsys.readouterr().out
+    assert "Slate type: night\n" in out
+    assert f"Projections: {NIGHT_PROJS_NAME} (newest in projections-night)\n" in out
+    assert "DKEntries: DKEntries (1).csv (auto: newest matching download; 125 of 125 players)\n" in out
+    assert os.path.isdir(night.night_slate_dir)
+    with open(os.path.join(night.night_slate_dir, "Pre-L0-DKEntries.csv"), encoding="utf-8") as a, \
+            open(night.twin_entries, encoding="utf-8") as b:
+        assert a.read() == b.read()
+    assert [n for n in os.listdir(night.downloads) if n.startswith("upload-ready-DKEntries-Night-2026-10-20_")]
+    assert _tree_state(night.slate_dir) == main_before
+
+
+def test_main_run_ignores_night_files(night, capsys):
+    """A night export saved in the main folder under a newer name is skipped, not used for main."""
+    night.run("--slate-type", "night")
+    shutil.copy(night.night_projs_dir / NIGHT_PROJS_NAME, night.projs_dir / "NBA-Projs-Night-2026-10-20_14-30-00.csv")
+    capsys.readouterr()
+
+    night.run()
+
+    out = capsys.readouterr().out
+    assert ("Warning: skipping NBA-Projs-Night-2026-10-20_14-30-00.csv in the main projections folder "
+            "(named for night)") in out
+    assert f"Projections: {PROJS_NAME} (newest in projections)" in out
+    assert night.rank_record()["inputs"]["projections"]["file"] == "L0-NBA-Projs-2026-10-20_13-55-35.csv"
+
+
+def test_finished_slate_reruns_after_next_slates_export(night, capsys):
+    """Next morning the projections folder's newest export is the next slate's (new DK IDs).
+    Re-runs on last night's finished slate still go through: the DKEntries belong to a finished
+    folder, whose own projections the past-slate rules use. Auto mode finds that DKEntries too."""
+    night.run()
+    make_twin(os.path.join(NIGHT_DIR, "L0-NBA-Projs-2026-10-20_13-55-35.csv"),
+              night.projs_dir / "NBA-Projs-2026-10-21_16-00-00.csv")
+    os.remove(night.twin_entries)   # tonight's DKEntries not downloaded yet
+    night.clock = datetime(2026, 10, 21, 0, 30, tzinfo=CT)  # after the 9:30 PM ET lock
+    capsys.readouterr()
+
+    night.run("--from", "rank", "--to", "rank", "-pw", "0.6")
+    out = capsys.readouterr().out
+    assert ("Projections: NBA-Projs-2026-10-21_16-00-00.csv (newest in projections; "
+            "not used: 2026-10-20_classic_main has finished)") in out
+    assert "DKEntries: DKEntries.csv (auto: newest download for a finished slate; 2026-10-20_classic_main)" in out
+    assert "Error" not in out
+    assert night.rank_record()["inputs"]["projections"]["file"] == "L0-NBA-Projs-2026-10-20_13-55-35.csv"
+
+    night.run("--from", "export", "--entries", str(night.downloads / "DKEntries.csv"))
+    out = capsys.readouterr().out
+    assert "DKEntries: DKEntries.csv (chosen; 2026-10-20_classic_main)" in out
+    assert "Error" not in out
+
+    # A plain full run doesn't fall back to last night's slate: it asks for tonight's DKEntries.
+    pools = night.files("lineup-pool-")
+    night.run()
+    out = capsys.readouterr().out
+    assert "no DKEntries downloaded in the last 24 h matches NBA-Projs-2026-10-21_16-00-00.csv" in out
+    assert night.files("lineup-pool-") == pools
+
+
+def test_unfinished_slate_still_needs_matching_projections(night, capsys):
+    """Before the slate's last lock, a DKEntries the newest projections don't cover still fails."""
+    night.run()
+    make_twin(os.path.join(NIGHT_DIR, "L0-NBA-Projs-2026-10-20_13-55-35.csv"),
+              night.projs_dir / "NBA-Projs-2026-10-20_13-58-00.csv")
+    capsys.readouterr()
+    night.run("--from", "rank", "--entries", str(night.downloads / "DKEntries.csv"))
+    out = capsys.readouterr().out
+    assert "matches 0 of 125 players in DKEntries.csv" in out
+    assert "for a past slate, pass --slate-dir" in out
+
+
+def test_wrong_slate_type_fails_clean(night, capsys):
+    """The night DKEntries chosen with slate type main fails before any slate folder is written."""
+    night.run("--entries", night.twin_entries)
+    assert "matches 0 of 125 players in DKEntries (1).csv" in capsys.readouterr().out
+    assert not os.path.exists(night.cfg.data_root)
+    assert night.engine_calls == 0
+
+
+def test_entries_ignored_with_slate_dir(night, capsys):
+    """--slate-dir works from the folder's own Pre-L0-DKEntries; --entries and a different --slate-type warn."""
+    night.run("--to", "rank")
+    capsys.readouterr()
+    night.run("--from", "assemble", "--to", "assemble", "--slate-dir", night.slate_dir,
+              "--entries", night.twin_entries, "--slate-type", "night")
+    out = capsys.readouterr().out
+    assert "Warning: --entries ignored: --slate-dir uses the folder's Pre-L0-DKEntries.csv." in out
+    assert "Warning: --slate-type night ignored: 2026-10-20_classic_main is a main slate." in out
+    assert "Error" not in out
+
+
+GUI_ORDER = [
+    "late_swap", "from_stage", "to_stage", "num_lineups", "randomness", "min_unique", "min_salary",
+    "min_projection", "proj_weight", "own_weight", "geo_weight",
+    "top_x", "slate_type", "entries", "no_slate_folder", "slate_dir", "max_caps", "max_all",
+    "proj", "own", "min_caps", "clear_overrides", "clear_caps", "reset_settings", "pool", "ranked",
+    "assembled", "seed",
+]
+
+
+def gui_dests():
+    parser = FakeGooeyParser()
+    cli.add_pipeline_args(parser, gui=True)
+    return [a.dest for a in parser._actions if a.dest != "help"]
+
+
+def test_gui_arg_order():
+    """Jonny's GUI order (O-15 §3.14): top_x, slate type and the DKEntries chooser right after the weights."""
+    assert gui_dests() == GUI_ORDER
+
+
+def test_entries_is_file_chooser():
+    """DKEntries is a file chooser in the GUI (a plain path on the CLI)."""
+    parser = FakeGooeyParser()
+    cli.add_pipeline_args(parser, gui=True)
+    assert parser.widgets == {"entries": "FileChooser"}
+    assert "default_dir" in parser.gooey_options["entries"]

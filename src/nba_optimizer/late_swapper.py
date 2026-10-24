@@ -2,7 +2,7 @@ import argparse
 import os
 import traceback
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 import pandas as pd
 import pulp
@@ -274,11 +274,17 @@ def solve_late_swap_batch(
     return generated_lineups
 
 
-def run(cfg: Config):
+def late_swap_output_name(slate_type: str, when: datetime) -> str:
+    """``late-swap-entries-[<Type>-]<date>_<HHMMSS>.csv``: the exporter's prefix rule for non-main slates."""
+    type_part = "" if slate_type == "main" else f"{slate_type.capitalize()}-"
+    return f"{LATE_SWAP_PREFIX}-{type_part}{when.strftime('%Y-%m-%d_%H%M%S')}.csv"
+
+
+def run(cfg: Config, projs_file: Optional[str] = None):
     print("Starting Late Swap Optimization...")
 
     try:
-        projs_file = get_latest_file(cfg.projs_dir, "NBA-Projs-*.csv")
+        projs_file = projs_file or get_latest_file(cfg.projs_dir, "NBA-Projs-*.csv")
         print(f"Using projections: {os.path.basename(projs_file)}")
 
         df_entries, entry_cols = read_ragged_csv(cfg.entries_path)
@@ -360,10 +366,7 @@ def run(cfg: Config):
             for s, player in update.items():
                 df_entries.at[idx, s] = player
 
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-        output_file = os.path.join(
-            cfg.output_dir, f"{LATE_SWAP_PREFIX}-{timestamp}.csv"
-        )
+        output_file = os.path.join(cfg.output_dir, late_swap_output_name(cfg.slate_type, datetime.now()))
 
         required_cols = list(ENTRY_HEADER_COLS) + list(ROSTER_SLOTS)
 
