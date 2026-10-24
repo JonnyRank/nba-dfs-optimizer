@@ -24,6 +24,11 @@ Nightly capture (O-0) is in place.
 - The engine writes every generated lineup. `-u/--min_unique` is applied at assemble by walking the ranked pool: of two lineups sharing more than 8−u players, the better-ranked stays. The O-13 caps ILP then picks from the survivors; with no caps it takes the top N without a solver.
 - The solver has a 10 s limit and reports `proven_optimal`. `-u` carries forward like the caps; the GUI box is pre-filled with 1.
 
+### Alternate slates (O-15)
+- `--slate-type` picks the projections folder (`NBA_PROJS_DIR` for main, `<NBA_PROJS_DIR>-<type>` or `NBA_PROJS_DIR_<TYPE>` otherwise); the newest file by name timestamp is used, and files named for another type are skipped.
+- `--entries` (GUI file chooser) defaults to the newest `DKEntries*.csv` download from the last 24 h matching those projections. DKEntries↔projections and DKEntries↔slate-folder ID checks run before anything is written.
+- `nba-dfs-capture finalize` with no arguments finalizes every slate of the night.
+
 ### Cloud sessions (Claude Code on the web)
 
 - A `SessionStart` hook (`.claude/hooks/session-start.sh`, matcher `startup|resume`) runs only when `CLAUDE_CODE_REMOTE=true` and is a no-op locally.

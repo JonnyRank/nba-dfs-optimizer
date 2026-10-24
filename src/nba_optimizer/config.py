@@ -1,6 +1,6 @@
 import os
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Dict, Optional
 
 from dotenv import load_dotenv
 
@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 # --- DRAFTKINGS ROSTER CONSTANTS ---
 ROSTER_SLOTS = ("PG", "SG", "SF", "PF", "C", "G", "F", "UTIL")
 ENTRY_HEADER_COLS = ("Entry ID", "Contest Name", "Contest ID", "Entry Fee")
+SLATE_TYPES = ("main", "early", "turbo", "afternoon", "night", "late")
 
 
 # --- EXPORT PREFIXES ---
@@ -42,6 +43,9 @@ class Config:
     # --- DIRECTORY SETTINGS ---
     entries_path: str = "DKEntries.csv"
     projs_dir: str = "projections"
+    # Non-main slate types' projections folders from NBA_PROJS_DIR_<TYPE>
+    # (O-15); a type without one uses the sibling folder <projs_dir>-<type>.
+    projs_dir_overrides: Dict[str, str] = field(default_factory=dict)
     base_dir: str = "exports"
     lineup_pool_dir: str = field(default="")
     ranked_lineup_dir: str = field(default="")
@@ -63,7 +67,7 @@ class Config:
         if not self.ranked_lineup_dir:
             self.ranked_lineup_dir = os.path.join(self.base_dir, "ranked-lineups")
         if not self.downloads_dir:
-            self.downloads_dir = os.path.join(os.path.expanduser("~"), "Downloads")
+            self.downloads_dir = default_downloads_dir()
 
     def ensure_directories(self):
         """Create required directories if they don't exist.
@@ -97,6 +101,35 @@ def _env_path(name: str) -> str:
     return value.rstrip("\\/") if value else ""
 
 
+def _load_dotenv() -> None:
+    """Load the .env nearest the package (the repo root for an editable install).
+
+    Searched from the package's location, not the working directory, so a
+    pythonw.exe shortcut or Gooey's relaunch reads the same .env as a terminal.
+    """
+    directory = os.path.dirname(os.path.abspath(__file__))
+    while True:
+        candidate = os.path.join(directory, ".env")
+        if os.path.isfile(candidate):
+            load_dotenv(candidate)
+            return
+        parent = os.path.dirname(directory)
+        if parent == directory:
+            load_dotenv()
+            return
+        directory = parent
+
+
+def default_downloads_dir() -> str:
+    return os.path.join(os.path.expanduser("~"), "Downloads")
+
+
+def downloads_dir_from_env() -> str:
+    """NBA_DOWNLOADS_DIR (read from .env too), else ~/Downloads; for the GUI's file chooser."""
+    _load_dotenv()
+    return _env_path("NBA_DOWNLOADS_DIR") or default_downloads_dir()
+
+
 def load_config_from_env() -> Config:
     """Load configuration from environment variables with defaults.
 
@@ -104,7 +137,7 @@ def load_config_from_env() -> Config:
         Config: Configuration instance populated from environment variables.
     """
     # Load environment variables from .env file if it exists
-    load_dotenv()
+    _load_dotenv()
 
     config = Config(
         entries_path=os.getenv("NBA_ENTRIES_PATH", "DKEntries.csv"),
@@ -113,6 +146,11 @@ def load_config_from_env() -> Config:
         output_dir=os.getenv("NBA_OUTPUT_DIR", "exports"),
         data_root=_env_path("NBA_DATA_ROOT"),
         downloads_dir=_env_path("NBA_DOWNLOADS_DIR"),
+        projs_dir_overrides={
+            t: _env_path(f"NBA_PROJS_DIR_{t.upper()}")
+            for t in SLATE_TYPES
+            if t != "main" and _env_path(f"NBA_PROJS_DIR_{t.upper()}")
+        },
     )
 
     # Ensure directories exist

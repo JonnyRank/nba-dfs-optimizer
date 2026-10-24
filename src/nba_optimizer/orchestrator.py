@@ -1,6 +1,5 @@
 import glob
 import os
-import re
 from dataclasses import replace
 from datetime import datetime
 from typing import Optional
@@ -9,11 +8,10 @@ import pandas as pd
 
 from . import assembler, engine, exporter, exposure_report, late_swapper, ranker, records
 from .config import load_config_from_env
+from .inputs import latest_projections, projs_dir_for, projs_name_time, resolve_inputs
 from .settings import find_record, latest_record_path, resolve_settings, stages_between, warn_ignored
 from .slate import PRE_L0_ENTRIES, SLATE_FILE, load_or_write_slate, lock_or_none
 from .utils import get_latest_file, merge_player_pool, parse_dk_entries
-
-PROJS_TIME_RE = re.compile(r"NBA-Projs-(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})")
 
 
 def _snapshot_projections(projs_file, slate, slate_dir, run_time):
@@ -41,20 +39,18 @@ def latest_l0_projections(slate_dir: str) -> str:
 
 
 def _export_time(path: str) -> datetime:
-    """The export time in an ``L0-NBA-Projs-YYYY-MM-DD_HH-MM-SS`` name, else the modified time.
+    """The export time in an ``L0-NBA-Projs-[<Type>-]YYYY-MM-DD_HH-MM-SS`` name, else the modified time.
 
     The name survives a copy that drops modified times (a Drive web download, a plain cp).
     """
-    match = PROJS_TIME_RE.search(os.path.basename(path))
-    if match:
-        return datetime.strptime(match.group(1), "%Y-%m-%d_%H-%M-%S")
-    return datetime.fromtimestamp(os.path.getmtime(path))
+    return projs_name_time(os.path.basename(path)) or datetime.fromtimestamp(os.path.getmtime(path))
 
 
-def _newest_projections(config, slate, slate_dir, run_time, with_projections, rerank):
+def _newest_projections(config, slate, slate_dir, run_time, with_projections, rerank, source_projs=None):
     """Projections for the run, or None when none are wanted.
 
-    Normally a snapshot of the newest export in projs_dir. On a finished
+    Normally a snapshot of *source_projs* (the run's resolved projections),
+    or of the newest export in projs_dir for the slate type. On a finished
     slate the newest export belongs to another slate, so a re-rank gets None
     (it uses the parent run's projections, R2) and a full run uses the
     folder's newest L0 copy, keeping a regenerated pool to pre-lock-0 numbers.
@@ -68,13 +64,13 @@ def _newest_projections(config, slate, slate_dir, run_time, with_projections, re
         print(f"past slate: using {os.path.basename(projs_file)}, the slate's last L0 projections")
         records.check_blend(pd.read_csv(projs_file))
         return projs_file
-    source_projs = get_latest_file(config.projs_dir, "NBA-Projs-*.csv")
+    source_projs = source_projs or latest_projections(config.projs_dir, config.slate_type)
     projs_file = _snapshot_projections(source_projs, slate, slate_dir, run_time)
     records.check_blend(pd.read_csv(projs_file))
     return projs_file
 
 
-def prepare_slate_inputs(config, run_time, with_projections=True, rerank=False):
+def prepare_slate_inputs(config, run_time, with_projections=True, rerank=False, source_projs=None):
     """Resolve tonight's slate and copy the run's inputs into its folder.
 
     Returns (config, slate, projs_file, slate_dir). With NBA_DATA_ROOT set,
@@ -100,15 +96,16 @@ def prepare_slate_inputs(config, run_time, with_projections=True, rerank=False):
             ranked_lineup_dir=slate_dir,
         )
 
-    projs_file = _newest_projections(config, slate, slate_dir, run_time, with_projections, rerank)
+    projs_file = _newest_projections(config, slate, slate_dir, run_time, with_projections, rerank, source_projs)
     return config, slate, projs_file, slate_dir
 
 
-def use_slate_dir(config, slate_dir, run_time, with_projections=True, rerank=False):
+def use_slate_dir(config, slate_dir, run_time, with_projections=True, rerank=False, typed_slate_type=None):
     """Like prepare_slate_inputs for an existing slate folder (``--slate-dir``).
 
     Uses the folder's Pre-L0-DKEntries.csv and slate.json; nothing but the
-    projections (when needed) is copied in.
+    projections (when needed) is copied in. The slate type is the folder's:
+    a different *typed_slate_type* is warned about and ignored.
     """
     slate_dir = os.path.abspath(slate_dir)
     slate_path = os.path.join(slate_dir, SLATE_FILE)
@@ -117,9 +114,31 @@ def use_slate_dir(config, slate_dir, run_time, with_projections=True, rerank=Fal
         if not os.path.isfile(path):
             raise FileNotFoundError(f"{os.path.basename(path)} not found in {slate_dir}")
     slate = records.read_json(slate_path)
-    config = replace(config, entries_path=entries, lineup_pool_dir=slate_dir, ranked_lineup_dir=slate_dir)
+    slate_type = slate.get("slate_type", config.slate_type)
+    if typed_slate_type and typed_slate_type != slate_type:
+        print(f"Warning: --slate-type {typed_slate_type} ignored: {slate['slate_id']} is a {slate_type} slate.")
+    config = replace(
+        config,
+        slate_type=slate_type,
+        projs_dir=projs_dir_for(config, slate_type, must_exist=False),
+        entries_path=entries,
+        lineup_pool_dir=slate_dir,
+        ranked_lineup_dir=slate_dir,
+    )
     projs_file = _newest_projections(config, slate, slate_dir, run_time, with_projections, rerank)
     return config, slate, projs_file, slate_dir
+
+
+def resolve_run_inputs(config, args, run_time):
+    """Pick the run's projections and DKEntries for its slate type (O-15) and print them.
+
+    Returns (config, inputs): config reads from the type's projections folder
+    and the chosen DKEntries, so every existing fallback reads the right files.
+    Raises before anything is written.
+    """
+    inputs = resolve_inputs(config, config.slate_type, _arg(args, "entries"), run_time)
+    inputs.print_lines()
+    return replace(config, projs_dir=inputs.projs_dir, entries_path=inputs.entries_file), inputs
 
 
 def parent_projections(config, record_dir: str, parent_record: dict) -> str:
@@ -212,9 +231,17 @@ def run_pipeline(args, run_time: Optional[datetime] = None, gui: bool = False):
         seed=_arg(args, "seed"),
     )
 
+    # One instant supplies every stage's filenames, generated_at and the run ID.
+    run_time = (run_time or datetime.now()).astimezone().replace(microsecond=0)
+
     if _arg(args, "late_swap"):
+        try:
+            config, inputs = resolve_run_inputs(config, args, run_time)
+        except (ValueError, KeyError, OSError) as e:
+            print(f"Error: {e}")
+            return
         print("\n=== RUNNING LATE SWAP RE-OPTIMIZATION ===")
-        late_swapper.run(config)
+        late_swapper.run(config, projs_file=inputs.projs_file)
         print("\n===========================================")
         print("Late Swap Complete!")
         print("Check your exports/ folder for the 'late-swap-entries' file.")
@@ -224,8 +251,6 @@ def run_pipeline(args, run_time: Optional[datetime] = None, gui: bool = False):
     defaults = pipeline_defaults(gui=gui)
     from_stage = _arg(args, "from_stage") or "generate"
     to_stage = _arg(args, "to_stage") or "export"
-    # One instant supplies every stage's filenames, generated_at and the run ID.
-    run_time = (run_time or datetime.now()).astimezone().replace(microsecond=0)
     try:
         stages = stages_between(from_stage, to_stage)
         if _arg(args, "no_slate_folder"):
@@ -237,12 +262,15 @@ def run_pipeline(args, run_time: Optional[datetime] = None, gui: bool = False):
         with_projections = from_stage in ("generate", "rank")
         rerank = from_stage == "rank"
         if _arg(args, "slate_dir"):
+            typed_type = _arg(args, "slate_type")
             config, slate, projs_file, slate_dir = use_slate_dir(
-                config, _arg(args, "slate_dir"), run_time, with_projections, rerank=rerank
+                config, _arg(args, "slate_dir"), run_time, with_projections, rerank=rerank,
+                typed_slate_type=typed_type if typed_type != defaults["slate_type"] else None,
             )
         else:
+            config, inputs = resolve_run_inputs(config, args, run_time)
             config, slate, projs_file, slate_dir = prepare_slate_inputs(
-                config, run_time, with_projections, rerank=rerank
+                config, run_time, with_projections, rerank=rerank, source_projs=inputs.projs_file
             )
         legacy = slate_dir is None
         record_dir = slate_dir or config.ranked_lineup_dir

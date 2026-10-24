@@ -26,7 +26,8 @@ This repo is a sequential file-based pipeline:
 6. `src/nba_optimizer/late_swapper.py` is the separate late-swap path.
 7. Nightly capture (O-0): `slate.py` (slate facts, `slate.json`, lock numbering), `records.py` (run records, entry sets, file classification) and `capture.py` (the `nba-dfs-capture finalize|record` CLI). See `docs/codebase/ARCHITECTURE.md`.
 8. Stage control (O-13): `assembler.py` (entries under exposure caps), `overrides.py` (`--proj/--own`), `settings.py` (`--from/--to`, inherited settings). `cli.add_pipeline_args` is shared by the CLI and GUI.
-9. `src/nba_optimizer/utils.py` holds the shared player-pool loader (`parse_dk_entries`, `merge_player_pool`) plus file/parsing helpers used across stages.
+9. Alternate slates (O-15): `inputs.py` picks the projections folder for `--slate-type` and the DKEntries (`--entries`, or the newest matching download), with ID checks before anything is written.
+10. `src/nba_optimizer/utils.py` holds the shared player-pool loader (`parse_dk_entries`, `merge_player_pool`) plus file/parsing helpers used across stages.
 
 Keep responsibilities in those modules. Do not move export, ranking, or report logic into the optimizer engine.
 
@@ -77,6 +78,7 @@ A deterministic pytest baseline exists:
 - `tests/test_pipeline_artifacts.py` — explicit artifact handoff between stages (ranker/exporter/exposure_report honor passed-in paths over "latest file").
 - `tests/test_ranker.py` — `ranker.rank_lineups` scoring semantics (totals, 0.1 geomean floor, weighted rank order, ties).
 - `tests/test_assembler.py`, `tests/test_overrides.py`, `tests/test_stages.py` — stage control (O-13): exposure-cap assembly on the 10/20 ranked fixture, overrides, `--from/--to` runs and inherited settings.
+- `tests/test_inputs.py`, `tests/test_docs.py` — alternate-slate inputs (O-15) on a "night twin" of the 10/20 files (`conftest.make_twin`), and the README settings table kept in GUI argument order.
 - `tests/test_slate.py`, `tests/test_records.py`, `tests/test_capture.py` — nightly capture on the real 2026-10-20 files (lock numbering, file classification, blend check, finalize chain verification, `record` checks). The engine seed is covered in `tests/test_engine_constraints.py`; run records and L0 entry sets in `tests/test_pipeline_artifacts.py`.
 
 The core export and leverage logic in `exporter.py` and `exposure_report.py` remains otherwise untested — prefer targeted manual verification with real CSV inputs and output inspection for those.

@@ -20,6 +20,7 @@ import pandas as pd
 
 from . import records
 from .config import Config, ROSTER_SLOTS, STANDARD_EXPORT_PREFIX
+from .inputs import MATCH_MIN, id_match, player_ids, projs_dir_for
 from .slate import (
     PRE_L0_ENTRIES,
     SLATE_FILE,
@@ -40,7 +41,7 @@ SLATE_ENTRIES_FILE = "slate-entries.csv"
 FINAL_ENTRIES = "Final-DKEntries.csv"
 
 # Projections whose IDs are mostly outside tonight's pool belong to another slate.
-PROJS_MEMBERSHIP_MIN = 0.5
+PROJS_MEMBERSHIP_MIN = MATCH_MIN
 
 RUN_TS_RE = re.compile(r"(\d{4}-\d{2}-\d{2})_(\d{6})")
 
@@ -910,6 +911,59 @@ def _resolve_slate_dir(cfg: Config, slate_dir: Optional[str], entries: Optional[
     return find_slate_dir(cfg, datetime.now().astimezone())
 
 
+def _slates_of_date(cfg: Config, slate_date: str) -> List[tuple]:
+    """(lock 0 start, folder) of every slate folder whose slate.json has *slate_date*, in lock-0 order."""
+    out = []
+    for name in sorted(os.listdir(cfg.data_root)):
+        path = os.path.join(cfg.data_root, name, SLATE_FILE)
+        if not os.path.isfile(path):
+            continue
+        try:
+            slate = records.read_json(path)
+            if slate.get("slate_date") == slate_date:
+                out.append((lock_starts(slate)[0], os.path.dirname(path)))
+        except (ValueError, KeyError, IndexError, OSError):
+            continue
+    return sorted(out)
+
+
+def finalize_targets(cfg: Config, now: datetime) -> List[str]:
+    """Every slate folder of the night find_slate_dir picks (same slate_date), in lock-0 order (O-15 §3.12)."""
+    picked = find_slate_dir(cfg, now)
+    slate_date = records.read_json(os.path.join(picked, SLATE_FILE))["slate_date"]
+    return [d for _, d in _slates_of_date(cfg, slate_date)] or [picked]
+
+
+def _record_slate_dir(cfg: Config, file: str) -> str:
+    """``record`` without --slate-dir: tonight's folder, or the one of that date whose
+    Pre-L0-DKEntries holds the file's players when several share it (§3.13)."""
+    picked = find_slate_dir(cfg, datetime.now().astimezone())
+    slate_date = records.read_json(os.path.join(picked, SLATE_FILE))["slate_date"]
+    folders = [d for _, d in _slates_of_date(cfg, slate_date)]
+    if len(folders) <= 1:
+        return picked
+    ids = player_ids(file)
+    matching = [
+        d for d in folders
+        if os.path.isfile(os.path.join(d, PRE_L0_ENTRIES))
+        and id_match(ids, player_ids(os.path.join(d, PRE_L0_ENTRIES))) >= MATCH_MIN
+    ]
+    if len(matching) != 1:
+        what = "none" if not matching else ", ".join(os.path.basename(d) for d in matching)
+        raise ValueError(
+            f"{os.path.basename(file)}: {len(folders)} slates on {slate_date} and its players match {what}; "
+            "pass --slate-dir"
+        )
+    return matching[0]
+
+
+def _slate_type_of(slate_dir: str, default: str) -> str:
+    path = os.path.join(slate_dir, SLATE_FILE)
+    if os.path.isfile(path):
+        return records.read_json(path).get("slate_type") or _slate_type_from_dir(slate_dir, default)
+    return _slate_type_from_dir(slate_dir, default)
+
+
 def main(argv=None):
     from .config import load_config_from_env
 
@@ -936,17 +990,31 @@ def main(argv=None):
         if args.command == "finalize":
             if args.assume_default_params and not args.entries:
                 parser.error("--assume-default-params needs --entries")
-            slate_dir = _resolve_slate_dir(cfg, args.slate_dir, args.entries)
-            finalize(
-                slate_dir,
-                [cfg.downloads_dir, cfg.projs_dir] + args.sweep,
-                dry_run=args.dry_run,
-                entries=args.entries,
-                assume_default_params=args.assume_default_params,
-                slate_type=cfg.slate_type,
-            )
+            if args.slate_dir or args.entries:
+                targets = [_resolve_slate_dir(cfg, args.slate_dir, args.entries)]
+            else:
+                targets = finalize_targets(cfg, datetime.now().astimezone())
+            failed = 0
+            for slate_dir in targets:
+                slate_type = _slate_type_of(slate_dir, cfg.slate_type)
+                if not (args.slate_dir or args.entries):
+                    print(f"\n=== {os.path.basename(os.path.normpath(slate_dir))} ===")
+                try:
+                    finalize(
+                        slate_dir,
+                        [cfg.downloads_dir, projs_dir_for(cfg, slate_type, must_exist=False)] + args.sweep,
+                        dry_run=args.dry_run,
+                        entries=args.entries,
+                        assume_default_params=args.assume_default_params,
+                        slate_type=slate_type,
+                    )
+                except (ValueError, FileNotFoundError) as e:
+                    print(f"Error: {e}")
+                    failed += 1
+            return 1 if failed else 0
         else:
-            record(args.file, _resolve_slate_dir(cfg, args.slate_dir, None), lock=args.lock, source=args.source)
+            slate_dir = args.slate_dir or _record_slate_dir(cfg, args.file)
+            record(args.file, slate_dir, lock=args.lock, source=args.source)
     except (ValueError, FileNotFoundError) as e:
         print(f"Error: {e}")
         return 1
