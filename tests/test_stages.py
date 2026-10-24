@@ -623,6 +623,43 @@ def test_main_run_ignores_night_files(night, capsys):
     assert night.rank_record()["inputs"]["projections"]["file"] == "L0-NBA-Projs-2026-10-20_13-55-35.csv"
 
 
+def test_finished_slate_reruns_after_next_slates_export(night, capsys):
+    """Next morning the projections folder's newest export is the next slate's (new DK IDs).
+    Re-runs on last night's finished slate still go through: the DKEntries belong to a finished
+    folder, whose own projections the past-slate rules use. Auto mode finds that DKEntries too."""
+    night.run()
+    make_twin(os.path.join(NIGHT_DIR, "L0-NBA-Projs-2026-10-20_13-55-35.csv"),
+              night.projs_dir / "NBA-Projs-2026-10-21_16-00-00.csv")
+    os.remove(night.twin_entries)   # tonight's DKEntries not downloaded yet
+    night.clock = datetime(2026, 10, 21, 0, 30, tzinfo=CT)  # after the 9:30 PM ET lock
+    capsys.readouterr()
+
+    night.run("--from", "rank", "--to", "rank", "-pw", "0.6")
+    out = capsys.readouterr().out
+    assert ("Projections: NBA-Projs-2026-10-21_16-00-00.csv (newest in projections; "
+            "not used: 2026-10-20_classic_main has finished)") in out
+    assert "DKEntries: DKEntries.csv (auto: newest download for a finished slate; 2026-10-20_classic_main)" in out
+    assert "Error" not in out
+    assert night.rank_record()["inputs"]["projections"]["file"] == "L0-NBA-Projs-2026-10-20_13-55-35.csv"
+
+    night.run("--from", "export", "--entries", str(night.downloads / "DKEntries.csv"))
+    out = capsys.readouterr().out
+    assert "DKEntries: DKEntries.csv (chosen; 2026-10-20_classic_main)" in out
+    assert "Error" not in out
+
+
+def test_unfinished_slate_still_needs_matching_projections(night, capsys):
+    """Before the slate's last lock, a DKEntries the newest projections don't cover still fails."""
+    night.run()
+    make_twin(os.path.join(NIGHT_DIR, "L0-NBA-Projs-2026-10-20_13-55-35.csv"),
+              night.projs_dir / "NBA-Projs-2026-10-20_13-58-00.csv")
+    capsys.readouterr()
+    night.run("--from", "rank", "--entries", str(night.downloads / "DKEntries.csv"))
+    out = capsys.readouterr().out
+    assert "matches 0 of 125 players in DKEntries.csv" in out
+    assert "for a past slate, pass --slate-dir" in out
+
+
 def test_wrong_slate_type_fails_clean(night, capsys):
     """The night DKEntries chosen with slate type main fails before any slate folder is written."""
     night.run("--entries", night.twin_entries)

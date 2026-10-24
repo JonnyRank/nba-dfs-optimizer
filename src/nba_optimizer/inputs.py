@@ -11,7 +11,7 @@ import os
 import re
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional, Set
+from typing import Callable, Optional, Set
 
 import pandas as pd
 
@@ -126,22 +126,29 @@ def _entries_candidates(cfg: Config):
     return list(unique.values())
 
 
-def pick_entries(cfg: Config, projs_file: str, run_time: datetime) -> str:
-    """Decision 5 auto mode: the newest recent DKEntries download matching *projs_file*.
+def _recent_entries(cfg: Config, run_time: datetime):
+    """(path, pool IDs) of each DKEntries download from the last 24 h, newest first.
 
     Candidates are ``DKEntries*.csv`` in cfg.downloads_dir plus cfg.entries_path
     (NBA_ENTRIES_PATH) when it exists. Only modified time counts: Windows keeps
-    a file's creation time when it's overwritten in place. A newer download
-    for another slate fails the match and is skipped.
+    a file's creation time when it's overwritten in place.
     """
-    projs_ids = player_ids(projs_file)
     oldest = run_time.timestamp() - ENTRIES_MAX_AGE_HOURS * 3600
     recent = [p for p in _entries_candidates(cfg) if os.path.getmtime(p) >= oldest]
     for path in sorted(recent, key=lambda p: (os.path.getmtime(p), os.path.basename(p)), reverse=True):
         try:
-            ids = _entries_ids(path)
+            yield path, _entries_ids(path)
         except (ValueError, OSError, UnicodeDecodeError):
             continue
+
+
+def pick_entries(cfg: Config, projs_file: str, run_time: datetime) -> str:
+    """Decision 5 auto mode: the newest recent DKEntries download matching *projs_file*.
+
+    A newer download for another slate fails the match and is skipped.
+    """
+    projs_ids = player_ids(projs_file)
+    for path, ids in _recent_entries(cfg, run_time):
         if id_match(ids, projs_ids) >= MATCH_MIN:
             return path
     raise FileNotFoundError(
@@ -159,34 +166,70 @@ class RunInputs:
     entries_how: str               # "chosen" | "auto"
     match: float                   # decision-4 share, for the console line
     n_players: int                 # DKEntries player-pool size
+    finished_slate: Optional[str] = None   # the DKEntries' finished slate folder, when projs_file isn't its slate
 
     def print_lines(self) -> None:
         """The three §6.1 lines at the start of a run."""
         folder = os.path.basename(os.path.normpath(self.projs_dir))
+        print(f"Slate type: {self.slate_type}")
+        if self.finished_slate:
+            slate_id = os.path.basename(os.path.normpath(self.finished_slate))
+            how = "chosen" if self.entries_how == "chosen" else "auto: newest download for a finished slate"
+            print(f"Projections: {os.path.basename(self.projs_file)} (newest in {folder}; "
+                  f"not used: {slate_id} has finished)")
+            print(f"DKEntries: {os.path.basename(self.entries_file)} ({how}; {slate_id})")
+            return
         how = "chosen" if self.entries_how == "chosen" else "auto: newest matching download"
         matched = round(self.match * self.n_players)
-        print(f"Slate type: {self.slate_type}")
         print(f"Projections: {os.path.basename(self.projs_file)} (newest in {folder})")
         print(f"DKEntries: {os.path.basename(self.entries_file)} ({how}; {matched} of {self.n_players} players)")
 
 
-def resolve_inputs(cfg: Config, slate_type: str, entries: Optional[str], run_time: datetime) -> RunInputs:
-    """Decisions 1-5 in order; raises ValueError / FileNotFoundError before anything is written."""
+def resolve_inputs(
+    cfg: Config,
+    slate_type: str,
+    entries: Optional[str],
+    run_time: datetime,
+    finished_slate: Optional[Callable[[str], Optional[str]]] = None,
+) -> RunInputs:
+    """Decisions 1-5 in order; raises ValueError / FileNotFoundError before anything is written.
+
+    *finished_slate* maps a DKEntries file to its finished slate folder (or
+    None). Once a slate has finished, the newest export is usually the next
+    slate's, and the past-slate rules use the folder's own projections; so a
+    DKEntries whose slate has finished skips the projections match (auto mode
+    then takes the newest recent download for a finished slate).
+    """
     projs_dir = projs_dir_for(cfg, slate_type)
     projs_file = latest_projections(projs_dir, slate_type)
+    past = None
     if entries:
         if not os.path.isfile(entries):
             raise FileNotFoundError(f"DKEntries file not found: {entries}")
         entries_file, how = entries, "chosen"
     else:
-        entries_file, how = pick_entries(cfg, projs_file, run_time), "auto"
+        try:
+            entries_file, how = pick_entries(cfg, projs_file, run_time), "auto"
+        except FileNotFoundError as e:
+            entries_file = None
+            for path, _ in (_recent_entries(cfg, run_time) if finished_slate else ()):
+                past = finished_slate(path)
+                if past:
+                    entries_file = path
+                    break
+            if not entries_file:
+                raise FileNotFoundError(f"{e} (for a past slate, pass --slate-dir)") from None
+            how = "auto"
 
     ids = _entries_ids(entries_file)
     match = id_match(ids, player_ids(projs_file))
-    if match < MATCH_MIN:
+    if match < MATCH_MIN and past is None and finished_slate:
+        past = finished_slate(entries_file)
+    if match < MATCH_MIN and past is None:
         raise ValueError(
             f"{os.path.basename(projs_file)} matches {round(match * len(ids))} of {len(ids)} players in "
             f"{os.path.basename(entries_file)}; export tonight's {slate_type} projections, "
-            "or check the slate type and DKEntries"
+            "or check the slate type and DKEntries (for a past slate, pass --slate-dir)"
         )
-    return RunInputs(slate_type, projs_dir, projs_file, entries_file, how, match, len(ids))
+    return RunInputs(slate_type, projs_dir, projs_file, entries_file, how, match, len(ids),
+                     past if match < MATCH_MIN else None)

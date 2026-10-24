@@ -261,6 +261,35 @@ def check_slate_folder(cfg: Config, entries_file: str, slate_dir: str, creating:
         )
 
 
+def finished_slate_dir(cfg: Config, entries_file: str, when: datetime) -> Optional[str]:
+    """The finished cfg.slate_type folder whose Pre-L0-DKEntries holds these DKEntries' players, or None.
+
+    Newest first. Lets a re-run on last night's slate through once the
+    projections folder holds the next slate's exports (the past-slate rules
+    never use those).
+    """
+    if not cfg.data_root or not os.path.isdir(cfg.data_root):
+        return None
+    try:
+        ids = player_ids(entries_file)
+    except (ValueError, OSError):
+        return None
+    suffix = f"_classic_{cfg.slate_type}"
+    for name in sorted(os.listdir(cfg.data_root), reverse=True):
+        slate_dir = os.path.join(cfg.data_root, name)
+        path = os.path.join(slate_dir, SLATE_FILE)
+        if not name.endswith(suffix) or not os.path.isfile(path):
+            continue
+        try:
+            finished = lock_or_none(read_json(path), when) is None
+        except (ValueError, KeyError, IndexError, OSError):
+            continue
+        found = _folder_match(ids, slate_dir) if finished else None
+        if found and found[0] >= MATCH_MIN:
+            return slate_dir
+    return None
+
+
 def _existing_slate_dir(cfg: Config, entries_file: str) -> Optional[str]:
     """Locate tonight's slate folder from a post-lock DKEntries file."""
     try:

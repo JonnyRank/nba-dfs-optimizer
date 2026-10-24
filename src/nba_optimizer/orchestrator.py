@@ -10,7 +10,7 @@ from . import assembler, engine, exporter, exposure_report, late_swapper, ranker
 from .config import load_config_from_env
 from .inputs import latest_projections, projs_dir_for, projs_name_time, resolve_inputs
 from .settings import find_record, latest_record_path, resolve_settings, stages_between, warn_ignored
-from .slate import PRE_L0_ENTRIES, SLATE_FILE, load_or_write_slate, lock_or_none
+from .slate import PRE_L0_ENTRIES, SLATE_FILE, finished_slate_dir, load_or_write_slate, lock_or_none
 from .utils import get_latest_file, merge_player_pool, parse_dk_entries
 
 
@@ -129,14 +129,17 @@ def use_slate_dir(config, slate_dir, run_time, with_projections=True, rerank=Fal
     return config, slate, projs_file, slate_dir
 
 
-def resolve_run_inputs(config, args, run_time):
+def resolve_run_inputs(config, args, run_time, allow_finished=True):
     """Pick the run's projections and DKEntries for its slate type (O-15) and print them.
 
     Returns (config, inputs): config reads from the type's projections folder
     and the chosen DKEntries, so every existing fallback reads the right files.
+    With *allow_finished*, a DKEntries whose slate folder has finished passes
+    without matching the newest projections (the past-slate rules don't use them).
     Raises before anything is written.
     """
-    inputs = resolve_inputs(config, config.slate_type, _arg(args, "entries"), run_time)
+    finished = (lambda path: finished_slate_dir(config, path, run_time)) if allow_finished else None
+    inputs = resolve_inputs(config, config.slate_type, _arg(args, "entries"), run_time, finished_slate=finished)
     inputs.print_lines()
     return replace(config, projs_dir=inputs.projs_dir, entries_path=inputs.entries_file), inputs
 
@@ -236,7 +239,7 @@ def run_pipeline(args, run_time: Optional[datetime] = None, gui: bool = False):
 
     if _arg(args, "late_swap"):
         try:
-            config, inputs = resolve_run_inputs(config, args, run_time)
+            config, inputs = resolve_run_inputs(config, args, run_time, allow_finished=False)
         except (ValueError, KeyError, OSError) as e:
             print(f"Error: {e}")
             return
