@@ -61,7 +61,7 @@ def _name_type(name: str) -> Optional[str]:
     """The slate type a projections name is for, or None for an untyped name."""
     match = PROJS_NAME_RE.match(name)
     word = match.group("type") if match else None
-    if word and word == word.capitalize() and word.lower() in SLATE_TYPES:
+    if word and word.lower() in SLATE_TYPES:
         return word.lower()
     return None
 

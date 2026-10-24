@@ -95,6 +95,12 @@ def test_latest_projections_skips_other_type(tmp_path, capsys):
     assert ("Warning: skipping NBA-Projs-Night-2026-10-23_20-49-17.csv in the main projections folder "
             "(named for night)") in capsys.readouterr().out
 
+    # A hand-renamed lowercase or uppercase type word is still that type's file.
+    shutil.copy(L0_PROJS, tmp_path / "NBA-Projs-night-2026-10-23_21-00-00.csv")
+    assert inputs.latest_projections(str(tmp_path), "main") == str(main)
+    os.remove(tmp_path / "NBA-Projs-night-2026-10-23_21-00-00.csv")
+    capsys.readouterr()
+
     # Several strays give one summary line, not one warning each.
     shutil.copy(L0_PROJS, tmp_path / "NBA-Projs-Night-2026-10-22_20-10-00.csv")
     inputs.latest_projections(str(tmp_path), "main")

@@ -138,9 +138,13 @@ def resolve_run_inputs(config, args, run_time, allow_finished=True):
     and the chosen DKEntries, so every existing fallback reads the right files.
     With *allow_finished*, a DKEntries whose slate folder has finished passes
     without matching the newest projections (the past-slate rules don't use them).
+    That's for re-runs (``--from``) or a chosen ``--entries``: a plain full run
+    whose auto-pick finds no download for the new projections should ask for
+    tonight's DKEntries, not quietly regenerate last night's slate.
     Raises before anything is written.
     """
-    finished = (lambda path: finished_slate_dir(config, path, run_time)) if allow_finished else None
+    rerun = (_arg(args, "from_stage") or "generate") != "generate" or bool(_arg(args, "entries"))
+    finished = (lambda path: finished_slate_dir(config, path, run_time)) if allow_finished and rerun else None
     inputs = resolve_inputs(config, config.slate_type, _arg(args, "entries"), run_time, finished_slate=finished)
     inputs.print_lines()
     return replace(config, projs_dir=inputs.projs_dir, entries_path=inputs.entries_file), inputs

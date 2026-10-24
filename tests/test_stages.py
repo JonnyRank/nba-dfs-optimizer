@@ -647,6 +647,13 @@ def test_finished_slate_reruns_after_next_slates_export(night, capsys):
     assert "DKEntries: DKEntries.csv (chosen; 2026-10-20_classic_main)" in out
     assert "Error" not in out
 
+    # A plain full run doesn't fall back to last night's slate: it asks for tonight's DKEntries.
+    pools = night.files("lineup-pool-")
+    night.run()
+    out = capsys.readouterr().out
+    assert "no DKEntries downloaded in the last 24 h matches NBA-Projs-2026-10-21_16-00-00.csv" in out
+    assert night.files("lineup-pool-") == pools
+
 
 def test_unfinished_slate_still_needs_matching_projections(night, capsys):
     """Before the slate's last lock, a DKEntries the newest projections don't cover still fails."""

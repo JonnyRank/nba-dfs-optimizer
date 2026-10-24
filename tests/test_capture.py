@@ -380,6 +380,18 @@ def test_finalize_main_loops_with_type_folders(tmp_path, monkeypatch, capsys):
     out = capsys.readouterr().out
     assert out.index(f"=== {SLATE_ID} ===") < out.index("=== 2026-10-20_classic_night ===")
 
+    # One slate failing doesn't stop the next; the exit code reports it.
+    def fail_main(slate_dir, search_dirs, **kw):
+        calls.append(slate_dir)
+        if slate_dir == main:
+            raise ValueError("main chain broken")
+
+    calls.clear()
+    monkeypatch.setattr(capture, "finalize", fail_main)
+    assert capture.main(["finalize"]) == 1
+    assert calls == [main, night]
+    assert "Error: main chain broken" in capsys.readouterr().out
+
 
 def test_record_picks_folder_by_ids(opening_night, tmp_path):
     """With two 10/20 slates, `record` picks the folder whose Pre-L0 DKEntries holds the file's players."""
