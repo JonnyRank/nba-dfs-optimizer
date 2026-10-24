@@ -28,6 +28,7 @@ def add_pipeline_args(parser, gui: bool = False) -> None:
 
     if gui:
         entries_help = "DKEntries file. Leave blank to use the newest matching download"
+        # Reads NBA_DOWNLOADS_DIR (loading .env) while the parser is built: GUI only.
         entries_widget = {
             "widget": "FileChooser",
             "gooey_options": {"default_dir": downloads_dir_from_env(), "wildcard": "CSV files (*.csv)|*.csv"},
@@ -231,6 +232,7 @@ def add_pipeline_args(parser, gui: bool = False) -> None:
         default=None,
         help="Base seed for the engine (Default: draw a fresh one, printed and recorded)",
     )
+
 
 def pipeline_defaults(gui: bool = False) -> dict:
     """Each pipeline argument's default, keyed by dest.

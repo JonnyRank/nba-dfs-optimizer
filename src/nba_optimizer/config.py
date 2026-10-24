@@ -102,10 +102,13 @@ def _env_path(name: str) -> str:
 
 
 def _load_dotenv() -> None:
-    """Load the .env nearest the package (the repo root for an editable install).
+    """Load the project's .env: the nearest one from the package up to the project root.
 
     Searched from the package's location, not the working directory, so a
     pythonw.exe shortcut or Gooey's relaunch reads the same .env as a terminal.
+    The walk stops at the first folder holding a pyproject.toml (the repo root
+    for an editable install), so an unrelated .env further up is never read;
+    without one there, python-dotenv's own search applies.
     """
     directory = os.path.dirname(os.path.abspath(__file__))
     while True:
@@ -114,7 +117,7 @@ def _load_dotenv() -> None:
             load_dotenv(candidate)
             return
         parent = os.path.dirname(directory)
-        if parent == directory:
+        if parent == directory or os.path.isfile(os.path.join(directory, "pyproject.toml")):
             load_dotenv()
             return
         directory = parent

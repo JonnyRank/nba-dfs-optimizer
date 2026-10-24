@@ -95,6 +95,14 @@ def test_latest_projections_skips_other_type(tmp_path, capsys):
     assert ("Warning: skipping NBA-Projs-Night-2026-10-23_20-49-17.csv in the main projections folder "
             "(named for night)") in capsys.readouterr().out
 
+    # Several strays give one summary line, not one warning each.
+    shutil.copy(L0_PROJS, tmp_path / "NBA-Projs-Night-2026-10-22_20-10-00.csv")
+    inputs.latest_projections(str(tmp_path), "main")
+    out = capsys.readouterr().out
+    assert out.count("Warning:") == 1
+    assert ("skipping 2 files named for night in the main projections folder "
+            "(newest NBA-Projs-Night-2026-10-23_20-49-17.csv)") in out
+
 
 def test_latest_projections_empty_folder(tmp_path):
     with pytest.raises(FileNotFoundError, match="no NBA-Projs-\\*.csv for night in"):

@@ -11,7 +11,7 @@ import os
 import re
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Callable, Optional, Set
+from typing import Callable, Dict, List, Optional, Set
 
 import pandas as pd
 
@@ -74,14 +74,22 @@ def latest_projections(directory: str, slate_type: str) -> str:
     Raises FileNotFoundError naming the folder when nothing qualifies.
     """
     candidates = []
+    skipped: Dict[str, List[str]] = {}
     for path in glob.glob(os.path.join(directory, "NBA-Projs-*.csv")):
         name = os.path.basename(path)
         named_for = _name_type(name)
         if named_for and named_for != slate_type:
-            print(f"Warning: skipping {name} in the {slate_type} projections folder (named for {named_for})")
+            skipped.setdefault(named_for, []).append(name)
             continue
         when = projs_name_time(name) or datetime.fromtimestamp(os.path.getmtime(path))
         candidates.append((when, name, path))
+    # One line per other type, so stray files don't flood every run.
+    for named_for, names in sorted(skipped.items()):
+        if len(names) == 1:
+            print(f"Warning: skipping {names[0]} in the {slate_type} projections folder (named for {named_for})")
+        else:
+            print(f"Warning: skipping {len(names)} files named for {named_for} in the {slate_type} "
+                  f"projections folder (newest {max(names)})")
     if not candidates:
         raise FileNotFoundError(f"no NBA-Projs-*.csv for {slate_type} in {directory}")
     return max(candidates)[2]

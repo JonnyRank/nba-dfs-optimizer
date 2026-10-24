@@ -105,7 +105,9 @@ def use_slate_dir(config, slate_dir, run_time, with_projections=True, rerank=Fal
 
     Uses the folder's Pre-L0-DKEntries.csv and slate.json; nothing but the
     projections (when needed) is copied in. The slate type is the folder's:
-    a different *typed_slate_type* is warned about and ignored.
+    a different *typed_slate_type* is warned about and ignored. A typed
+    ``main`` can't be told from the default (the GUI always sends it), so
+    the caller passes None for it and only a non-main type warns.
     """
     slate_dir = os.path.abspath(slate_dir)
     slate_path = os.path.join(slate_dir, SLATE_FILE)

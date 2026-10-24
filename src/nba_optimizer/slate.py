@@ -23,6 +23,7 @@ from .utils import parse_dk_entries
 ET = ZoneInfo("America/New_York")
 SLATE_FILE = "slate.json"
 PRE_L0_ENTRIES = "Pre-L0-DKEntries.csv"
+CLASSIC_SEP = "_classic_"            # slate_id = <slate_date>_classic_<slate_type>
 GAME_INFO_RE = re.compile(r"^([A-Za-z]{2,4})@([A-Za-z]{2,4}) (\d{2}/\d{2}/\d{4} \d{2}:\d{2}[AP]M) ET$")
 
 
@@ -89,7 +90,7 @@ def build_slate(entries_file: str, slate_type: str) -> dict:
 
     return {
         "schema": SCHEMA_VERSION,
-        "slate_id": f"{slate_date}_classic_{slate_type}",
+        "slate_id": f"{slate_date}{CLASSIC_SEP}{slate_type}",
         "slate_date": slate_date,
         "slate_type": slate_type,
         "source_file": name,
@@ -241,7 +242,7 @@ def check_slate_folder(cfg: Config, entries_file: str, slate_dir: str, creating:
     own = None if creating else _folder_match(ids, slate_dir)
     if own is not None and own[0] >= MATCH_MIN:
         return
-    date_prefix = slate_id[:10] + "_classic_"
+    date_prefix = slate_id.split(CLASSIC_SEP)[0] + CLASSIC_SEP
     siblings = sorted(
         n for n in os.listdir(cfg.data_root)
         if n.startswith(date_prefix) and n != slate_id and os.path.isdir(os.path.join(cfg.data_root, n))
@@ -274,7 +275,7 @@ def finished_slate_dir(cfg: Config, entries_file: str, when: datetime) -> Option
         ids = player_ids(entries_file)
     except (ValueError, OSError):
         return None
-    suffix = f"_classic_{cfg.slate_type}"
+    suffix = f"{CLASSIC_SEP}{cfg.slate_type}"
     for name in sorted(os.listdir(cfg.data_root), reverse=True):
         slate_dir = os.path.join(cfg.data_root, name)
         path = os.path.join(slate_dir, SLATE_FILE)
@@ -298,7 +299,7 @@ def _existing_slate_dir(cfg: Config, entries_file: str) -> Optional[str]:
         games = {}
     if games:
         date = min(games.values()).date().isoformat()
-        candidate = os.path.join(cfg.data_root, f"{date}_classic_{cfg.slate_type}")
+        candidate = os.path.join(cfg.data_root, f"{date}{CLASSIC_SEP}{cfg.slate_type}")
         if os.path.isfile(os.path.join(candidate, SLATE_FILE)):
             return candidate
     try:
