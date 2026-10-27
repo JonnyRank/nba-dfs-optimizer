@@ -86,6 +86,25 @@ def test_min_source_my_vs_stok():
     assert records.check_blend(df, warn=False)["mismatches"] == 1
 
 
+def test_check_blend_includes_cs_fppm():
+    """CS FPPM (current season) joins the non-zero mean once the export has the column."""
+    df = pd.DataFrame({
+        "ID": [1, 2],
+        "Projection": [30.0 * 1.2, 30.0 * 1.0],
+        "Stok Mins": [30.0, 30.0],
+        "My Mins": [None, None],
+        "LS FPPM": [None, None],
+        "CS FPPM": [1.4, None],
+        "Stok FPPM": [1.0, 1.0],
+        "My FPPM": [None, None],
+        "Blend FPPM": [1.2, 1.0],
+    })
+    assert records.check_blend(df)["mismatches"] == 0
+
+    df.loc[0, ["Blend FPPM", "Projection"]] = [1.0, 30.0]  # blend that ignored CS FPPM
+    assert records.check_blend(df, warn=False)["examples"] == ["1"]
+
+
 def test_snapshot_input_reuses_identical_and_never_overwrites(tmp_path):
     """Same contents reuse the existing copy; a different file under the same name gets -HHMMSS."""
     src_a = tmp_path / "a.csv"
