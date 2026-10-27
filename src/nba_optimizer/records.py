@@ -36,6 +36,8 @@ CAPTURE_PREFIX_RE = re.compile(r"^(?:(?:Pre|Post)-)?L\d+-|^Final-|^Post-", re.IG
 # Blend check tolerances: the workbook rounds nothing, so these only absorb float noise.
 BLEND_FPPM_TOL = 1e-6
 BLEND_PROJ_TOL = 1e-4
+# FPPM sources the workbook averages (non-zero values only) into Blend FPPM.
+BLEND_FPPM_COLS = ("Stok FPPM", "LS FPPM", "CS FPPM", "My FPPM")
 
 _SHA_CACHE: Dict[tuple, str] = {}
 
@@ -392,8 +394,9 @@ def derive_projection_fields(df_projs: pd.DataFrame) -> pd.DataFrame:
 def check_blend(df_projs: pd.DataFrame, warn: bool = True) -> Optional[dict]:
     """Verify the workbook's Blend FPPM and Projection columns.
 
-    ``Blend FPPM`` must be the mean of the non-zero values among Stok/LS/My
-    FPPM, and ``Projection`` must equal ``mins_used * Blend FPPM``. Returns
+    ``Blend FPPM`` must be the mean of the non-zero values among Stok/LS/CS/My
+    FPPM (CS = current season; a column missing from older exports is
+    skipped), and ``Projection`` must equal ``mins_used * Blend FPPM``. Returns
     ``None`` for the basic (3-column) layout. A mismatch only warns.
     """
     if "Stok Mins" not in df_projs.columns:
@@ -404,7 +407,7 @@ def check_blend(df_projs: pd.DataFrame, warn: bool = True) -> Optional[dict]:
             print(f"Warning: blend check skipped; expanded projections lack {missing}")
         return None
     df = derive_projection_fields(df_projs)
-    fppm_cols = [c for c in ("Stok FPPM", "LS FPPM", "My FPPM") if c in df.columns]
+    fppm_cols = [c for c in BLEND_FPPM_COLS if c in df.columns]
     fppm = df[fppm_cols].apply(pd.to_numeric, errors="coerce").fillna(0.0)
     nonzero = fppm.where(fppm != 0)
     expected_blend = nonzero.mean(axis=1).fillna(0.0)
