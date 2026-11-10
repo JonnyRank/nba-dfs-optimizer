@@ -191,13 +191,14 @@ def find_input(config, args, from_stage: str, record_dir: str, legacy: bool):
             return path, find_record(record_dir, stage, key, os.path.basename(path))
         except FileNotFoundError:
             pass
-    rec_path = latest_record_path(record_dir, stage)
-    if rec_path:
-        rec = records.read_json(rec_path)
-        if rec.get(key):
-            candidate = os.path.join(directory, rec[key])
-            if os.path.isfile(candidate):
-                return candidate, rec
+    else:
+        rec_path = latest_record_path(record_dir, stage)
+        if rec_path:
+            rec = records.read_json(rec_path)
+            if rec.get(key):
+                candidate = os.path.join(directory, rec[key])
+                if os.path.isfile(candidate):
+                    return candidate, rec
     what = {"rank": "lineup pool", "assemble": "ranked file", "export": "assembly"}[from_stage]
     raise FileNotFoundError(f"--from {from_stage}: no {what} found in {record_dir}")
 
