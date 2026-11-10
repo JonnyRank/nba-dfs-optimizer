@@ -528,6 +528,22 @@ def test_no_slate_folder_writes_legacy_layout(night, capsys):
     assert not os.path.exists(night.cfg.data_root)
 
 
+def test_no_slate_folder_from_rank_picks_newest_pool_by_name(night, capsys):
+    """R3: in the legacy dirs, --from rank takes the newest pool by name, so a pool copied in
+    without its run record wins over an older run's recorded pool."""
+    night.run("--to", "rank", "--no-slate-folder")
+    pool_dir = os.path.join(night.cfg.base_dir, "lineup-pools")
+    [old_pool] = os.listdir(pool_dir)
+    shutil.copy(os.path.join(pool_dir, old_pool), os.path.join(pool_dir, "lineup-pool-2026-10-21_090000.csv"))
+
+    capsys.readouterr()
+    night.run("--from", "rank", "--to", "rank", "--no-slate-folder")
+    out = capsys.readouterr().out
+    assert "Pool: lineup-pool-2026-10-21_090000.csv" in out
+    assert latest_record(os.path.join(night.cfg.base_dir, "ranked-lineups"), "rank")["pool_file"] == (
+        "lineup-pool-2026-10-21_090000.csv")
+
+
 def test_past_slate_warns_when_parent_projections_changed(night, capsys):
     """R2: a parent projections file edited in place since the parent run (sha mismatch) warns."""
     night.run("--to", "rank")

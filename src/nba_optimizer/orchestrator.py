@@ -183,6 +183,14 @@ def find_input(config, args, from_stage: str, record_dir: str, legacy: bool):
             raise FileNotFoundError(f"--{explicit} file not found: {path}")
         return path, find_record(record_dir, stage, key, os.path.basename(path))
 
+    if legacy:
+        # Legacy dirs: the newest file by name wins, so a CSV copied in without
+        # its run record is still picked up over an older run's recorded file.
+        try:
+            path = get_latest_file(directory, pattern)
+            return path, find_record(record_dir, stage, key, os.path.basename(path))
+        except FileNotFoundError:
+            pass
     rec_path = latest_record_path(record_dir, stage)
     if rec_path:
         rec = records.read_json(rec_path)
@@ -190,12 +198,6 @@ def find_input(config, args, from_stage: str, record_dir: str, legacy: bool):
             candidate = os.path.join(directory, rec[key])
             if os.path.isfile(candidate):
                 return candidate, rec
-    if legacy:
-        try:
-            path = get_latest_file(directory, pattern)
-            return path, find_record(record_dir, stage, key, os.path.basename(path))
-        except FileNotFoundError:
-            pass
     what = {"rank": "lineup pool", "assemble": "ranked file", "export": "assembly"}[from_stage]
     raise FileNotFoundError(f"--from {from_stage}: no {what} found in {record_dir}")
 
