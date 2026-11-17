@@ -74,11 +74,11 @@ One table for the GUI and the CLI, in the order the GUI shows them. The GUI box 
 | `entries` | `--entries` | blank (auto) | all | DKEntries file; blank uses the newest matching download. |
 | `no_slate_folder` | `--no-slate-folder` | off | all | This run only: keep out of the night's capture (legacy exports layout). |
 | `slate_dir` | `--slate-dir` | tonight's | all | Work in an existing slate folder, e.g. a past slate. |
-| `max_caps` | `--max` | none | assemble | Max exposure `PLAYER=PCT` (percent of entries). |
+| `max_caps` | `--max` | none | assemble | Max exposure `PLAYER=PCT` (percent of entries), e.g. `Jarrett Allen=75`. |
 | `max_all` | `--max-all` | none | assemble | Max exposure PCT for every player (a player's own `--max` replaces it). |
 | `proj` | `--proj` | none | generate, rank | Projection override `PLAYER=VALUE` (name or DK ID). |
 | `own` | `--own` | none | rank | Ownership override `PLAYER=VALUE`. |
-| `min_caps` | `--min` | none | assemble | Min exposure `PLAYER=PCT`. |
+| `min_caps` | `--min` | none | assemble | Min exposure `PLAYER=PCT`, e.g. `Jarrett Allen=20`. |
 | `clear_overrides` | `--clear-overrides` | none | rank | Drop inherited `--proj`/`--own` overrides. |
 | `clear_caps` | `--clear-caps` | none | assemble | Drop inherited `--max`/`--min` caps (`all` also drops `--max-all`). |
 | `reset_settings` | `--reset-settings` | off | rank, assemble | Inherit nothing: weights, overrides, caps and `-u` return to defaults. |
@@ -89,7 +89,8 @@ One table for the GUI and the CLI, in the order the GUI shows them. The GUI box 
 
 **How the boxes behave**
 - The weight boxes and `min_unique` start filled in and are sent as shown. Clearing one on a `from_stage` run inherits the last run's value.
-- The `proj`, `own`, `max_caps` and `min_caps` boxes take `;`-separated lists, e.g. `Dylan Harper=80; OG Anunoby=50`.
+- The `proj`, `own`, `max_caps` and `min_caps` boxes take `PLAYER=VALUE`, typed bare: no quotes and no `%` sign. One player is `Jarrett Allen=75`; several are separated with `;`, e.g. `Jarrett Allen=75; Dylan Harper=40`.
+- A player is a DK ID or a name. Names ignore case and a unique part of one is enough (`allen=75`), but the part you type must be spelled as DraftKings spells it. On the CLI, quote the value so the shell keeps it whole: `--max "Jarrett Allen=75"`.
 - The clear boxes take `all` or `;`-separated player names.
 - A blank `entries` box means auto-pick: the newest `DKEntries*.csv` in Downloads from the last 24 h whose players match the slate type's projections.
 - Settings carry forward on `from_stage` runs; `reset_settings` undoes that.

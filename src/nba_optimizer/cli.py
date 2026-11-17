@@ -26,6 +26,10 @@ def add_pipeline_args(parser, gui: bool = False) -> None:
         weight_help = "or inherited on a --from run"
         unique_help = ", or inherited on a --from run"
 
+    def example(text: str) -> str:
+        """A PLAYER=VALUE example: typed bare in a GUI box, shell-quoted on the CLI."""
+        return f"{text} (no quotes)" if gui else f'"{text}" (or repeat the flag)'
+
     if gui:
         entries_help = "DKEntries file. Leave blank to use the newest matching download"
         # Reads NBA_DOWNLOADS_DIR (loading .env) while the parser is built: GUI only.
@@ -161,7 +165,7 @@ def add_pipeline_args(parser, gui: bool = False) -> None:
         dest="max_caps",
         action="append",
         default=None,
-        help='Max exposure "PLAYER=PCT" (percent of entries); repeat or separate with ";"',
+        help=f"Max exposure PLAYER=PCT, e.g. {example('Jarrett Allen=75; Dylan Harper=40')}",
     )
     parser.add_argument(
         "--max-all",
@@ -174,20 +178,20 @@ def add_pipeline_args(parser, gui: bool = False) -> None:
         "--proj",
         action="append",
         default=None,
-        help='Projection override "PLAYER=VALUE" (name or DK ID); repeat or separate with ";"',
+        help=f"Projection override PLAYER=VALUE (name or DK ID), e.g. {example('Jarrett Allen=38.5; Dylan Harper=30')}",
     )
     parser.add_argument(
         "--own",
         action="append",
         default=None,
-        help='Ownership override "PLAYER=VALUE"; repeat or separate with ";"',
+        help=f"Ownership override PLAYER=VALUE, e.g. {example('Jarrett Allen=22; Dylan Harper=15')}",
     )
     parser.add_argument(
         "--min",
         dest="min_caps",
         action="append",
         default=None,
-        help='Min exposure "PLAYER=PCT" (percent of entries); repeat or separate with ";"',
+        help=f"Min exposure PLAYER=PCT, e.g. {example('Jarrett Allen=20; Dylan Harper=10')}",
     )
     parser.add_argument(
         "--clear-overrides",
