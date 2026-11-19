@@ -30,7 +30,7 @@ class Config:
     min_salary: int = 49500
     roster_size: int = 8
     min_games: int = 2
-    min_projection: float = 10.0
+    min_projection: float = 15.0
 
     # --- RANKING WEIGHTS (the one source of defaults; O-13 §3.4) ---
     proj_weight: float = 0.8

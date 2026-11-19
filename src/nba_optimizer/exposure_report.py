@@ -49,7 +49,7 @@ def _resolve_entries_file(cfg: Config, entries_file: Optional[str] = None) -> st
 
 def run(
     cfg: Config,
-    top_x: int = 25,
+    top_x: int = 30,
     entries_file: Optional[str] = None,
     df_players: Optional[pd.DataFrame] = None,
 ):
@@ -169,8 +169,8 @@ def main():
         "-t",
         "--top_x",
         type=int,
-        default=25,
-        help="Limit display to top X highest-exposed players (Default: 25). Use 0 for all",
+        default=30,
+        help="Limit display to top X highest-exposed players (Default: 30). Use 0 for all",
     )
     parser.add_argument(
         "-e",

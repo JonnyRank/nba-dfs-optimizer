@@ -100,8 +100,8 @@ def add_pipeline_args(parser, gui: bool = False) -> None:
         "-mp",
         "--min_projection",
         type=float,
-        default=10.0,
-        help="Min projection for a player to be considered (Default: 10.0)",
+        default=15.0,
+        help="Min projection for a player to be considered (Default: 15.0)",
     )
     parser.add_argument(
         "-pw",
@@ -131,7 +131,7 @@ def add_pipeline_args(parser, gui: bool = False) -> None:
         "-t",
         "--top_x",
         type=int,
-        default=25,
+        default=30,
         help="Display only top X exposed players (0 for all)",
     )
     parser.add_argument(

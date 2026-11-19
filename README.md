@@ -65,11 +65,11 @@ One table for the GUI and the CLI, in the order the GUI shows them. The GUI box 
 | `randomness` | `-r`, `--randomness` | 0.25 | generate | Random variance applied to projections (0.0-1.0). |
 | `min_unique` | `-u`, `--min_unique` | 1 | assemble | Min unique players between any two entries. |
 | `min_salary` | `-ms`, `--min_salary` | 49500 | generate | Min salary for a lineup. |
-| `min_projection` | `-mp`, `--min_projection` | 10.0 | generate | Min projection for a player to be considered. |
+| `min_projection` | `-mp`, `--min_projection` | 15.0 | generate | Min projection for a player to be considered. |
 | `proj_weight` | `-pw`, `--proj_weight` | 0.8 | rank | Weight for the projection rank. |
 | `own_weight` | `-ow`, `--own_weight` | 0.0 | rank | Weight for the total-ownership rank. |
 | `geo_weight` | `-gw`, `--geo_weight` | 0.2 | rank | Weight for the geomean-ownership rank. |
-| `top_x` | `-t`, `--top_x` | 25 | export | Players shown in the exposure report (0 for all). |
+| `top_x` | `-t`, `--top_x` | 30 | export | Players shown in the exposure report (0 for all). |
 | `slate_type` | `--slate-type` | main | all | Picks the projections folder and names the slate folder. |
 | `entries` | `--entries` | blank (auto) | all | DKEntries file; blank uses the newest matching download. |
 | `no_slate_folder` | `--no-slate-folder` | off | all | This run only: keep out of the night's capture (legacy exports layout). |
