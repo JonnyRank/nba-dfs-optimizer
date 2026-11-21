@@ -224,6 +224,39 @@ def test_min_unique_2_fixture():
     assert result.df_selected["Final_Rank"].tolist() == list(range(1, 41))
 
 
+def test_min_unique_summary_reports_effect_on_top_n(capsys):
+    """u=2 removes 4 pool lineups but none of ranks 1-40 (they share at most 6), and the
+    summary says so; u=3 removes 17 of ranks 1-40 and the 40 picked share at most 5."""
+    settings = AssembleSettings(n_entries=40, min_unique=2)
+    result = assemble(_ranked(), settings)
+    assert result.min_unique_removed_top_n == 0 and result.top_n_max_shared == 6
+    assembler.print_summary(result, settings)
+    out = capsys.readouterr().out
+    assert "removed 4 of 100 pool lineups" in out
+    assert "ranks 1-40: none removed (they already share at most 6 players); " \
+           "min_unique doesn't change the selection" in out
+    assert "Selected entries share at most 6 players" in out
+
+    settings = AssembleSettings(n_entries=40, min_unique=3)
+    result = assemble(_ranked(), settings)
+    assert result.min_unique_removed_top_n == 17
+    assert result.selected_max_shared == _max_shared(_selected_sets(result)) <= 5
+    assembler.print_summary(result, settings)
+    assert "ranks 1-40: 17 removed (before min_unique they shared up to 6 players)" in capsys.readouterr().out
+
+
+def test_min_unique_summary_with_caps_makes_no_selection_claim(capsys):
+    """With a cap the ILP may reach below rank 40, where -u 2 did remove rows, so the
+    summary reports ranks 1-40 untouched but doesn't claim the selection is unchanged."""
+    settings = AssembleSettings(n_entries=40, min_unique=2, max={OG_ANUNOBY: 50})
+    result = assemble(_ranked(), settings)
+    assert result.solve["method"] == "ilp" and result.min_unique_removed_top_n == 0
+    assembler.print_summary(result, settings)
+    out = capsys.readouterr().out
+    assert "ranks 1-40: none removed (they already share at most 6 players)\n" in out
+    assert "doesn't change the selection" not in out
+
+
 def test_min_unique_3_fixture():
     result = assemble(_ranked(), AssembleSettings(n_entries=40, min_unique=3))
     ranks = result.df_selected["Final_Rank"].tolist()

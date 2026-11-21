@@ -48,6 +48,10 @@ class AssembleResult:
     skipped_above_worst: int
     min_unique_removed: int = 0
     pool_size: int = 0
+    # How -u touched ranks 1-N of the full pool, and the overlap it was measured against.
+    min_unique_removed_top_n: int = 0
+    top_n_max_shared: int = 0
+    selected_max_shared: int = 0
 
 
 def max_count(pct: float, n: int) -> int:
@@ -82,6 +86,11 @@ def unique_survivors(sets: List[set], min_unique: int,
             keep.append(i)
             taken.update(subs)
     return keep
+
+
+def max_shared(sets: List[set]) -> int:
+    """The most players any two of *sets* have in common (0 with fewer than two)."""
+    return max((len(a & b) for a, b in itertools.combinations(sets, 2)), default=0)
 
 
 def _names_from_pool(df_ranked: pd.DataFrame) -> Dict[int, str]:
@@ -400,6 +409,9 @@ def assemble(df_ranked: pd.DataFrame, settings: AssembleSettings) -> AssembleRes
         skipped_above_worst=sum(1 for r in full_ranks if r < worst and r not in selected),
         min_unique_removed=removed,
         pool_size=len(df_full),
+        min_unique_removed_top_n=n - sum(1 for i in keep if i < n),
+        top_n_max_shared=max_shared(full_sets[:n]),
+        selected_max_shared=max_shared([sets[i] for i in chosen]),
     )
 
 
@@ -429,11 +441,23 @@ def print_summary(result: AssembleResult, settings: AssembleSettings) -> None:
     u, removed, size = settings.min_unique, result.min_unique_removed, result.pool_size
     if u <= 0:
         print(f"  min_unique: {u} (duplicates allowed)")
-    elif u == 1:
-        print(f"  min_unique: 1 -> removed {removed} exact duplicates of {size}")
     else:
-        print(f"  min_unique: {u} -> any two entries share at most {len(ROSTER_SLOTS) - u} players; "
-              f"removed {removed} of {size}")
+        if u == 1:
+            print(f"  min_unique: 1 -> removed {removed} exact duplicates of {size} pool lineups")
+        else:
+            print(f"  min_unique: {u} -> any two entries share at most {len(ROSTER_SLOTS) - u} players; "
+                  f"removed {removed} of {size} pool lineups")
+        # What -u did to the entries you'd get without it: ranks 1-N of the full pool.
+        top_removed, top_shared = result.min_unique_removed_top_n, result.top_n_max_shared
+        if n < 2:
+            pass  # one entry: rank 1 always survives and there is no pair to compare
+        elif top_removed == 0:
+            # With caps the ILP may reach below rank N, where -u can still have removed rows.
+            unchanged = "; min_unique doesn't change the selection" if result.solve["method"] == "top_n" else ""
+            print(f"    ranks 1-{n}: none removed (they already share at most {top_shared} players)"
+                  f"{unchanged}")
+        else:
+            print(f"    ranks 1-{n}: {top_removed} removed (before min_unique they shared up to {top_shared} players)")
     by_id = {e["dk_id"]: e for e in result.exposures}
     for dk_id in list(settings.max) + [k for k in settings.min if k not in settings.max]:
         e = by_id.get(dk_id)
@@ -450,6 +474,8 @@ def print_summary(result: AssembleResult, settings: AssembleSettings) -> None:
     else:
         print(f"Solve: {result.solve['status']} in {result.solve['seconds']:.1f} s")
     print(f"Worst selected rank: {result.solve['worst_rank']}; {result.kept_top_n} of ranks 1-{n} kept")
+    if n >= 2:
+        print(f"Selected entries share at most {result.selected_max_shared} players")
 
 
 def assembled_path(cfg: Config, slate: Optional[dict], run_time: datetime) -> str:
@@ -502,6 +528,9 @@ def run(
         "settings": settings_payload(settings, _names_from_pool(df_ranked)),
         "inherited": list(inherited or []),
         "min_unique_removed": result.min_unique_removed,
+        "min_unique_removed_top_n": result.min_unique_removed_top_n,
+        "top_n_max_shared": result.top_n_max_shared,
+        "selected_max_shared": result.selected_max_shared,
         "solve": result.solve,
         "exposures": result.exposures,
         "skipped_above_worst": result.skipped_above_worst,
