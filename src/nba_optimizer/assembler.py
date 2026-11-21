@@ -449,7 +449,9 @@ def print_summary(result: AssembleResult, settings: AssembleSettings) -> None:
                   f"removed {removed} of {size} pool lineups")
         # What -u did to the entries you'd get without it: ranks 1-N of the full pool.
         top_removed, top_shared = result.min_unique_removed_top_n, result.top_n_max_shared
-        if top_removed == 0:
+        if n < 2:
+            pass  # one entry: rank 1 always survives and there is no pair to compare
+        elif top_removed == 0:
             # With caps the ILP may reach below rank N, where -u can still have removed rows.
             unchanged = "; min_unique doesn't change the selection" if result.solve["method"] == "top_n" else ""
             print(f"    ranks 1-{n}: none removed (they already share at most {top_shared} players)"
