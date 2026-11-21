@@ -229,7 +229,7 @@ def test_min_unique_summary_reports_effect_on_top_n(capsys):
     summary says so; u=3 removes 17 of ranks 1-40 and the 40 picked share at most 5."""
     settings = AssembleSettings(n_entries=40, min_unique=2)
     result = assemble(_ranked(), settings)
-    assert result.top_n_unique_removed == 0 and result.top_n_max_shared == 6
+    assert result.min_unique_removed_top_n == 0 and result.top_n_max_shared == 6
     assembler.print_summary(result, settings)
     out = capsys.readouterr().out
     assert "removed 4 of 100 pool lineups" in out
@@ -239,10 +239,10 @@ def test_min_unique_summary_reports_effect_on_top_n(capsys):
 
     settings = AssembleSettings(n_entries=40, min_unique=3)
     result = assemble(_ranked(), settings)
-    assert result.top_n_unique_removed == 17
+    assert result.min_unique_removed_top_n == 17
     assert result.selected_max_shared == _max_shared(_selected_sets(result)) <= 5
     assembler.print_summary(result, settings)
-    assert "ranks 1-40: 17 removed (they share up to 6 players)" in capsys.readouterr().out
+    assert "ranks 1-40: 17 removed (before min_unique they shared up to 6 players)" in capsys.readouterr().out
 
 
 def test_min_unique_3_fixture():

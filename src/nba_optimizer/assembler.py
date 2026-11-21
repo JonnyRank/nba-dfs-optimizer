@@ -49,7 +49,7 @@ class AssembleResult:
     min_unique_removed: int = 0
     pool_size: int = 0
     # How -u touched ranks 1-N of the full pool, and the overlap it was measured against.
-    top_n_unique_removed: int = 0
+    min_unique_removed_top_n: int = 0
     top_n_max_shared: int = 0
     selected_max_shared: int = 0
 
@@ -409,7 +409,7 @@ def assemble(df_ranked: pd.DataFrame, settings: AssembleSettings) -> AssembleRes
         skipped_above_worst=sum(1 for r in full_ranks if r < worst and r not in selected),
         min_unique_removed=removed,
         pool_size=len(df_full),
-        top_n_unique_removed=n - sum(1 for i in keep if i < n),
+        min_unique_removed_top_n=n - sum(1 for i in keep if i < n),
         top_n_max_shared=max_shared(full_sets[:n]),
         selected_max_shared=max_shared([sets[i] for i in chosen]),
     )
@@ -448,14 +448,14 @@ def print_summary(result: AssembleResult, settings: AssembleSettings) -> None:
             print(f"  min_unique: {u} -> any two entries share at most {len(ROSTER_SLOTS) - u} players; "
                   f"removed {removed} of {size} pool lineups")
         # What -u did to the entries you'd get without it: ranks 1-N of the full pool.
-        top_removed, top_shared = result.top_n_unique_removed, result.top_n_max_shared
+        top_removed, top_shared = result.min_unique_removed_top_n, result.top_n_max_shared
         if top_removed == 0:
             # With caps the ILP may reach below rank N, where -u can still have removed rows.
             unchanged = "; min_unique doesn't change the selection" if result.solve["method"] == "top_n" else ""
             print(f"    ranks 1-{n}: none removed (they already share at most {top_shared} players)"
                   f"{unchanged}")
         else:
-            print(f"    ranks 1-{n}: {top_removed} removed (they share up to {top_shared} players)")
+            print(f"    ranks 1-{n}: {top_removed} removed (before min_unique they shared up to {top_shared} players)")
     by_id = {e["dk_id"]: e for e in result.exposures}
     for dk_id in list(settings.max) + [k for k in settings.min if k not in settings.max]:
         e = by_id.get(dk_id)
@@ -526,7 +526,8 @@ def run(
         "settings": settings_payload(settings, _names_from_pool(df_ranked)),
         "inherited": list(inherited or []),
         "min_unique_removed": result.min_unique_removed,
-        "min_unique_removed_top_n": result.top_n_unique_removed,
+        "min_unique_removed_top_n": result.min_unique_removed_top_n,
+        "top_n_max_shared": result.top_n_max_shared,
         "selected_max_shared": result.selected_max_shared,
         "solve": result.solve,
         "exposures": result.exposures,
